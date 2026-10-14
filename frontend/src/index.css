@@ -135,15 +135,10 @@ body {
 .brand-logo {
   width: 38px;
   height: 38px;
-  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-  color: #ffffff;
   border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.15rem;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  object-fit: contain;
+  display: block;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 .brand-title {

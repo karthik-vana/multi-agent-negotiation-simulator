@@ -133,7 +133,7 @@ const Sidebar = () => {
       {/* Brand Header */}
       <div className="sidebar-header">
         <div className="brand-wrapper">
-          <div className="brand-logo">N</div>
+          <img src="/favicon.svg" alt="Negotiator AI" className="brand-logo" />
           <div className="brand-title">Negotiator AI</div>
         </div>
 
