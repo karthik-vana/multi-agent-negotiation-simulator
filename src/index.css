@@ -542,3 +542,420 @@ body {
     padding: 24px 20px;
   }
 }
+
+/* ==========================================================================
+   Task 2: Scenario Selection Module & Scenario Card Styles
+   ========================================================================== */
+
+.scenario-selection-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.scenario-page-header {
+  margin-bottom: 8px;
+}
+
+.scenario-stepper-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scenario-page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.scenario-page-subtitle {
+  font-size: 0.94rem;
+  color: var(--text-muted);
+  max-width: 760px;
+  line-height: 1.6;
+}
+
+/* Validation Alert Banner */
+.scenario-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.scenario-alert-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.scenario-alert-warning .alert-icon {
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* 3-Column Responsive Grid */
+.scenarios-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .scenarios-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .scenarios-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Scenario Card Styling */
+.scenario-card {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: var(--shadow-card);
+  user-select: none;
+}
+
+.scenario-card:hover {
+  transform: translateY(-3px);
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+}
+
+.scenario-card.selected {
+  border-color: var(--card-accent, var(--primary));
+  background: #ffffff;
+  box-shadow: 0 0 0 1px var(--card-accent, var(--primary)),
+              0 12px 28px -6px rgba(79, 70, 229, 0.15),
+              0 4px 12px -2px rgba(79, 70, 229, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Scenario Card Top */
+.scenario-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.scenario-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.scenario-card:hover .scenario-icon-wrapper {
+  transform: scale(1.05);
+}
+
+.scenario-top-badges {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scenario-category-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg-surface-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+}
+
+.scenario-select-indicator {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.indicator-empty {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  border: 2px solid #cbd5e1;
+  transition: border-color 0.15s ease;
+}
+
+.scenario-card:hover .indicator-empty {
+  border-color: var(--text-muted);
+}
+
+.indicator-check {
+  color: var(--card-accent, var(--primary));
+}
+
+/* Scenario Card Body */
+.scenario-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.scenario-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+
+.scenario-card-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+
+/* Metadata Row (Agents & Duration) */
+.scenario-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.scenario-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: var(--text-main);
+}
+
+.meta-icon {
+  color: var(--text-muted);
+}
+
+/* Key Negotiation Levers */
+.scenario-levers-section {
+  margin-bottom: 20px;
+  margin-top: auto;
+}
+
+.scenario-levers-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+
+.scenario-levers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scenario-lever-tag {
+  font-size: 0.74rem;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.scenario-card.selected .scenario-lever-tag {
+  border-color: #cbd5e1;
+  background: var(--bg-surface-subtle);
+}
+
+/* Scenario Card Footer / Button */
+.scenario-card-footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.scenario-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface-subtle);
+  color: var(--text-main);
+}
+
+.scenario-select-btn:hover {
+  background: #e2e8f0;
+}
+
+.scenario-select-btn.btn-selected {
+  background: var(--card-accent, var(--primary));
+  border-color: var(--card-accent, var(--primary));
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+/* Bottom Action Bar */
+.scenario-action-bar {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  box-shadow: var(--shadow-card);
+  margin-top: 12px;
+}
+
+@media (max-width: 680px) {
+  .scenario-action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.scenario-selection-status {
+  flex: 1;
+}
+
+.status-selected-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-right: 6px;
+}
+
+.status-scenario-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-right: 8px;
+}
+
+.status-participants-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+}
+
+.status-unselected-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: #cbd5e1;
+}
+
+.scenario-cta-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.btn-continue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-continue.ready {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+}
+
+.btn-continue.ready:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+}
+
+.btn-continue.disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
