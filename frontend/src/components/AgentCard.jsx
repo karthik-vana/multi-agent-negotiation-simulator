@@ -13,6 +13,7 @@ import {
   PERSONALITIES,
   PERSONALITY_DESCRIPTIONS
 } from '../data/scenarios';
+import { useSettings } from '../context/SettingsContext';
 
 const personalityIcons = {
   [PERSONALITIES.AGGRESSIVE]: Flame,
@@ -42,11 +43,32 @@ const personalityColorStyles = {
 };
 
 const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAccent }) => {
+  const { t } = useSettings();
   const activePersonality = currentPersonality || agent.defaultPersonality;
   const ActiveIcon = personalityIcons[activePersonality] || Sparkles;
   const activeColor = personalityColorStyles[activePersonality] || personalityColorStyles[PERSONALITIES.COLLABORATIVE];
 
   const isDefault = activePersonality === agent.defaultPersonality;
+
+  const agentKey = agent.id.replace(/-/g, '_');
+  const agentName = t ? (t(`agent_${agentKey}_name`) || agent.name) : agent.name;
+  const agentStakeholder = t ? (t(`agent_${agentKey}_stakeholder`) || agent.stakeholder) : agent.stakeholder;
+
+  const getPersonalityLabel = (p) => {
+    if (!t) return p;
+    if (p === PERSONALITIES.AGGRESSIVE) return t('aggressive');
+    if (p === PERSONALITIES.COLLABORATIVE) return t('collaborative');
+    if (p === PERSONALITIES.RISK_AVERSE) return t('riskAverse');
+    return p;
+  };
+
+  const getPersonalityDesc = (p) => {
+    if (!t) return PERSONALITY_DESCRIPTIONS[p];
+    if (p === PERSONALITIES.AGGRESSIVE) return t('aggressive_desc') || PERSONALITY_DESCRIPTIONS[p];
+    if (p === PERSONALITIES.COLLABORATIVE) return t('collaborative_desc') || PERSONALITY_DESCRIPTIONS[p];
+    if (p === PERSONALITIES.RISK_AVERSE) return t('risk_averse_desc') || PERSONALITY_DESCRIPTIONS[p];
+    return PERSONALITY_DESCRIPTIONS[p];
+  };
 
   return (
     <div
@@ -71,8 +93,8 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
         </div>
 
         <div className="agent-identity">
-          <div className="agent-stakeholder-badge">{agent.stakeholder}</div>
-          <h3 className="agent-name">{agent.name}</h3>
+          <div className="agent-stakeholder-badge">{agentStakeholder}</div>
+          <h3 className="agent-name">{agentName}</h3>
         </div>
       </div>
 
@@ -83,7 +105,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
       <div className="agent-section-box agent-goal-box">
         <div className="agent-section-title">
           <Target size={15} className="section-icon goal-icon" />
-          <span>Primary Goal & Target</span>
+          <span>{t ? t('primaryGoalTitle') : 'Primary Goal & Target'}</span>
         </div>
         <p className="agent-goal-text">{agent.primaryGoal}</p>
       </div>
@@ -92,7 +114,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
       <div className="agent-section-box agent-constraint-box">
         <div className="agent-section-title">
           <ShieldAlert size={15} className="section-icon constraint-icon" />
-          <span>Key Negotiation Constraints</span>
+          <span>{t ? t('keyConstraintsTitle') : 'Key Negotiation Constraints'}</span>
         </div>
         <ul className="agent-constraints-list">
           {agent.keyConstraints?.map((constraint, idx) => (
@@ -107,11 +129,11 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
       {/* Personality Selection Controls */}
       <div className="agent-personality-control-block">
         <div className="personality-control-header">
-          <span className="personality-label">Negotiation Personality:</span>
+          <span className="personality-label">{t ? t('negotiationPersonality') : 'Negotiation Personality:'}</span>
           {isDefault ? (
-            <span className="default-pill">Default Preset</span>
+            <span className="default-pill">{t ? t('defaultPreset') : 'Default Preset'}</span>
           ) : (
-            <span className="custom-pill">User Modified</span>
+            <span className="custom-pill">{t ? t('userModified') : 'User Modified'}</span>
           )}
         </div>
 
@@ -142,7 +164,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
                 }
               >
                 <Icon size={14} />
-                <span>{personality}</span>
+                <span>{getPersonalityLabel(personality)}</span>
               </button>
             );
           })}
@@ -159,10 +181,10 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
         >
           <div className="behavior-header">
             <ActiveIcon size={14} />
-            <strong>{activePersonality} Strategy:</strong>
+            <strong>{getPersonalityLabel(activePersonality)} {t ? t('strategy') : 'Strategy'}:</strong>
           </div>
           <p className="behavior-text">
-            {PERSONALITY_DESCRIPTIONS[activePersonality]}
+            {getPersonalityDesc(activePersonality)}
           </p>
         </div>
       </div>

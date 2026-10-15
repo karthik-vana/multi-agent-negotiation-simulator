@@ -6,49 +6,53 @@ import ScenarioSelection from './pages/ScenarioSelection';
 import AgentConfiguration from './pages/AgentConfiguration';
 import NegotiationArenaPlaceholder from './pages/NegotiationArenaPlaceholder';
 import HistoryPlaceholder from './pages/HistoryPlaceholder';
-import SettingsPlaceholder from './pages/SettingsPlaceholder';
+import Settings from './pages/Settings';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { ScenarioProvider } from './context/ScenarioContext';
 import { AuthProvider } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 
 function App() {
   return (
     <AuthProvider>
-      <ScenarioProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public authentication routes */}
-            <Route
-              path="/login"
-              element={
-                <PublicOnlyRoute>
-                  <Login />
-                </PublicOnlyRoute>
-              }
-            />
+      <SettingsProvider>
+        <ScenarioProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public authentication routes */}
+              <Route
+                path="/login"
+                element={
+                  <PublicOnlyRoute>
+                    <Login />
+                  </PublicOnlyRoute>
+                }
+              />
 
-            {/* Protected application routes */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="scenarios" element={<ScenarioSelection />} />
-              <Route path="agents" element={<AgentConfiguration />} />
-              <Route path="arena" element={<NegotiationArenaPlaceholder />} />
-              <Route path="history" element={<HistoryPlaceholder />} />
-              <Route path="settings" element={<SettingsPlaceholder />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ScenarioProvider>
+              {/* Protected application routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="scenarios" element={<ScenarioSelection />} />
+                <Route path="agents" element={<AgentConfiguration />} />
+                <Route path="arena" element={<NegotiationArenaPlaceholder />} />
+                <Route path="history" element={<HistoryPlaceholder />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="profile" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </ScenarioProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }

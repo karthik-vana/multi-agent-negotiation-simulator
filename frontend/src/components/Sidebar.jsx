@@ -9,31 +9,17 @@ import {
   Settings,
   Search,
   LogOut,
-  Sun,
-  Moon,
   X,
   AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 const Sidebar = () => {
   const { currentUser, logout } = useAuth();
+  const { t } = useSettings();
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const navigate = useNavigate();
-
-  // Theme Toggle: persists in localStorage and applies data-theme attribute
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'light';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
 
   // Search state and indexing
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,46 +28,46 @@ const Sidebar = () => {
 
   const MODULES = [
     {
-      name: 'Dashboard',
+      name: t ? t('dashboard') : 'Dashboard',
       path: '/',
-      section: 'Main Menu',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: LayoutDashboard,
       keywords: ['home', 'overview', 'summary', 'workspace', 'start']
     },
     {
-      name: 'Scenarios',
+      name: t ? t('scenarios') : 'Scenarios',
       path: '/scenarios',
-      section: 'Main Menu',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: Layers,
       keywords: ['vendor', 'pricing', 'job offer', 'budget', 'allocation', 'templates']
     },
     {
-      name: 'Agent Configuration',
+      name: t ? t('agentConfig') : 'Agent Configuration',
       path: '/agents',
-      section: 'Main Menu',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: Users,
       keywords: ['personality', 'aggressive', 'collaborative', 'risk-averse', 'persona', 'roles', 'goals', 'constraints']
     },
     {
-      name: 'Negotiation Arena',
+      name: t ? t('arena') : 'Negotiation Arena',
       path: '/arena',
-      section: 'Simulation',
+      section: t ? t('simulationSection') : 'Simulation',
       icon: Swords,
       keywords: ['chat', 'transcript', 'live', 'turns', 'simulation', 'practice']
     },
     {
-      name: 'History & Reports',
+      name: t ? t('history') : 'History & Reports',
       path: '/history',
-      section: 'Simulation',
+      section: t ? t('simulationSection') : 'Simulation',
       icon: FileText,
       keywords: ['analytics', 'outcome', 'metrics', 'concession', 'curves', 'archive']
     },
     {
-      name: 'Settings',
+      name: t ? t('profileAndSettings') : 'Profile & Settings',
       path: '/settings',
-      section: 'System',
+      section: t ? t('systemSection') : 'System',
       icon: Settings,
-      keywords: ['config', 'firebase', 'llm', 'preferences', 'keys']
+      keywords: ['profile', 'settings', 'account', 'avatar', 'preferences', 'appearance', 'language', 'theme']
     }
   ];
 
@@ -136,19 +122,6 @@ const Sidebar = () => {
           <img src="/favicon.svg" alt="Negotiator AI" className="brand-logo" />
           <div className="brand-title">Negotiator AI</div>
         </div>
-
-        {/* Working Theme Pill Toggle */}
-        <button
-          type="button"
-          className="theme-pill-toggle"
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          onClick={toggleTheme}
-          aria-label="Toggle light/dark theme"
-        >
-          <div className="theme-toggle-knob">
-            {theme === 'light' ? <Sun size={11} /> : <Moon size={11} />}
-          </div>
-        </button>
       </div>
 
       {/* Interactive Search Input with Dropdown */}
@@ -156,7 +129,7 @@ const Sidebar = () => {
         <Search size={15} className="sidebar-search-icon" />
         <input
           type="text"
-          placeholder="Search modules..."
+          placeholder={t ? t('searchPlaceholder') : 'Search modules...'}
           className="sidebar-search-input"
           value={searchQuery}
           onChange={(e) => {
@@ -220,7 +193,7 @@ const Sidebar = () => {
       <nav className="sidebar-nav">
 
         {/* Section 1: Main Menu */}
-        <div className="nav-section-title">Main Menu</div>
+        <div className="nav-section-title">{t ? t('mainMenu') : 'Main Menu'}</div>
 
         <NavLink
           to="/"
@@ -228,8 +201,8 @@ const Sidebar = () => {
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <LayoutDashboard size={18} className="nav-icon" />
-          <span>Dashboard</span>
-          <span className="nav-badge">Overview</span>
+          <span>{t ? t('dashboard') : 'Dashboard'}</span>
+          <span className="nav-badge">{t ? t('overview') : 'Overview'}</span>
         </NavLink>
 
         <NavLink
@@ -237,7 +210,7 @@ const Sidebar = () => {
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <Layers size={18} className="nav-icon" />
-          <span>Scenarios</span>
+          <span>{t ? t('scenarios') : 'Scenarios'}</span>
           <span className="nav-badge">3</span>
         </NavLink>
 
@@ -246,19 +219,19 @@ const Sidebar = () => {
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <Users size={18} className="nav-icon" />
-          <span>Agent Configuration</span>
+          <span>{t ? t('agentConfig') : 'Agent Configuration'}</span>
         </NavLink>
 
         {/* Section 2: Negotiation Execution */}
-        <div className="nav-section-title">Simulation</div>
+        <div className="nav-section-title">{t ? t('simulationSection') : 'Simulation'}</div>
 
         <NavLink
           to="/arena"
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <Swords size={18} className="nav-icon" />
-          <span>Negotiation Arena</span>
-          <span className="nav-badge nav-badge-pill">Live</span>
+          <span>{t ? t('arena') : 'Negotiation Arena'}</span>
+          <span className="nav-badge nav-badge-pill">{t ? t('live') : 'Live'}</span>
         </NavLink>
 
         <NavLink
@@ -266,24 +239,29 @@ const Sidebar = () => {
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <FileText size={18} className="nav-icon" />
-          <span>History & Reports</span>
+          <span>{t ? t('history') : 'History & Reports'}</span>
         </NavLink>
 
         {/* Section 3: System */}
-        <div className="nav-section-title">System</div>
+        <div className="nav-section-title">{t ? t('systemSection') : 'System'}</div>
 
         <NavLink
           to="/settings"
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <Settings size={18} className="nav-icon" />
-          <span>Settings</span>
+          <span>{t ? t('settings') : 'Settings'}</span>
         </NavLink>
       </nav>
 
       {/* Bottom Profile Footer */}
       <div className="sidebar-footer">
-        <div className="user-card">
+        <div
+          className="user-card"
+          onClick={() => navigate('/settings')}
+          style={{ cursor: 'pointer' }}
+          title="Open Profile & Settings"
+        >
           <div className="user-profile">
             <div className="avatar-wrapper">
               {currentUser?.photoURL ? (
@@ -367,10 +345,10 @@ const Sidebar = () => {
             </div>
 
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 8px 0' }}>
-              Are you sure you want to log out?
+              {t ? t('logoutTitle') : 'Are you sure you want to log out?'}
             </h3>
             <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-              You will be signed out of your current session and redirected to the login screen.
+              {t ? t('logoutDesc') : 'You will be signed out of your current session and redirected to the login screen.'}
             </p>
 
             <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
@@ -390,7 +368,7 @@ const Sidebar = () => {
                 }}
                 onClick={() => setShowConfirmLogout(false)}
               >
-                Cancel
+                {t ? t('cancel') : 'Cancel'}
               </button>
               <button
                 type="button"
@@ -412,7 +390,7 @@ const Sidebar = () => {
                   await logout();
                 }}
               >
-                Yes, Log Out
+                {t ? t('yesSignOut') : 'Yes, Log Out'}
               </button>
             </div>
           </div>

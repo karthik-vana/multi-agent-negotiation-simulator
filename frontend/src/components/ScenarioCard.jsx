@@ -8,6 +8,7 @@ import {
   Clock,
   Sparkles
 } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 const iconMap = {
   ShoppingCart: ShoppingCart,
@@ -16,6 +17,7 @@ const iconMap = {
 };
 
 const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
+  const { t } = useSettings();
   const IconComponent = iconMap[scenario.iconName] || Sparkles;
 
   const handleKeyDown = (e) => {
@@ -24,6 +26,11 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
       onSelect(scenario.id);
     }
   };
+
+  const scenarioKey = scenario.id.replace(/-/g, '_');
+  const scenarioName = t ? (t(`scenario_${scenarioKey}_name`) || scenario.name) : scenario.name;
+  const scenarioCategory = t ? (t(`scenario_${scenarioKey}_category`) || scenario.category) : scenario.category;
+  const scenarioDesc = t ? (t(`scenario_${scenarioKey}_desc`) || scenario.shortDescription) : scenario.shortDescription;
 
   return (
     <div
@@ -51,10 +58,10 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
         </div>
 
         <div className="scenario-top-badges">
-          <span className="scenario-category-pill">{scenario.category}</span>
+          <span className="scenario-category-pill">{scenarioCategory}</span>
           <div
             className={`scenario-select-indicator ${isSelected ? 'active' : ''}`}
-            title={isSelected ? 'Selected Scenario' : 'Click to select'}
+            title={isSelected ? (t ? t('selectedContext') : 'Selected Scenario') : (t ? t('selectScenario') : 'Click to select')}
           >
             {isSelected ? (
               <CheckCircle2 size={18} className="indicator-check" />
@@ -67,15 +74,15 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
 
       {/* Title & Description */}
       <div className="scenario-card-body">
-        <h3 className="scenario-card-title">{scenario.name}</h3>
-        <p className="scenario-card-desc">{scenario.shortDescription}</p>
+        <h3 className="scenario-card-title">{scenarioName}</h3>
+        <p className="scenario-card-desc">{scenarioDesc}</p>
 
         {/* Metadata badges row: Agents & Estimated Duration */}
         <div className="scenario-meta-row">
           <div className="scenario-meta-chip">
             <Users size={14} className="meta-icon" />
             <span>
-              <strong>{scenario.participantCount}</strong> Participating Agents
+              <strong>{scenario.participantCount}</strong> {t ? t('participatingAgents') : 'Participating Agents'}
             </span>
           </div>
 
@@ -88,7 +95,7 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
         {/* Key Negotiation Levers */}
         {scenario.keyLevers && scenario.keyLevers.length > 0 && (
           <div className="scenario-levers-section">
-            <span className="scenario-levers-label">Core Negotiation Levers:</span>
+            <span className="scenario-levers-label">{t ? t('coreLevers') : 'Core Negotiation Levers:'}</span>
             <div className="scenario-levers-list">
               {scenario.keyLevers.map((lever, idx) => (
                 <span key={idx} className="scenario-lever-tag">
@@ -113,10 +120,10 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
           {isSelected ? (
             <>
               <CheckCircle2 size={16} />
-              <span>Selected Context</span>
+              <span>{t ? t('selectedContext') : 'Selected Context'}</span>
             </>
           ) : (
-            <span>Select Scenario</span>
+            <span>{t ? t('selectScenario') : 'Select Scenario'}</span>
           )}
         </button>
       </div>
