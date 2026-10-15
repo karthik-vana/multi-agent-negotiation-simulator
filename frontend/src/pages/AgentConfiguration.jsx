@@ -63,9 +63,21 @@ const AgentConfiguration = () => {
     setTimeout(() => setNotification(''), 2500);
   };
 
+  // Get active scenario agent personalities only (excluding any stray keys from storage)
+  const getScopedPersonalities = () => {
+    const scoped = {};
+    if (activeScenario && activeScenario.agents) {
+      activeScenario.agents.forEach((agent) => {
+        scoped[agent.id] = agentPersonalities[agent.id] || agent.defaultPersonality;
+      });
+    }
+    return scoped;
+  };
+
   const handleStartNegotiation = () => {
+    const scopedPersonalities = getScopedPersonalities();
     // Validate current configuration at execution time
-    const validation = validateNegotiationConfig(activeScenario, agentPersonalities);
+    const validation = validateNegotiationConfig(activeScenario, scopedPersonalities);
 
     if (!validation.isValid) {
       setValidationErrors(validation.errors);
@@ -81,14 +93,14 @@ const AgentConfiguration = () => {
         scenarioId: validation.validatedConfig.scenarioId,
         scenario: validation.validatedConfig.scenario,
         agents: validation.validatedConfig.agents,
-        agentPersonalities: { ...agentPersonalities },
+        agentPersonalities: scopedPersonalities,
         negotiationConfig: validation.validatedConfig,
       }
     });
   };
 
   // Pre-validate configuration to reflect real-time readiness
-  const currentValidation = validateNegotiationConfig(activeScenario, agentPersonalities);
+  const currentValidation = validateNegotiationConfig(activeScenario, getScopedPersonalities());
 
   const scenarioKey = activeScenario.id.replace(/-/g, '_');
   const scenarioName = t ? (t(`scenario_${scenarioKey}_name`) || activeScenario.name) : activeScenario.name;
