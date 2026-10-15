@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -33,7 +33,18 @@ const AgentConfiguration = () => {
   const [notification, setNotification] = useState('');
 
   // Fallback scenario if none selected (helps during direct development/testing)
-  const activeScenario = selectedScenario || getScenarioById('vendor-pricing');
+  const activeScenario =
+    selectedScenario || getScenarioById(selectedScenarioId) || getScenarioById('vendor-pricing');
+
+  useEffect(() => {
+    if (!activeScenario) {
+      navigate('/scenarios', { replace: true });
+    }
+  }, [activeScenario, navigate]);
+
+  if (!activeScenario) {
+    return null;
+  }
 
   const handlePersonalityChange = (agentId, personality) => {
     updateAgentPersonality(agentId, personality);
@@ -51,12 +62,19 @@ const AgentConfiguration = () => {
   const handleStartNegotiation = () => {
     // Clear draft as it is promoted to active negotiation session
     discardDraft?.();
-    // Navigate to Arena with full configured state
+
+    const configuredAgents = activeScenario.agents?.map((agent) => ({
+      ...agent,
+      personality:
+        agentPersonalities[agent.id] || agent.defaultPersonality
+    }));
+
     navigate('/arena', {
       state: {
         scenarioId: activeScenario.id,
         scenario: activeScenario,
-        agentPersonalities: agentPersonalities
+        agents: configuredAgents,
+        agentPersonalities: { ...agentPersonalities }
       }
     });
   };
@@ -171,7 +189,7 @@ const AgentConfiguration = () => {
               {t ? t('configValidatedTitle') : 'Configuration Validated & Ready for Simulation'}
             </h4>
             <p className="validation-desc">
-              {t ? t('configValidatedDesc') : `All ${activeScenario.participantCount} agent roles are parameter-mapped with bounded goals, operational constraints, and active negotiation personalities. Ready to initialize the Orchestrator Agent.`}
+              {t ? t('configValidatedDesc') : `Review the selected agents, their goals, constraints, and negotiation personalities before continuing to the next step.`}
             </p>
           </div>
         </div>
