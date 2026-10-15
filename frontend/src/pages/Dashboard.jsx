@@ -1,66 +1,235 @@
 import React from 'react';
-import { Bot, Sliders, Play, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Sparkles, Play, ArrowRight, FileText, Users, Lightbulb, TrendingUp } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import './Dashboard.css';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { t } = useSettings();
 
+  const handleNavigate = (path) => {
+    navigate(path);
+  };
+
   return (
-    <div>
-      {/* Welcome & Overview Card */}
-      <div className="content-card">
-        <h2 className="card-title">
-          {t ? t('dashboardWelcomeTitle') : 'Welcome to Multi-Agent Negotiation Simulator'}
-        </h2>
-        <p className="card-description">
-          {t ? t('dashboardWelcomeDesc') : 'An autonomous AI-powered simulation and training platform designed to study multi-stakeholder negotiation dynamics. Autonomous LLM agents represent conflicting parties with customized goals, constraints, and distinct behavioral personalities.'}
-        </p>
+    <div className="dashboard-page-container">
+      {/* ==========================================================================
+          Hero Banner Card
+          ========================================================================== */}
+      <div className="dashboard-hero-card">
+        <div className="hero-ambient-glow" />
 
-        {/* Introductory Workflow Card */}
-        <div className="intro-grid">
-          <div className="intro-item">
-            <div className="intro-item-title">
-              <Sliders size={16} style={{ color: '#4f46e5' }} />
-              <span>{t ? t('workflowStep1Title') : '1. Scenario Selection'}</span>
-            </div>
-            <p className="intro-item-desc">
-              {t ? t('workflowStep1Desc') : 'Select predefined negotiation templates (such as vendor pricing, job offers, or budget allocations) to initialize context and boundary conditions.'}
-            </p>
+        {/* Left Column: Value Proposition & CTA */}
+        <div className="hero-content-col">
+          <div className="hero-pill-badge">
+            <Sparkles size={14} className="hero-pill-icon" />
+            <span>{t ? t('aiPoweredBadge') : 'AI-Powered Negotiation Training'}</span>
           </div>
 
-          <div className="intro-item">
-            <div className="intro-item-title">
-              <Bot size={16} style={{ color: '#06b6d4' }} />
-              <span>{t ? t('workflowStep2Title') : '2. Agent Configuration'}</span>
-            </div>
-            <p className="intro-item-desc">
-              {t ? t('workflowStep2Desc') : 'Review participating stakeholder roles and configure behavioral personalities (Aggressive, Collaborative, or Risk-Averse).'}
-            </p>
+          <h1 className="hero-title">
+            <span>{t ? t('dashboardHeroTitleMain') : 'Simulate. Negotiate.'}</span>
+            <span className="hero-title-accent">{t ? t('dashboardHeroTitleAccent') : 'Learn.'}</span>
+          </h1>
+
+          <p className="hero-description">
+            {t
+              ? t('dashboardHeroDesc')
+              : 'An autonomous AI-powered simulation and training platform designed to study multi-stakeholder negotiation dynamics. Interact with intelligent agents, explore real-world scenarios, and develop your negotiation skills in a risk-free environment.'}
+          </p>
+
+          <button
+            type="button"
+            id="dashboard-get-started-btn"
+            className="btn-hero-get-started"
+            onClick={() => handleNavigate('/scenarios')}
+          >
+            <Play size={16} className="btn-hero-icon" />
+            <span>{t ? t('getStarted') : 'Get Started'}</span>
+          </button>
+        </div>
+
+        {/* Right Column: 3D Illustration & Floating Interactive Badges */}
+        <div className="hero-art-col">
+          <img
+            src="/images/dashboard/hero-illustration.jpg"
+            alt="AI Negotiation Simulation Collaboration"
+            className="hero-illustration-img"
+          />
+
+          {/* Floating animated ambient pills */}
+          <div className="hero-floating-bubble bubble-left">
+            <Lightbulb size={13} style={{ color: '#f59e0b' }} />
+            <span>Strategy & Insight</span>
           </div>
 
-          <div className="intro-item">
-            <div className="intro-item-title">
-              <Play size={16} style={{ color: '#10b981' }} />
-              <span>{t ? t('workflowStep3Title') : '3. Live Negotiation Arena'}</span>
-            </div>
-            <p className="intro-item-desc">
-              {t ? t('workflowStep3Desc') : 'Observe autonomous AI-vs-AI turn-taking and concessions, or step in directly to negotiate in Practice Mode.'}
-            </p>
+          <div className="hero-floating-bubble bubble-right">
+            <TrendingUp size={13} style={{ color: '#10b981' }} />
+            <span>Real-time Analytics</span>
           </div>
         </div>
       </div>
 
-      {/* Verification Card */}
-      <div className="content-card" style={{ borderLeft: '4px solid #4f46e5' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-          <CheckCircle2 size={18} style={{ color: '#10b981' }} />
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>
-            {t ? t('dashboardFoundationTitle') : 'Task 1: Shared Application Foundation Established'}
-          </h3>
+      {/* ==========================================================================
+          3 Workflow Step Cards
+          ========================================================================== */}
+      <div className="dashboard-steps-grid" id="dashboard-steps-grid">
+        {/* Step 1: Scenario Selection */}
+        <div
+          role="button"
+          tabIndex={0}
+          id="dashboard-step-scenarios"
+          className="dashboard-step-card"
+          style={{
+            '--step-accent': '#2563eb',
+            '--step-bg': '#eff6ff',
+            '--step-glow': 'rgba(37, 99, 235, 0.28)',
+          }}
+          onClick={() => handleNavigate('/scenarios')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleNavigate('/scenarios');
+            }
+          }}
+        >
+          <div className="step-card-image-wrap">
+            <span className="step-number-badge">1</span>
+            <img
+              src="/images/dashboard/step1-scenarios.jpg"
+              alt="Scenario Selection"
+              className="step-card-img"
+            />
+          </div>
+
+          <div className="step-card-body">
+            <div className="step-card-header">
+              <div className="step-header-left">
+                <div className="step-icon-wrap">
+                  <FileText size={18} />
+                </div>
+                <h3 className="step-card-title">{t ? t('step1Title') : 'Scenario Selection'}</h3>
+              </div>
+              <div className="step-arrow-circle" aria-hidden="true">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+
+            <p className="step-card-desc">
+              {t
+                ? t('step1Desc')
+                : 'Select predefined negotiation templates such as vendor pricing, job offers, or budget allocations to initialize context and boundary conditions.'}
+            </p>
+          </div>
         </div>
-        <p className="card-description" style={{ fontSize: '0.88rem' }}>
-          {t ? t('dashboardFoundationDesc') : 'This dashboard verifies the shared application layout, navigation shell, responsive sidebar, and global styling system. All downstream feature modules can now be implemented inside their designated placeholder routes without structural conflicts.'}
-        </p>
+
+        {/* Step 2: Agent Configuration */}
+        <div
+          role="button"
+          tabIndex={0}
+          id="dashboard-step-agents"
+          className="dashboard-step-card"
+          style={{
+            '--step-accent': '#7c3aed',
+            '--step-bg': '#f5f3ff',
+            '--step-glow': 'rgba(124, 58, 237, 0.28)',
+          }}
+          onClick={() => handleNavigate('/agents')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleNavigate('/agents');
+            }
+          }}
+        >
+          <div className="step-card-image-wrap">
+            <span
+              className="step-number-badge"
+              style={{ backgroundColor: '#7c3aed', '--step-accent': '#7c3aed' }}
+            >
+              2
+            </span>
+            <img
+              src="/images/dashboard/step2-agents.jpg"
+              alt="Agent Configuration"
+              className="step-card-img"
+            />
+          </div>
+
+          <div className="step-card-body">
+            <div className="step-card-header">
+              <div className="step-header-left">
+                <div className="step-icon-wrap">
+                  <Users size={18} />
+                </div>
+                <h3 className="step-card-title">{t ? t('step2Title') : 'Agent Configuration'}</h3>
+              </div>
+              <div className="step-arrow-circle" aria-hidden="true">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+
+            <p className="step-card-desc">
+              {t
+                ? t('step2Desc')
+                : 'Review participating stakeholder roles and configure behavior personalities (Aggressive, Collaborative, or Risk-Averse).'}
+            </p>
+          </div>
+        </div>
+
+        {/* Step 3: Live Negotiation Arena */}
+        <div
+          role="button"
+          tabIndex={0}
+          id="dashboard-step-arena"
+          className="dashboard-step-card"
+          style={{
+            '--step-accent': '#10b981',
+            '--step-bg': '#ecfdf5',
+            '--step-glow': 'rgba(16, 185, 129, 0.28)',
+          }}
+          onClick={() => handleNavigate('/arena')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleNavigate('/arena');
+            }
+          }}
+        >
+          <div className="step-card-image-wrap">
+            <span
+              className="step-number-badge"
+              style={{ backgroundColor: '#10b981', '--step-accent': '#10b981' }}
+            >
+              3
+            </span>
+            <img
+              src="/images/dashboard/step3-arena.jpg"
+              alt="Live Negotiation Arena"
+              className="step-card-img"
+            />
+          </div>
+
+          <div className="step-card-body">
+            <div className="step-card-header">
+              <div className="step-header-left">
+                <div className="step-icon-wrap">
+                  <Play size={18} />
+                </div>
+                <h3 className="step-card-title">{t ? t('step3Title') : 'Live Negotiation Arena'}</h3>
+              </div>
+              <div className="step-arrow-circle" aria-hidden="true">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+
+            <p className="step-card-desc">
+              {t
+                ? t('step3Desc')
+                : 'Observe autonomous AI-vs-AI turn-taking and concessions, or step in directly to negotiate in Practice Mode with real-time feedback.'}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
