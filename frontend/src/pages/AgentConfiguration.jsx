@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -29,7 +29,18 @@ const AgentConfiguration = () => {
   const [notification, setNotification] = useState('');
 
   // Fallback scenario if none selected (helps during direct development/testing)
-  const activeScenario = selectedScenario || getScenarioById('vendor-pricing');
+  const activeScenario =
+  selectedScenario || getScenarioById(selectedScenarioId);
+
+useEffect(() => {
+  if (!activeScenario) {
+    navigate('/scenarios', { replace: true });
+  }
+}, [activeScenario, navigate]);
+
+if (!activeScenario) {
+  return null;
+}
 
   const handlePersonalityChange = (agentId, personality) => {
     updateAgentPersonality(agentId, personality);
@@ -43,16 +54,23 @@ const AgentConfiguration = () => {
     setTimeout(() => setNotification(''), 2500);
   };
 
-  const handleStartNegotiation = () => {
-    // Navigate to Arena with full configured state
-    navigate('/arena', {
-      state: {
-        scenarioId: activeScenario.id,
-        scenario: activeScenario,
-        agentPersonalities: agentPersonalities
-      }
-    });
-  };
+  
+const handleStartNegotiation = () => {
+  const configuredAgents = activeScenario.agents.map((agent) => ({
+    ...agent,
+    personality:
+      agentPersonalities[agent.id] || agent.defaultPersonality
+  }));
+
+  navigate('/arena', {
+    state: {
+      scenarioId: activeScenario.id,
+      scenario: activeScenario,
+      agents: configuredAgents,
+      agentPersonalities: { ...agentPersonalities }
+    }
+  });
+};
 
   return (
     <div className="agent-configuration-page">
@@ -159,11 +177,10 @@ const AgentConfiguration = () => {
           <CheckCircle2 size={20} className="validation-success-icon" />
           <div>
             <h4 className="validation-title">
-              Configuration Validated & Ready for Simulation
+              Agent Configuration Ready
             </h4>
             <p className="validation-desc">
-              All {activeScenario.participantCount} agent roles are parameter-mapped with bounded goals, operational
-              constraints, and active negotiation personalities. Ready to initialize the Orchestrator Agent.
+              Review the selected agents, their goals, constraints, and negotiation personalities before continuing to the next step.
             </p>
           </div>
         </div>
