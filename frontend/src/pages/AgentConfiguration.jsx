@@ -8,12 +8,11 @@ import {
   AlertCircle,
   RotateCcw,
   Play,
-  Shield,
   Layers,
-  Sparkles
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { getScenarioById } from '../data/scenarios';
+import { validateNegotiationConfig } from '../utils/configurationValidator';
 import AgentCard from '../components/AgentCard';
 
 const AgentConfiguration = () => {
@@ -27,50 +26,63 @@ const AgentConfiguration = () => {
   } = useScenario();
 
   const [notification, setNotification] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
 
   // Fallback scenario if none selected (helps during direct development/testing)
   const activeScenario =
-  selectedScenario || getScenarioById(selectedScenarioId);
+    selectedScenario || getScenarioById(selectedScenarioId) || getScenarioById('vendor-pricing');
 
-useEffect(() => {
+  useEffect(() => {
+    if (!activeScenario) {
+      navigate('/scenarios', { replace: true });
+    }
+  }, [activeScenario, navigate]);
+
   if (!activeScenario) {
-    navigate('/scenarios', { replace: true });
+    return null;
   }
-}, [activeScenario, navigate]);
-
-if (!activeScenario) {
-  return null;
-}
 
   const handlePersonalityChange = (agentId, personality) => {
     updateAgentPersonality(agentId, personality);
+    if (validationErrors.length > 0) {
+      setValidationErrors([]);
+    }
     setNotification(`Updated agent personality to ${personality}.`);
     setTimeout(() => setNotification(''), 2500);
   };
 
   const handleReset = () => {
     resetAgentPersonalities();
+    setValidationErrors([]);
     setNotification('Restored all agents to default scenario personalities.');
     setTimeout(() => setNotification(''), 2500);
   };
 
-  
-const handleStartNegotiation = () => {
-  const configuredAgents = activeScenario.agents.map((agent) => ({
-    ...agent,
-    personality:
-      agentPersonalities[agent.id] || agent.defaultPersonality
-  }));
+  const handleStartNegotiation = () => {
+    // Validate current configuration at execution time
+    const validation = validateNegotiationConfig(activeScenario, agentPersonalities);
 
-  navigate('/arena', {
-    state: {
-      scenarioId: activeScenario.id,
-      scenario: activeScenario,
-      agents: configuredAgents,
-      agentPersonalities: { ...agentPersonalities }
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      return;
     }
-  });
-};
+
+    setValidationErrors([]);
+
+    // Hand over structured, validated configuration to the downstream Orchestrator / Arena
+    navigate('/arena', {
+      state: {
+        scenarioId: validation.validatedConfig.scenarioId,
+        scenario: validation.validatedConfig.scenario,
+        agents: validation.validatedConfig.agents,
+        agentPersonalities: { ...agentPersonalities },
+        negotiationConfig: validation.validatedConfig,
+      }
+    });
+  };
+
+  // Pre-validate configuration to reflect real-time readiness
+  const currentValidation = validateNegotiationConfig(activeScenario, agentPersonalities);
 
   return (
     <div className="agent-configuration-page">
@@ -145,6 +157,23 @@ const handleStartNegotiation = () => {
         </div>
       </div>
 
+      {/* Validation Warning Alert (if user attempts to start with invalid configuration) */}
+      {validationErrors.length > 0 && (
+        <div className="scenario-alert scenario-alert-warning" role="alert" style={{ marginBottom: '24px' }}>
+          <AlertCircle size={20} className="alert-icon" style={{ color: '#ef4444' }} />
+          <div className="alert-content">
+            <strong style={{ color: '#ef4444' }}>Configuration Validation Failed:</strong>
+            <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+              {validationErrors.map((err, idx) => (
+                <li key={idx} style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                  {err}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Quick Status Notification Toast */}
       {notification && (
         <div className="agent-config-toast" role="status">
@@ -174,13 +203,21 @@ const handleStartNegotiation = () => {
       {/* Dynamic Validation & Handover Status Box */}
       <div className="agent-validation-banner">
         <div className="validation-status-group">
-          <CheckCircle2 size={20} className="validation-success-icon" />
+          {currentValidation.isValid ? (
+            <CheckCircle2 size={20} className="validation-success-icon" />
+          ) : (
+            <AlertCircle size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />
+          )}
           <div>
             <h4 className="validation-title">
-              Agent Configuration Ready
+              {currentValidation.isValid
+                ? 'Configuration Validated & Ready for Simulation'
+                : 'Configuration Incomplete'}
             </h4>
             <p className="validation-desc">
-              Review the selected agents, their goals, constraints, and negotiation personalities before continuing to the next step.
+              {currentValidation.isValid
+                ? `All ${activeScenario.participantCount} agent roles are parameter-mapped with bounded goals, operational constraints, and active negotiation personalities. Ready to initialize the Orchestrator Agent.`
+                : currentValidation.errors[0] || 'Please complete all required fields and select valid agent personalities.'}
             </p>
           </div>
         </div>
@@ -190,7 +227,12 @@ const handleStartNegotiation = () => {
             type="button"
             id="start-negotiation-btn"
             onClick={handleStartNegotiation}
-            className="btn-start-negotiation"
+            className={`btn-start-negotiation ${!currentValidation.isValid ? 'disabled' : ''}`}
+            title={
+              currentValidation.isValid
+                ? 'Launch live negotiation simulation with current agent configuration'
+                : currentValidation.errors.join('; ')
+            }
           >
             <Play size={16} className="play-icon" />
             <span>Start Negotiation Arena</span>

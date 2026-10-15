@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, AlertCircle, CheckCircle2, Sliders, Sparkles, Layers } from 'lucide-react';
 import { getAllScenarios } from '../data/scenarios';
 import { useScenario } from '../context/ScenarioContext';
+import { validateNegotiationConfig } from '../utils/configurationValidator';
 import ScenarioCard from '../components/ScenarioCard';
 
 const ScenarioSelection = () => {
@@ -19,8 +20,9 @@ const ScenarioSelection = () => {
   };
 
   const handleContinue = () => {
-    if (!selectedScenarioId) {
-      setValidationError('Please select a negotiation scenario before proceeding to agent configuration.');
+    const validation = validateNegotiationConfig(selectedScenarioId);
+    if (!validation.isValid) {
+      setValidationError(validation.errors[0] || 'Please select a negotiation scenario before proceeding to agent configuration.');
       return;
     }
 

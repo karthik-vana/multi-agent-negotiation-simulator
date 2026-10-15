@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getScenarioById } from '../data/scenarios';
+import { validateNegotiationConfig } from '../utils/configurationValidator';
 
 const SCENARIO_STORAGE_KEY = 'mans_selected_scenario_id';
 const PERSONALITIES_STORAGE_KEY = 'mans_agent_personalities';
@@ -84,6 +85,10 @@ export const ScenarioProvider = ({ children }) => {
     setAgentPersonalities({});
   };
 
+  const validateCurrentConfig = () => {
+    return validateNegotiationConfig(selectedScenarioId || selectedScenario, agentPersonalities);
+  };
+
   return (
     <ScenarioContext.Provider
       value={{
@@ -93,7 +98,8 @@ export const ScenarioProvider = ({ children }) => {
         selectScenario,
         updateAgentPersonality,
         resetAgentPersonalities,
-        clearSelection
+        clearSelection,
+        validateCurrentConfig
       }}
     >
       {children}
