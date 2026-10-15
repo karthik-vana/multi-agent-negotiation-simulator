@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, AlertCircle, CheckCircle2, Sliders, Sparkles, Layers } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowRight, AlertCircle, CheckCircle2, Sliders, Sparkles, Layers, X } from 'lucide-react';
 import { getAllScenarios } from '../data/scenarios';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -9,22 +9,47 @@ import ScenarioCard from '../components/ScenarioCard';
 
 const ScenarioSelection = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const scenarios = getAllScenarios();
-  const { selectedScenarioId, selectedScenario, selectScenario } = useScenario();
+  const { selectedScenarioId, selectedScenario, selectScenario, clearSelection } = useScenario();
   const { t } = useSettings();
   const [validationError, setValidationError] = useState('');
 
+  // Handle incoming redirect error (e.g. attempting to navigate to configure agent without a scenario)
+  useEffect(() => {
+    if (location.state?.error) {
+      setValidationError(location.state.error);
+    }
+  }, [location.state]);
+
   const handleSelectScenario = (scenarioId) => {
-    selectScenario(scenarioId);
-    if (validationError) {
+    // If already selected, clicking the card toggles it off back to unselected state
+    if (selectedScenarioId === scenarioId) {
+      clearSelection();
       setValidationError('');
+    } else {
+      selectScenario(scenarioId);
+      if (validationError) {
+        setValidationError('');
+      }
     }
   };
 
   const handleContinue = () => {
+    if (!selectedScenarioId) {
+      setValidationError(
+        t ? t('pleaseSelectScenario') : 'Please select a negotiation scenario before proceeding to agent configuration.'
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     const validation = validateNegotiationConfig(selectedScenarioId);
     if (!validation.isValid) {
-      setValidationError(t ? t('pleaseSelectScenario') : (validation.errors[0] || 'Please select a negotiation scenario before proceeding to agent configuration.'));
+      setValidationError(
+        t ? t('pleaseSelectScenario') : (validation.errors[0] || 'Please select a negotiation scenario before proceeding to agent configuration.')
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -60,11 +85,20 @@ const ScenarioSelection = () => {
 
       {/* Validation Warning Alert (if user tries to continue without a selection) */}
       {validationError && (
-        <div className="scenario-alert scenario-alert-warning" role="alert">
+        <div className="scenario-alert scenario-alert-warning" role="alert" id="scenario-validation-alert">
           <AlertCircle size={18} className="alert-icon" />
           <div className="alert-content">
             <strong>{t ? t('selectionRequired') : 'Selection Required:'}</strong> {validationError}
           </div>
+          <button
+            type="button"
+            className="alert-dismiss-btn"
+            onClick={() => setValidationError('')}
+            title="Dismiss message"
+            aria-label="Dismiss message"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 

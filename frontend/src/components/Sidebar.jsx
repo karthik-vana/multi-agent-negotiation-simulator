@@ -14,10 +14,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useScenario } from '../context/ScenarioContext';
 
 const Sidebar = () => {
   const { currentUser, logout } = useAuth();
   const { t } = useSettings();
+  const { selectedScenarioId } = useScenario();
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const navigate = useNavigate();
 
@@ -94,7 +96,15 @@ const Sidebar = () => {
   }, []);
 
   const handleSelectModule = (path) => {
-    navigate(path);
+    if (path === '/agents' && !selectedScenarioId) {
+      navigate('/scenarios', {
+        state: {
+          error: t ? t('pleaseSelectScenario') : 'Please select a negotiation scenario before proceeding to agent configuration.'
+        }
+      });
+    } else {
+      navigate(path);
+    }
     setSearchQuery('');
     setIsSearchOpen(false);
   };
@@ -216,6 +226,16 @@ const Sidebar = () => {
 
         <NavLink
           to="/agents"
+          onClick={(e) => {
+            if (!selectedScenarioId) {
+              e.preventDefault();
+              navigate('/scenarios', {
+                state: {
+                  error: t ? t('pleaseSelectScenario') : 'Please select a negotiation scenario before proceeding to agent configuration.'
+                }
+              });
+            }
+          }}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <Users size={18} className="nav-icon" />

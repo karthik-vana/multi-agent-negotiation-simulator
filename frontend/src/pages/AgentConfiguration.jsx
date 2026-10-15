@@ -32,15 +32,20 @@ const AgentConfiguration = () => {
   const [notification, setNotification] = useState('');
   const [validationErrors, setValidationErrors] = useState([]);
 
-  // Fallback scenario if none selected (helps during direct development/testing)
+  // Active scenario strictly based on user selection
   const activeScenario =
-    selectedScenario || getScenarioById(selectedScenarioId) || getScenarioById('vendor-pricing');
+    selectedScenario || (selectedScenarioId ? getScenarioById(selectedScenarioId) : null);
 
   useEffect(() => {
     if (!activeScenario) {
-      navigate('/scenarios', { replace: true });
+      navigate('/scenarios', {
+        replace: true,
+        state: {
+          error: t ? t('pleaseSelectScenario') : 'Please select a negotiation scenario before proceeding to agent configuration.'
+        }
+      });
     }
-  }, [activeScenario, navigate]);
+  }, [activeScenario, navigate, t]);
 
   if (!activeScenario) {
     return null;

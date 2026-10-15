@@ -735,10 +735,44 @@ body {
   color: #92400e;
 }
 
+[data-theme="dark"] .scenario-alert-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
 .scenario-alert-warning .alert-icon {
   color: #d97706;
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+[data-theme="dark"] .scenario-alert-warning .alert-icon {
+  color: #fbbf24;
+}
+
+.alert-dismiss-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.alert-dismiss-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .alert-dismiss-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* 3-Column Responsive Grid */

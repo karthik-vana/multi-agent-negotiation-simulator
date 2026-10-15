@@ -61,7 +61,7 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
           <span className="scenario-category-pill">{scenarioCategory}</span>
           <div
             className={`scenario-select-indicator ${isSelected ? 'active' : ''}`}
-            title={isSelected ? (t ? t('selectedContext') : 'Selected Scenario') : (t ? t('selectScenario') : 'Click to select')}
+            title={isSelected ? (t ? t('clickToDeselect') : 'Click to deselect scenario') : (t ? t('selectScenario') : 'Click to select')}
           >
             {isSelected ? (
               <CheckCircle2 size={18} className="indicator-check" />
@@ -112,6 +112,7 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
         <button
           type="button"
           className={`scenario-select-btn ${isSelected ? 'btn-selected' : ''}`}
+          title={isSelected ? (t ? t('clickToDeselect') : 'Click to deselect scenario') : (t ? t('selectScenario') : 'Click to select')}
           onClick={(e) => {
             e.stopPropagation();
             onSelect(scenario.id);

@@ -93,6 +93,7 @@ export const TRANSLATIONS = {
     continueToAgentConfig: "Continue to Agent Configuration",
     selectionRequired: "Selection Required:",
     pleaseSelectScenario: "Please select a negotiation scenario before proceeding to agent configuration.",
+    clickToDeselect: "Click to deselect scenario",
 
     // Scenario Metadata
     scenario_vendor_pricing_name: "Vendor Pricing Negotiation",
@@ -247,6 +248,7 @@ export const TRANSLATIONS = {
     continueToAgentConfig: "एजेंट कॉन्फ़िगरेशन जारी रखें",
     selectionRequired: "चयन आवश्यक है:",
     pleaseSelectScenario: "एजेंट कॉन्फ़िगरेशन पर आगे बढ़ने से पहले कृपया एक परिदृश्य का चयन करें।",
+    clickToDeselect: "परिदृश्य अचयनित करने के लिए क्लिक करें",
 
     scenario_vendor_pricing_name: "विक्रेता मूल्य निर्धारण वार्ता (Vendor Pricing)",
     scenario_vendor_pricing_category: "खरीद और बिक्री (Procurement & Sales)",
@@ -396,6 +398,7 @@ export const TRANSLATIONS = {
     continueToAgentConfig: "এজেন্ট কনফিগারেশন চালিয়ে যান",
     selectionRequired: "নির্বাচন আবশ্যক:",
     pleaseSelectScenario: "পরবর্তী ধাপে যাওয়ার আগে একটি দৃশ্যকল্প নির্বাচন করুন।",
+    clickToDeselect: "দৃশ্যকল্প নির্বাচন বাতিল করতে ক্লিক করুন",
 
     scenario_vendor_pricing_name: "ভেন্ডর মূল্য নির্ধারণ আলোচনা",
     scenario_vendor_pricing_category: "ক্রয় ও বিক্রয় (Procurement)",
@@ -545,6 +548,7 @@ export const TRANSLATIONS = {
     continueToAgentConfig: "ఏజెంట్ కాన్ఫిగరేషన్‌కు కొనసాగండి",
     selectionRequired: "ఎంపిక అవసరం:",
     pleaseSelectScenario: "కొనసాగడానికి ముందు దయచేసి ఒక సన్నివేశాన్ని ఎంచుకోండి.",
+    clickToDeselect: "సన్నివేశాన్ని ఎంపిక తీసివేయడానికి క్లిక్ చేయండి",
 
     scenario_vendor_pricing_name: "విక్రేత ధర చర్చలు (Vendor Pricing)",
     scenario_vendor_pricing_category: "కొనుగోలు & అమ్మకాలు (Procurement)",
@@ -694,6 +698,7 @@ export const TRANSLATIONS = {
     continueToAgentConfig: "முகவர் உள்ளமைவுக்கு தொடரவும்",
     selectionRequired: "தேர்வு தேவை:",
     pleaseSelectScenario: "தொடர்வதற்கு முன் ஒரு சூழலைத் தேர்ந்தெடுக்கவும்.",
+    clickToDeselect: "சூழலை தேர்வு நீக்க கிளிக் செய்க",
 
     scenario_vendor_pricing_name: "விற்பனையாளர் விலை பேச்சுவார்த்தை",
     scenario_vendor_pricing_category: "கொள்முதல் மற்றும் விற்பனை",
@@ -843,6 +848,7 @@ export const TRANSLATIONS = {
     continueToAgentConfig: "एजंट कॉन्फिगरेशन सुरू ठेवा",
     selectionRequired: "निवड आवश्यक आहे:",
     pleaseSelectScenario: "पुढे जाण्यापूर्वी कृपया एक परिस्थिती निवडा.",
+    clickToDeselect: "परिस्थिती निवड रद्द करण्यासाठी क्लिक करा",
 
     scenario_vendor_pricing_name: "विक्रेता किंमत वाटाघाटी (Vendor Pricing)",
     scenario_vendor_pricing_category: "खरेदी आणि विक्री (Procurement & Sales)",
