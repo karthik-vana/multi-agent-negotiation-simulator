@@ -6,6 +6,7 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
+  deleteUser,
   onAuthStateChanged,
 } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured, firebaseMissingConfigError } from '../firebase/config';
@@ -125,6 +126,29 @@ export const AuthProvider = ({ children }) => {
     return signOut(auth);
   };
 
+  // Update Profile (Display Name & Photo URL)
+  const updateUserProfile = async ({ displayName, photoURL }) => {
+    if (auth && auth.currentUser) {
+      const updates = {};
+      if (displayName !== undefined) updates.displayName = displayName.trim();
+      if (photoURL !== undefined) updates.photoURL = photoURL;
+
+      await updateProfile(auth.currentUser, updates);
+      setCurrentUser({
+        ...auth.currentUser,
+        ...updates,
+      });
+    }
+  };
+
+  // Delete User Account
+  const deleteUserAccount = async () => {
+    if (auth && auth.currentUser) {
+      await deleteUser(auth.currentUser);
+      setCurrentUser(null);
+    }
+  };
+
   const value = {
     currentUser,
     loading,
@@ -135,6 +159,8 @@ export const AuthProvider = ({ children }) => {
     loginWithGoogle,
     resetPassword,
     logout,
+    updateUserProfile,
+    deleteUserAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

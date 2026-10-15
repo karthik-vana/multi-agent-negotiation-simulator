@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
+import { useSettings } from '../context/SettingsContext';
 import { getScenarioById } from '../data/scenarios';
 import AgentCard from '../components/AgentCard';
 
@@ -23,54 +24,64 @@ const AgentConfiguration = () => {
     selectedScenario,
     agentPersonalities,
     updateAgentPersonality,
-    resetAgentPersonalities
+    resetAgentPersonalities,
+    lastDraftSaved,
+    discardDraft,
   } = useScenario();
+  const { t } = useSettings();
 
   const [notification, setNotification] = useState('');
 
   // Fallback scenario if none selected (helps during direct development/testing)
   const activeScenario =
-  selectedScenario || getScenarioById(selectedScenarioId);
+    selectedScenario || getScenarioById(selectedScenarioId) || getScenarioById('vendor-pricing');
 
-useEffect(() => {
+  useEffect(() => {
+    if (!activeScenario) {
+      navigate('/scenarios', { replace: true });
+    }
+  }, [activeScenario, navigate]);
+
   if (!activeScenario) {
-    navigate('/scenarios', { replace: true });
+    return null;
   }
-}, [activeScenario, navigate]);
-
-if (!activeScenario) {
-  return null;
-}
 
   const handlePersonalityChange = (agentId, personality) => {
     updateAgentPersonality(agentId, personality);
-    setNotification(`Updated agent personality to ${personality}.`);
+    setNotification(`Updated agent personality.`);
     setTimeout(() => setNotification(''), 2500);
   };
 
   const handleReset = () => {
     resetAgentPersonalities();
+    discardDraft?.();
     setNotification('Restored all agents to default scenario personalities.');
     setTimeout(() => setNotification(''), 2500);
   };
 
-  
-const handleStartNegotiation = () => {
-  const configuredAgents = activeScenario.agents.map((agent) => ({
-    ...agent,
-    personality:
-      agentPersonalities[agent.id] || agent.defaultPersonality
-  }));
+  const handleStartNegotiation = () => {
+    // Clear draft as it is promoted to active negotiation session
+    discardDraft?.();
 
-  navigate('/arena', {
-    state: {
-      scenarioId: activeScenario.id,
-      scenario: activeScenario,
-      agents: configuredAgents,
-      agentPersonalities: { ...agentPersonalities }
-    }
-  });
-};
+    const configuredAgents = activeScenario.agents?.map((agent) => ({
+      ...agent,
+      personality:
+        agentPersonalities[agent.id] || agent.defaultPersonality
+    }));
+
+    navigate('/arena', {
+      state: {
+        scenarioId: activeScenario.id,
+        scenario: activeScenario,
+        agents: configuredAgents,
+        agentPersonalities: { ...agentPersonalities }
+      }
+    });
+  };
+
+  const scenarioKey = activeScenario.id.replace(/-/g, '_');
+  const scenarioName = t ? (t(`scenario_${scenarioKey}_name`) || activeScenario.name) : activeScenario.name;
+  const scenarioCategory = t ? (t(`scenario_${scenarioKey}_category`) || activeScenario.category) : activeScenario.category;
 
   return (
     <div className="agent-configuration-page">
@@ -83,22 +94,20 @@ const handleStartNegotiation = () => {
           title="Back to Scenario Selection"
         >
           <ArrowLeft size={16} />
-          <span>Change Scenario</span>
+          <span>{t ? t('changeScenario') : 'Change Scenario'}</span>
         </button>
 
         <div className="agent-stepper-pill">
           <Sliders size={14} />
-          <span>Step 2 of 3 • Agent Role & Personality Configuration</span>
+          <span>{t ? t('step2AgentConfig') : 'Step 2 of 3 • Agent Role & Personality Configuration'}</span>
         </div>
       </div>
 
       {/* Page Title & Context Description */}
       <div className="agent-page-title-group">
-        <h1 className="agent-page-title">Configure Negotiating Agents</h1>
+        <h1 className="agent-page-title">{t ? t('configureAgentsTitle') : 'Configure Negotiating Agents'}</h1>
         <p className="agent-page-subtitle">
-          Review the participating stakeholder roles, primary objectives, and strict boundary constraints loaded
-          dynamically for <strong>{activeScenario.name}</strong>. Customize each agent's behavioral personality below
-          to model realistic negotiation dynamics before initiating the session.
+          {t ? t('configureAgentsSubtitle') : `Review the participating stakeholder roles, primary objectives, and strict boundary constraints loaded dynamically for ${scenarioName}. Customize each agent's behavioral personality below to model realistic negotiation dynamics before initiating the session.`}
         </p>
       </div>
 
@@ -121,15 +130,15 @@ const handleStartNegotiation = () => {
           </div>
 
           <div className="scenario-banner-info">
-            <span className="scenario-banner-label">Active Scenario Context</span>
-            <h2 className="scenario-banner-name">{activeScenario.name}</h2>
+            <span className="scenario-banner-label">{t ? t('activeScenarioContext') : 'Active Scenario Context'}</span>
+            <h2 className="scenario-banner-name">{scenarioName}</h2>
           </div>
         </div>
 
         <div className="scenario-banner-meta">
-          <span className="banner-pill category-pill">{activeScenario.category}</span>
+          <span className="banner-pill category-pill">{scenarioCategory}</span>
           <span className="banner-pill agents-pill">
-            {activeScenario.participantCount} Participating Agents
+            {activeScenario.participantCount} {t ? t('participatingAgents') : 'Participating Agents'}
           </span>
           <span className="banner-pill rounds-pill">{activeScenario.estimatedRounds}</span>
 
@@ -140,7 +149,7 @@ const handleStartNegotiation = () => {
             title="Reset all agent personalities to defaults"
           >
             <RotateCcw size={14} />
-            <span>Reset Defaults</span>
+            <span>{t ? t('resetDefaults') : 'Reset Defaults'}</span>
           </button>
         </div>
       </div>
@@ -177,10 +186,10 @@ const handleStartNegotiation = () => {
           <CheckCircle2 size={20} className="validation-success-icon" />
           <div>
             <h4 className="validation-title">
-              Agent Configuration Ready
+              {t ? t('configValidatedTitle') : 'Configuration Validated & Ready for Simulation'}
             </h4>
             <p className="validation-desc">
-              Review the selected agents, their goals, constraints, and negotiation personalities before continuing to the next step.
+              {t ? t('configValidatedDesc') : `Review the selected agents, their goals, constraints, and negotiation personalities before continuing to the next step.`}
             </p>
           </div>
         </div>
@@ -193,7 +202,7 @@ const handleStartNegotiation = () => {
             className="btn-start-negotiation"
           >
             <Play size={16} className="play-icon" />
-            <span>Start Negotiation Arena</span>
+            <span>{t ? t('startNegotiationArena') : 'Start Negotiation Arena'}</span>
             <ArrowRight size={16} />
           </button>
         </div>

@@ -1,46 +1,49 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sparkles, Shield } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 const Header = () => {
   const location = useLocation();
+  const { t } = useSettings();
 
   const getPageMeta = () => {
     switch (location.pathname) {
       case '/':
         return {
-          title: 'Dashboard',
-          subtitle: 'Welcome to the Multi-Agent Negotiation Simulator platform'
+          title: t ? t('dashboard') : 'Dashboard',
+          subtitle: t ? t('headerSubtitleDashboard') : 'Welcome to the Multi-Agent Negotiation Simulator platform'
         };
       case '/scenarios':
         return {
-          title: 'Scenarios',
-          subtitle: 'Pre-built negotiation contexts and problem templates'
+          title: t ? t('scenarios') : 'Scenarios',
+          subtitle: t ? t('headerSubtitleScenarios') : 'Pre-built negotiation contexts and problem templates'
         };
       case '/agents':
         return {
-          title: 'Agent Configuration',
-          subtitle: 'Define agent roles, negotiation personalities, and boundary constraints'
+          title: t ? t('agentConfig') : 'Agent Configuration',
+          subtitle: t ? t('headerSubtitleAgents') : 'Define agent roles, negotiation personalities, and boundary constraints'
         };
       case '/arena':
         return {
-          title: 'Negotiation Arena',
-          subtitle: 'Real-time multi-agent negotiation execution and turn-by-turn reasoning'
+          title: t ? t('arena') : 'Negotiation Arena',
+          subtitle: t ? t('headerSubtitleArena') : 'Real-time multi-agent negotiation execution and turn-by-turn reasoning'
         };
       case '/history':
         return {
-          title: 'History & Reports',
-          subtitle: 'Archived negotiation transcripts, concession curves, and outcome analytics'
+          title: t ? t('history') : 'History & Reports',
+          subtitle: t ? t('headerSubtitleHistory') : 'Archived negotiation transcripts, concession curves, and outcome analytics'
         };
+      case '/profile':
       case '/settings':
         return {
-          title: 'Settings',
-          subtitle: 'Platform parameters, LLM model configuration, and simulation settings'
+          title: t ? t('profileAndSettings') : 'Profile & Settings',
+          subtitle: t ? t('headerSubtitleSettings') : 'Manage your profile details, application preferences, and system configuration.'
         };
       default:
         return {
-          title: 'Multi-Agent Negotiation Simulator',
-          subtitle: 'Autonomous LLM negotiation arena'
+          title: 'Negotiator AI',
+          subtitle: t ? t('headerSubtitleDefault') : 'Autonomous LLM negotiation arena'
         };
     }
   };
@@ -57,7 +60,7 @@ const Header = () => {
       <div className="header-actions">
         <div className="header-status-chip">
           <Shield size={14} style={{ color: '#4f46e5' }} />
-          <span>Task 1 Layout Ready</span>
+          <span>{t ? t('statusReady') : 'System Ready'}</span>
         </div>
       </div>
     </header>

@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, AlertCircle, CheckCircle2, Sliders, Sparkles, Layers } from 'lucide-react';
 import { getAllScenarios } from '../data/scenarios';
 import { useScenario } from '../context/ScenarioContext';
+import { useSettings } from '../context/SettingsContext';
 import ScenarioCard from '../components/ScenarioCard';
 
 const ScenarioSelection = () => {
   const navigate = useNavigate();
   const scenarios = getAllScenarios();
   const { selectedScenarioId, selectedScenario, selectScenario } = useScenario();
+  const { t } = useSettings();
   const [validationError, setValidationError] = useState('');
 
   const handleSelectScenario = (scenarioId) => {
@@ -20,7 +22,7 @@ const ScenarioSelection = () => {
 
   const handleContinue = () => {
     if (!selectedScenarioId) {
-      setValidationError('Please select a negotiation scenario before proceeding to agent configuration.');
+      setValidationError(t ? t('pleaseSelectScenario') : 'Please select a negotiation scenario before proceeding to agent configuration.');
       return;
     }
 
@@ -34,19 +36,23 @@ const ScenarioSelection = () => {
     });
   };
 
+  const getSelectedScenarioName = () => {
+    if (!selectedScenario) return '';
+    const key = selectedScenario.id.replace(/-/g, '_');
+    return t ? (t(`scenario_${key}_name`) || selectedScenario.name) : selectedScenario.name;
+  };
+
   return (
     <div className="scenario-selection-page">
       {/* Module Header Section */}
       <div className="scenario-page-header">
         <div className="scenario-stepper-badge">
           <Layers size={14} />
-          <span>Step 1 of 3 • Scenario Selection</span>
+          <span>{t ? t('step1ScenarioSelection') : 'Step 1 of 3 • Scenario Selection'}</span>
         </div>
-        <h1 className="scenario-page-title">Choose Your Negotiation Scenario</h1>
+        <h1 className="scenario-page-title">{t ? t('chooseScenarioTitle') : 'Choose Your Negotiation Scenario'}</h1>
         <p className="scenario-page-subtitle">
-          Select one of the three predefined negotiation templates below. The chosen scenario establishes the
-          operational context, stakeholder objectives, and boundary constraints before you configure the participating
-          AI agent personas.
+          {t ? t('chooseScenarioSubtitle') : 'Select one of the three predefined negotiation templates below. The chosen scenario establishes the operational context, stakeholder objectives, and boundary constraints before you configure the participating AI agent personas.'}
         </p>
       </div>
 
@@ -55,7 +61,7 @@ const ScenarioSelection = () => {
         <div className="scenario-alert scenario-alert-warning" role="alert">
           <AlertCircle size={18} className="alert-icon" />
           <div className="alert-content">
-            <strong>Selection Required:</strong> {validationError}
+            <strong>{t ? t('selectionRequired') : 'Selection Required:'}</strong> {validationError}
           </div>
         </div>
       )}
@@ -79,17 +85,17 @@ const ScenarioSelection = () => {
             <div className="status-selected-box">
               <CheckCircle2 size={18} style={{ color: selectedScenario.accentColor }} />
               <div>
-                <span className="status-label">Active Selection:</span>
-                <span className="status-scenario-name">{selectedScenario.name}</span>
+                <span className="status-label">{t ? t('activeSelection') : 'Active Selection:'}</span>
+                <span className="status-scenario-name">{getSelectedScenarioName()}</span>
                 <span className="status-participants-pill">
-                  {selectedScenario.participantCount} Agents
+                  {selectedScenario.participantCount} {t ? t('participatingAgents') : 'Agents'}
                 </span>
               </div>
             </div>
           ) : (
             <div className="status-unselected-box">
               <span className="status-dot" />
-              <span>No scenario selected. Click any card above to choose your simulation context.</span>
+              <span>{t ? t('noScenarioSelected') : 'No scenario selected. Click any card above to choose your simulation context.'}</span>
             </div>
           )}
         </div>
@@ -106,7 +112,7 @@ const ScenarioSelection = () => {
                 : 'Please select a scenario first'
             }
           >
-            <span>Configure Agents</span>
+            <span>{t ? t('continueToAgentConfig') : 'Configure Agents'}</span>
             <ArrowRight size={18} />
           </button>
         </div>
