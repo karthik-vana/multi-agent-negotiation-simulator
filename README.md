@@ -186,13 +186,38 @@ cd multi-agent-negotiation-simulator/frontend
 npm install
 ```
 
+### 4. Set Up Environment Variables (Firebase Authentication)
+Copy the provided environment template:
+```bash
+cp .env.example .env
+```
+
 ---
 
 ## Environment Variables
 
-**No environment variables are required** to run Task 1 (Scenario Selection & Agent Configuration). The frontend runs out of the box with built-in templates and client-side validation.
+The application uses **Firebase Authentication** for user accounts, profile details, and session management.
 
-When backend LLM keys are added in downstream tasks, an environment template (`.env.example`) will be provided.
+Create a `.env` file in the `frontend/` directory (you can copy from `frontend/.env.example`):
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+### Required Firebase Configuration Keys:
+
+| Variable | Description | Example / Location |
+| :--- | :--- | :--- |
+| `VITE_FIREBASE_API_KEY` | Firebase Web API Key | Firebase Console > Project Settings |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Authentication Domain | `your-project.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase Project Identifier | `your-project-id` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage Bucket | `your-project.firebasestorage.app` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Cloud Messaging Sender ID | Numeric project sender ID |
+| `VITE_FIREBASE_APP_ID` | Firebase Web Application ID | `1:xxx:web:xxx` |
+| `VITE_FIREBASE_MEASUREMENT_ID` | Google Analytics Measurement ID (optional) | `G-XXXXXXXXXX` |
+
+> **Local Fallback:** If Firebase credentials are not provided or connectivity fails, the platform automatically activates a local mock session, allowing all Task 1 modules (*Scenario Selection*, *Agent Configuration*, and *Validation*) to run seamlessly without blocking development.
 
 ---
 
