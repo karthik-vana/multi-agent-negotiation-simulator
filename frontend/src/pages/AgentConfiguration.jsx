@@ -168,7 +168,9 @@ const AgentConfiguration = () => {
           <span className="banner-pill agents-pill">
             {activeScenario.participantCount} {t ? t('participatingAgents') : 'Participating Agents'}
           </span>
-          <span className="banner-pill rounds-pill">{activeScenario.estimatedRounds}</span>
+          <span className="banner-pill rounds-pill">
+            {t ? (t(`scenario_${scenarioKey}_rounds`) || activeScenario.estimatedRounds) : activeScenario.estimatedRounds}
+          </span>
 
           <button
             type="button"

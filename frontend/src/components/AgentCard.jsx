@@ -53,6 +53,8 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
   const agentKey = agent.id.replace(/-/g, '_');
   const agentName = t ? (t(`agent_${agentKey}_name`) || agent.name) : agent.name;
   const agentStakeholder = t ? (t(`agent_${agentKey}_stakeholder`) || agent.stakeholder) : agent.stakeholder;
+  const agentRoleDesc = t ? (t(`agent_${agentKey}_role_desc`) || agent.roleDescription) : agent.roleDescription;
+  const agentPrimaryGoal = t ? (t(`agent_${agentKey}_primary_goal`) || agent.primaryGoal) : agent.primaryGoal;
 
   const getPersonalityLabel = (p) => {
     if (!t) return p;
@@ -68,6 +70,12 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
     if (p === PERSONALITIES.COLLABORATIVE) return t('collaborative_desc') || PERSONALITY_DESCRIPTIONS[p];
     if (p === PERSONALITIES.RISK_AVERSE) return t('risk_averse_desc') || PERSONALITY_DESCRIPTIONS[p];
     return PERSONALITY_DESCRIPTIONS[p];
+  };
+
+  const getConstraintText = (constraint, idx) => {
+    if (!t) return constraint;
+    const key = `agent_${agentKey}_constraint_${idx}`;
+    return t(key) || constraint;
   };
 
   return (
@@ -99,7 +107,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
       </div>
 
       {/* Role Description */}
-      <p className="agent-role-desc">{agent.roleDescription}</p>
+      <p className="agent-role-desc">{agentRoleDesc}</p>
 
       {/* Primary Goal / Objective Section */}
       <div className="agent-section-box agent-goal-box">
@@ -107,7 +115,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
           <Target size={15} className="section-icon goal-icon" />
           <span>{t ? t('primaryGoalTitle') : 'Primary Goal & Target'}</span>
         </div>
-        <p className="agent-goal-text">{agent.primaryGoal}</p>
+        <p className="agent-goal-text">{agentPrimaryGoal}</p>
       </div>
 
       {/* Key Constraints Section */}
@@ -120,7 +128,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
           {agent.keyConstraints?.map((constraint, idx) => (
             <li key={idx} className="agent-constraint-item">
               <span className="constraint-bullet" />
-              <span>{constraint}</span>
+              <span>{getConstraintText(constraint, idx)}</span>
             </li>
           ))}
         </ul>

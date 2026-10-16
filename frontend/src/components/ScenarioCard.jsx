@@ -86,7 +86,7 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
 
           <div className="scenario-meta-chip">
             <Clock size={14} className="meta-icon" />
-            <span>{scenario.estimatedRounds}</span>
+            <span>{t ? (t(`scenario_${scenarioKey}_rounds`) || scenario.estimatedRounds) : scenario.estimatedRounds}</span>
           </div>
         </div>
 
