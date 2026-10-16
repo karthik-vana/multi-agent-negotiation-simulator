@@ -52,7 +52,7 @@ const Dashboard = () => {
         {/* Right Column: 3D Illustration & Floating Interactive Badges */}
         <div className="hero-art-col">
           <img
-            src="/images/dashboard/hero-illustration.jpg"
+            src="/images/dashboard/hero-card.png"
             alt="AI Negotiation Simulation Collaboration"
             className="hero-illustration-img"
           />
