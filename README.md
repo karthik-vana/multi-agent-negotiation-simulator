@@ -3,8 +3,9 @@
 An AI-powered negotiation simulation and training platform designed to model, study, and practice real-world multi-stakeholder negotiations using autonomous intelligent agents.
 
 [![React](https://img.shields.io/badge/React-19.0.0-blue.svg)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-6.2.0-646CFF.svg)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6.4.4-646CFF.svg)](https://vitejs.dev/)
 [![React Router](https://img.shields.io/badge/React_Router-7.3.0-CA4245.svg)](https://reactrouter.com/)
+[![Tests](https://img.shields.io/badge/Unit_Tests-21%20Passed-10b981.svg)](#running-tests)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -12,98 +13,132 @@ An AI-powered negotiation simulation and training platform designed to model, st
 ## Table of Contents
 
 - [Project Description](#project-description)
+- [Task 1: Scenario Selection & Agent Configuration](#task-1-scenario-selection--agent-configuration)
+  - [Module Overview](#module-overview)
+  - [Sequential 3-Step Simulation Workflow](#sequential-3-step-simulation-workflow)
+  - [Implemented Deliverables](#implemented-deliverables)
+- [Team Task Division](#team-task-division)
 - [Features](#features)
-  - [Current Implementation](#current-implementation)
-  - [Planned Features](#planned-features)
+  - [Completed Features (Task 1)](#completed-features-task-1)
+  - [Planned Features (Downstream Tasks)](#planned-features-downstream-tasks)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Installation and Setup](#installation-and-setup)
 - [Environment Variables](#environment-variables)
 - [Running the Application](#running-the-application)
+- [Running Tests](#running-tests)
 - [Project Structure](#project-structure)
+- [Configuration Validation Engine](#configuration-validation-engine)
 - [Available Scripts](#available-scripts)
 - [Troubleshooting](#troubleshooting)
-- [About](#about)
+- [About & Team](#about--team)
 
 ---
 
 ## Project Description
 
-Negotiation is a core competency across business operations, contract discussions, procurement, hiring, and resource distribution. However, mastering negotiation skills is challenging due to the scarcity of realistic, scalable, and repeatable practice environments.
+Negotiation is a core competency across business operations, contract discussions, procurement, hiring, and cross-functional resource distribution. However, mastering negotiation skills is challenging due to the scarcity of realistic, scalable, and repeatable practice environments.
 
-The **Multi-Agent Negotiation Simulator** addresses this challenge by providing a web-based platform where autonomous Generative AI agents represent distinct stakeholders with conflicting objectives, strict constraints, and configurable behavioral personalities. Agents exchange contextually reasoned offers and counteroffers, evaluate concessions, and work toward mutually agreeable outcomes.
+The **Multi-Agent Negotiation Simulator (Negotiator AI)** provides a web-based platform where autonomous Generative AI agents represent distinct stakeholders with conflicting objectives, strict boundary constraints, and configurable behavioral personalities. Agents exchange contextually reasoned offers and counteroffers, evaluate concessions, and work toward mutually agreeable outcomes.
 
-### Intended Use Cases
+---
 
-* **AI vs AI Simulation Mode:** Observe autonomous AI agents negotiate with one another in real time to analyze negotiation dynamics, concession trajectories, and strategic tradeoffs.
-* **Human vs AI Practice Mode:** Step directly into negotiations as one of the active participants to practice tactics, evaluate counterparty resistance, and receive structured feedback.
-* **Pre-Built Scenario Templates:**
-  * **Vendor Pricing Negotiation:** Enterprise SaaS procurement balancing annual contract value, SLA guarantees, contract tenure, and payment terms.
-  * **Job Offer Negotiation:** Candidate and hiring manager negotiating base salary, equity options, sign-on bonuses, and remote work flexibility.
-  * **Project Budget Allocation:** Cross-functional leadership dividing a fixed capital expenditure pool between infrastructure stability and customer-facing growth features.
-* **Agent Personality & Goal Configuration:** Customize agents with distinct strategic profiles—such as Aggressive, Collaborative, or Risk-Averse.
-* **Outcome Analysis:** Review post-negotiation analytics including agreement terms, concession curves, and satisfaction scores.
+## Task 1: Scenario Selection & Agent Configuration
 
-> **Note:** The current version of this repository establishes the foundational frontend architecture, shared layout shell, sidebar navigation, and placeholder routing. The negotiation engine, scenario selection cards, agent configuration controls, and backend LLM integration represent planned capabilities.
+### Module Overview
+Task 1 establishes the operational context, stakeholder boundary definitions, and agent personality configuration before starting an autonomous negotiation. It guarantees that any negotiation payload handed over to downstream LLM orchestrators is mathematically feasible and structurally complete.
+
+### Sequential 3-Step Simulation Workflow
+```
+[ Step 1: Scenario Selection ] ➔ [ Step 2: Agent Configuration ] ➔ [ Step 3: AI Negotiation Arena ]
+   • Choose Business Domain         • Inspect Stakeholder Bio         • Real-time LLM Bargaining
+   • Inspect Core Levers            • Review Primary Goals            • Concession Curves
+   • Selection Validation           • Review Constraints              • Outcome Analytics
+                                    • Select Personality
+                                    • Configuration Validation
+```
+
+### Implemented Deliverables
+
+1. **Scenario Selection Module (`/scenarios`):**
+   - **Vendor Pricing Negotiation:** B2B enterprise software procurement between Alex Rivers (Procurement Lead) and Marcus Chen (Enterprise Sales VP). Core levers: price per license, minimum order volume, contract tenure, SLA terms.
+   - **Job Offer Negotiation:** Talent compensation bargaining between Sarah Jenkins (Hiring Manager) and David Park (Senior Candidate). Core levers: base salary, equity percentage, sign-on bonus, remote work policy.
+   - **Project Budget Allocation:** 3-party resource bargaining between Elena Rostova (Engineering Lead), Marcus Vance (Product Lead), and Priya Sharma (Finance Director). Core levers: infrastructure budget, product feature allocation, contingency reserves.
+   - **Card Interaction:** High-resolution domain illustrations, category tags, participant counts, turn estimates, negotiation levers, selection highlight, toggle-to-deselect, and navigation guards.
+
+2. **Agent Configuration Interface (`/agents`):**
+   - **Agent Role Cards:** Displays stakeholder bio, animated SVG face avatar, highlighted **Primary Goal** container, and bulleted **Key Constraints** container.
+   - **3 Strategic Personality Profiles:**
+     - 🔴 **Aggressive:** Firm on price targets, highly resistant to early concessions, aims for maximum individual surplus.
+     - 🟢 **Collaborative:** Win-win mindset, explores multi-issue package trade-offs, flexible on secondary terms.
+     - 🟡 **Risk-Averse:** Prioritizes compliance, stability guarantees, risk-mitigation terms, and dispute penalties.
+   - **Dynamic Feedback:** Instant behavioral descriptions update live as users customize personalities, with visual tracking for *Default* vs. *Custom* states.
+
+3. **Scenario-to-Agent Mapping & Validation Engine (`configurationValidator.js`):**
+   - Automatically maps selected scenario IDs to their corresponding agent personas, parameters, and default traits.
+   - Enforces pre-flight validation preventing simulation launch if scenarios, roles, constraints, or personalities are invalid.
+   - Prepares clean, serialized JSON configuration payloads for the downstream orchestrator (`prepareNegotiationConfig`).
+
+---
+
+## Team Task Division
+
+| Team Member | Module / Responsibility | Key Deliverables |
+| :--- | :--- | :--- |
+| **Niharika Indurthi** | **Scenario Selection UI** | Scenario selection screen, 3 scenario cards, selection logic, toggle deselect, and navigation routing. |
+| **Saitejaswini Tammana** | **Scenario Data & Agent Templates** | Centralized data models (`scenarios.js`), agent bios, goal targets, parameter boundaries, and constraints. |
+| **Keerthana** | **Agent Configuration UI** | Agent role cards, primary goal & constraint boxes, and 3-way personality selection controls. |
+| **Karthik Vana** | **Configuration Validation Logic** | Pre-flight validation rules (`configurationValidator.js`), schema verification, and boundary integrity checks. |
+| **Shubhay Yadav** | **Integration, Avatars & Polish** | Animated SVG face avatars, 6-language localization, mobile responsiveness, test suite, and PR integration. |
 
 ---
 
 ## Features
 
-### Current Implementation
+### Completed Features (Task 1)
 
-* **Foundational Frontend Setup:** Clean, modern Single Page Application built with React 19 and Vite 6.
-* **Shared Application Shell (`AppLayout`):** Reusable layout container ensuring consistent navigation and layout across all views.
-* **Modern Sidebar Navigation (`Sidebar`):**
-  * Brand logo badge and application title.
-  * Search input placeholder for fast navigation.
-  * Grouped navigation sections: *Main Menu*, *Simulation*, and *System*.
-  * Active route highlighting with accent pill indicators and badges.
-  * User profile footer with status indicator.
-  * Responsive drawer behavior for smaller viewports.
-* **Contextual Header Bar (`Header`):** Dynamic page titles and subtitles that update automatically based on the current active route.
-* **Main Content Area:** Standardized container with responsive padding and spacing for future module integration.
-* **Dashboard Overview:** Clean landing screen with introductory workflow steps explaining the simulation lifecycle.
-* **Client-Side Routing:** Configured routes for all primary views with placeholder destinations.
-* **Modular Styling System:** Vanilla CSS design tokens with custom CSS properties for colors, spacing, typography, and card components.
+* **Pre-Built Negotiation Scenarios:** 3 fully populated templates (*Vendor Pricing*, *Job Offer*, *Project Budget Allocation*).
+* **Agent Role Cards with Animated Avatars:** Interactive SVG face avatars with dynamic expressions and breathing micro-animations.
+* **3 Personality Selectors:** Aggressive, Collaborative, and Risk-Averse controls with dynamic behavioral previews.
+* **Configuration Validation Gate:** Real-time validation banner checking scenario integrity, agent completeness, goals, constraints, and personality enums.
+* **Automated Test Suite:** 21 unit tests covering schema validation and edge-case handling with 100% pass rates.
+* **Full-Width Modern Layout:** Clean SaaS interface adhering to WCAG contrast standards.
+* **Multi-Language Support (i18n):** Complete localization across 6 languages (**English, Hindi, Bengali, Telugu, Tamil, Marathi**).
+* **Responsive Mobile Experience:** Touch-friendly slide-out drawer, navigation back controls, and responsive grid layouts.
 
-### Planned Features
+### Planned Features (Downstream Tasks)
 
-* [ ] Interactive scenario selection interface with pre-built scenario cards.
-* [ ] Agent configuration interface with reusable agent cards, goal reviews, and personality selectors.
 * [ ] Turn-taking Orchestrator Agent to manage conversational state and detect deadlocks.
-* [ ] LLM-powered offer generation and concession decision modules.
+* [ ] LLM-powered offer generation and concession decision modules (OpenAI, Gemini, Anthropic).
 * [ ] Chat-style Negotiation Arena with turn-by-turn reasoning and live stance indicators.
-* [ ] Interactive Human Participant mode (Practice Mode).
-* [ ] Final outcome evaluation screen with downloadable transcripts and summary reports.
+* [ ] Interactive Human vs. AI Practice Mode.
+* [ ] Final outcome evaluation screen with concession curves, Pareto efficiency scoring, and downloadable transcripts.
 
 ---
 
 ## Tech Stack
 
-The technologies currently implemented in the repository are:
-
 | Technology | Category | Purpose |
 | :--- | :--- | :--- |
-| **React 19** | Frontend Framework | Declarative UI component architecture |
+| **React 19** | Frontend Framework | Component-driven declarative UI architecture |
 | **Vite 6** | Build Tool & Dev Server | Fast Hot Module Replacement (HMR) and optimized bundling |
-| **React Router 7** | Client-Side Routing | Multi-page layout navigation without full page reloads |
-| **Lucide React** | Icon System | Clean, consistent SVG icons throughout the interface |
-| **Vanilla CSS** | Styling System | Custom CSS variables, responsive design, and card styles (`index.css`) |
+| **React Router 7** | Client-Side Routing | Multi-step workflow navigation without page reloads |
+| **Lucide React** | Icon System | Modern SVG icons throughout the interface |
+| **Node Test Runner** | Unit Testing | Native Node.js test suite for configuration validation |
+| **Vanilla CSS** | Styling System | Custom CSS variables, responsive breakpoints, and animations (`index.css`) |
 
 ---
 
 ## Prerequisites
 
-Before setting up the project locally, verify that the following tools are installed on your machine:
+Verify that the following tools are installed on your machine:
 
-* **Node.js:** `v18.0.0` or higher (tested with `v20+` / `v24+`)
-* **npm:** `v9.0.0` or higher (comes bundled with Node.js)
+* **Node.js:** `v18.0.0` or higher (tested on `v20+` / `v24+`)
+* **npm:** `v9.0.0` or higher
 * **Git:** Installed and configured
 
-Verify your versions by running:
-
+Verify versions by running:
 ```bash
 node -v
 npm -v
@@ -114,12 +149,19 @@ git --version
 
 ## Quick Start
 
-Get the application running locally in three commands:
+Get the application running locally in four commands:
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/karthik-vana/multi-agent-negotiation-simulator.git
-cd multi-agent-negotiation-simulator
+
+# 2. Navigate to the frontend directory
+cd multi-agent-negotiation-simulator/frontend
+
+# 3. Install dependencies
 npm install
+
+# 4. Start the development server
 npm run dev
 ```
 
@@ -129,28 +171,17 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## Installation and Setup
 
-Follow these detailed steps to set up the repository on your local development environment:
-
 ### 1. Clone the Repository
-
-Clone the project to your local machine using Git:
-
 ```bash
 git clone https://github.com/karthik-vana/multi-agent-negotiation-simulator.git
 ```
 
-### 2. Navigate to the Project Root
-
-The application runs directly from the root of the repository:
-
+### 2. Navigate to Frontend Directory
 ```bash
-cd multi-agent-negotiation-simulator
+cd multi-agent-negotiation-simulator/frontend
 ```
 
 ### 3. Install Dependencies
-
-Install all required packages defined in `package.json`:
-
 ```bash
 npm install
 ```
@@ -159,140 +190,179 @@ npm install
 
 ## Environment Variables
 
-**No environment variables are currently required** to run the frontend application in its current setup. The project runs out of the box with standard local development defaults.
+**No environment variables are required** to run Task 1 (Scenario Selection & Agent Configuration). The frontend runs out of the box with built-in templates and client-side validation.
 
-When downstream backend services or LLM API keys (e.g., OpenAI, Anthropic, Gemini) are integrated into future phases, an environment template (`.env.example`) and instructions will be documented here.
+When backend LLM keys are added in downstream tasks, an environment template (`.env.example`) will be provided.
 
 ---
 
 ## Running the Application
 
 ### Development Mode
-
-Start the local development server with Hot Module Replacement (HMR):
-
 ```bash
 npm run dev
 ```
-
-After starting, Vite will output the local development address:
-
-```text
-  VITE v6.2.0  ready in 250 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-```
-
-Open your web browser and navigate to **`http://localhost:5173`**.
+Vite will launch the local development server at `http://localhost:5173/`.
 
 ### Building for Production
-
-Compile and bundle the frontend assets for production:
-
 ```bash
 npm run build
 ```
-
-The optimized static files will be emitted to the `dist/` directory.
+Build output is emitted to `frontend/dist/`.
 
 ### Previewing the Production Build
-
-Test the production bundle locally before deployment:
-
 ```bash
 npm run preview
 ```
 
 ---
 
-## Project Structure
+## Running Tests
 
-The repository is structured as a modular React single-page application:
+The repository includes comprehensive automated unit tests verifying scenario configuration validation:
+
+```bash
+cd frontend
+npm test
+```
+
+### Test Suite Summary:
+* **21 passing unit tests** covering:
+  - Scenario template integrity (unique IDs, non-empty parameters, feasible agreement ranges).
+  - Explicit agent list completeness.
+  - Rejection of invalid/unknown scenario IDs.
+  - Boundary constraint integrity.
+  - Personality modification validation and enum enforcement.
+  - Handover payload generation via `prepareNegotiationConfig()`.
+
+---
+
+## Project Structure
 
 ```text
 multi-agent-negotiation-simulator/
-├── public/
-│   └── favicon.svg                             # Application favicon
-├── src/
-│   ├── components/
-│   │   ├── AppLayout.jsx                       # Shared application layout shell (Sidebar + Header + Outlet)
-│   │   ├── Header.jsx                          # Contextual header with dynamic titles and subtitles
-│   │   └── Sidebar.jsx                         # Responsive sidebar with categorized navigation links
-│   ├── pages/
-│   │   ├── Dashboard.jsx                       # Introductory dashboard overview
-│   │   ├── ScenariosPlaceholder.jsx            # Placeholder view for Scenario Selection
-│   │   ├── AgentConfigurationPlaceholder.jsx   # Placeholder view for Agent Configuration
-│   │   ├── NegotiationArenaPlaceholder.jsx     # Placeholder view for Negotiation Arena
-│   │   ├── HistoryPlaceholder.jsx              # Placeholder view for History & Reports
-│   │   └── SettingsPlaceholder.jsx             # Placeholder view for Settings
-│   ├── App.jsx                                 # Application router definition (React Router)
-│   ├── index.css                               # Global CSS design tokens, resets, and layout styles
-│   └── main.jsx                                # React application bootstrap entry point
-├── .gitignore                                  # Git ignore rules for node_modules, build artifacts, etc.
-├── index.html                                  # HTML entry template with typography links
-├── LICENSE                                     # Project license (MIT)
-├── package.json                                # Project dependencies and script definitions
-├── package-lock.json                           # Deterministic dependency tree lockfile
-├── README.md                                   # Comprehensive project documentation
-└── vite.config.js                              # Vite build and server configuration
+├── docs/
+│   └── configuration-validator.md              # Detailed validation specification & schema docs
+├── frontend/
+│   ├── public/
+│   │   ├── favicon.svg                         # Application robot favicon
+│   │   └── images/                             # Custom high-res artwork
+│   │       ├── dashboard/                      # Dashboard cards & hero illustrations
+│   │       └── scenarios/                      # Vendor, Job Offer & Budget illustrations
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── AgentCard.jsx                   # Agent role card with goals, constraints & personality
+│   │   │   ├── AgentFaceAvatar.jsx             # Animated SVG face avatars
+│   │   │   ├── AgentFaceAvatar.css             # Avatar blinking & breathing micro-animations
+│   │   │   ├── AppLayout.jsx                   # Layout shell (Sidebar + Header + Outlet + Mobile Drawer)
+│   │   │   ├── Header.jsx                      # Contextual header with page meta & mobile controls
+│   │   │   ├── ScenarioCard.jsx                # Domain scenario card with artwork & levers
+│   │   │   └── Sidebar.jsx                     # Sidebar navigation with Simulation & Practice modes
+│   │   ├── context/
+│   │   │   ├── AuthContext.jsx                 # User profile & authentication context
+│   │   │   ├── ScenarioContext.jsx             # Active scenario & personality state management
+│   │   │   └── SettingsContext.jsx             # Language & theme settings context
+│   │   ├── data/
+│   │   │   └── scenarios.js                    # 3 pre-built scenario data templates & schemas
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx                   # Introductory landing page & workflow guide
+│   │   │   ├── Dashboard.css                   # Hero card & step cards styling
+│   │   │   ├── ScenarioSelection.jsx           # Task 1: Step 1 Scenario Selection screen
+│   │   │   ├── AgentConfiguration.jsx          # Task 1: Step 2 Agent Configuration screen
+│   │   │   ├── NegotiationArenaPlaceholder.jsx # Step 3 Negotiation Arena placeholder
+│   │   │   ├── PracticeMode.jsx                # Practice Mode placeholder & feature roadmap
+│   │   │   ├── HistoryPlaceholder.jsx          # History & Reports placeholder
+│   │   │   └── Settings.jsx                    # User settings & profile preferences
+│   │   ├── utils/
+│   │   │   ├── configurationValidator.js       # Pre-flight negotiation configuration validator
+│   │   │   └── translations.js                 # 6-language dictionary (EN, HI, BN, TE, TA, MR)
+│   │   ├── App.jsx                             # Application route definitions
+│   │   ├── index.css                           # Global design system, typography, and responsive CSS
+│   │   └── main.jsx                            # React 19 bootstrap entry point
+│   ├── tests/
+│   │   ├── configurationValidator.test.js      # 13 validation engine unit tests
+│   │   └── scenarios.test.js                   # 8 scenario data model unit tests
+│   ├── package.json                            # Frontend dependencies & npm scripts
+│   └── vite.config.js                          # Vite build & development server config
+├── .gitignore                                  # Git ignore rules
+├── LICENSE                                     # MIT License
+└── README.md                                   # Comprehensive project documentation
 ```
 
-### Key File Responsibilities
+---
 
-* **`src/components/AppLayout.jsx`**: Combines the persistent sidebar, contextual top header, and dynamic content viewport (`<Outlet />`).
-* **`src/components/Sidebar.jsx`**: Renders navigation links for Dashboard, Scenarios, Agent Configuration, Arena, History, and Settings with active route indicators.
-* **`src/components/Header.jsx`**: Displays the active section title and subtitle dynamically according to browser navigation.
-* **`src/App.jsx`**: Centralizes client-side route paths inside React Router's `<BrowserRouter>`.
-* **`src/index.css`**: Defines CSS design variables for typography, card surfaces, borders, and responsive breakpoints.
+## Configuration Validation Engine
+
+The validator (`frontend/src/utils/configurationValidator.js`) ensures valid simulation setup before entering the arena:
+
+```javascript
+import { validateNegotiationConfig, prepareNegotiationConfig } from './utils/configurationValidator';
+
+// 1. Validate configuration
+const validation = validateNegotiationConfig(selectedScenarioId, activeAgents);
+if (!validation.isValid) {
+  console.error("Configuration errors:", validation.errors);
+  return;
+}
+
+// 2. Prepare serialized handover payload for downstream LLM orchestrator
+const payload = prepareNegotiationConfig(selectedScenarioId, activeAgents);
+console.log("Ready for Negotiation Arena:", payload);
+```
+
+For complete technical documentation, see [`docs/configuration-validator.md`](docs/configuration-validator.md).
 
 ---
 
 ## Available Scripts
 
-The following scripts are defined in `package.json`:
+Run these scripts from the `frontend/` directory:
 
 | Command | Action | Description |
 | :--- | :--- | :--- |
-| `npm run dev` | `vite` | Starts the Vite local development server with instant HMR on port `5173`. |
-| `npm run build` | `vite build` | Compiles JavaScript and CSS into optimized production bundles in `dist/`. |
-| `npm run preview` | `vite preview` | Locally serves the production build generated in `dist/` for verification. |
+| `npm run dev` | `vite` | Starts local development server on port `5173` with instant HMR. |
+| `npm test` | `node --test tests/*.test.js` | Runs all 21 automated unit tests. |
+| `npm run build` | `vite build` | Compiles production assets into `frontend/dist/`. |
+| `npm run preview` | `vite preview` | Serves the production bundle locally for inspection. |
 
 ---
 
 ## Troubleshooting
 
-### Port 5173 Already in Use
+### 1. Working Directory
+Make sure to navigate to the `frontend/` subfolder before executing npm commands:
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-If another process is running on port `5173`, Vite will automatically attempt the next available port (e.g., `5174`), or you can specify a custom port:
-
+### 2. Port 5173 in Use
+If port `5173` is occupied, specify an alternative port:
 ```bash
 npm run dev -- --port 3000
 ```
 
-### Dependencies Missing or Build Errors
-
-If you encounter module resolution errors, clear the local cache and reinstall packages:
-
+### 3. Clear Cache & Clean Install
+If experiencing module resolution warnings:
 ```bash
-rm -rf node_modules package-lock.json
-npm install
-```
+# On Linux / macOS
+rm -rf node_modules package-lock.json && npm install
 
-*(On Windows PowerShell, use `Remove-Item -Recurse -Force node_modules, package-lock.json` followed by `npm install`).*
-
-### Node Version Warnings
-
-If dependencies fail to install due to an older runtime, ensure you are running Node.js `18.0.0` or newer:
-
-```bash
-node -v
+# On Windows PowerShell
+Remove-Item -Recurse -Force node_modules, package-lock.json; npm install
 ```
 
 ---
 
-## About
+## About & Team
 
-* **Project Name:** Multi-Agent Negotiation Simulator
+* **Project Name:** Multi-Agent Negotiation Simulator (**Negotiator AI**)
 * **Repository:** [https://github.com/karthik-vana/multi-agent-negotiation-simulator](https://github.com/karthik-vana/multi-agent-negotiation-simulator)
-* **License:** This project is licensed under the terms of the [MIT License](LICENSE).
+* **License:** Licensed under the terms of the [MIT License](LICENSE).
+* **Team Members:**
+  * **Shubhay Yadav**
+  * **Niharika Indurthi**
+  * **Saitejaswini Tammana**
+  * **Keerthana**
+  * **Karthik Vana**
