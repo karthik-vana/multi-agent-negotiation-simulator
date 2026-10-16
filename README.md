@@ -42,6 +42,8 @@ Negotiation is a core competency across business operations, contract discussion
 
 The **Multi-Agent Negotiation Simulator (Negotiator AI)** provides a web-based platform where autonomous Generative AI agents represent distinct stakeholders with conflicting objectives, strict boundary constraints, and configurable behavioral personalities. Agents exchange contextually reasoned offers and counteroffers, evaluate concessions, and work toward mutually agreeable outcomes.
 
+![Negotiator AI Dashboard](https://github.com/user-attachments/assets/ddd8405d-ea0e-4b38-81e0-c7e976073546)
+
 ---
 
 ## Task 1: Scenario Selection & Agent Configuration
