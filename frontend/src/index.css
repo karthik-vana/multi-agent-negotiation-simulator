@@ -673,21 +673,7 @@ body {
   justify-content: center;
 }
 
-.header-dashboard-btn {
-  background: var(--bg-surface-subtle);
-}
 
-.header-dashboard-btn.active {
-  background: var(--primary-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.header-dashboard-label {
-  display: inline-block;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
 
 .header-title-group {
   display: flex;
@@ -957,16 +943,7 @@ body {
     gap: 8px;
   }
 
-  .header-dashboard-label {
-    display: none;
-  }
 
-  .header-dashboard-btn {
-    padding: 0;
-    width: 44px;
-    height: 44px;
-    justify-content: center;
-  }
 
   .header-page-title {
     font-size: 1.05rem;
