@@ -1,11 +1,14 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { Sparkles, Shield } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, ArrowLeft } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
-const Header = () => {
+const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useSettings();
+
+  const isHome = location.pathname === '/';
 
   const getPageMeta = () => {
     switch (location.pathname) {
@@ -26,8 +29,13 @@ const Header = () => {
         };
       case '/arena':
         return {
-          title: t ? t('arena') : 'Negotiation Arena',
-          subtitle: t ? t('headerSubtitleArena') : 'Real-time multi-agent negotiation execution and turn-by-turn reasoning'
+          title: t ? t('aiNegotiationArena') : 'AI Negotiation Arena',
+          subtitle: t ? t('headerSubtitleArena') : 'Autonomous AI vs AI negotiation execution'
+        };
+      case '/practice':
+        return {
+          title: t ? t('practiceMode') : 'Practice Mode',
+          subtitle: t ? t('headerSubtitlePractice') : 'Practice negotiation skills with an AI opponent'
         };
       case '/history':
         return {
@@ -52,19 +60,40 @@ const Header = () => {
 
   return (
     <header className="app-header">
+      <div className="header-nav-controls">
+        {/* Mobile Sidebar Hamburger Toggle */}
+        <button
+          type="button"
+          className="header-mobile-toggle-btn"
+          onClick={onToggleMobileNav}
+          aria-label={isMobileNavOpen ? 'Close navigation drawer' : 'Open navigation drawer'}
+          title={isMobileNavOpen ? 'Close menu' : 'Open menu'}
+        >
+          {isMobileNavOpen ? <X size={26} strokeWidth={2.2} /> : <Menu size={26} strokeWidth={2.2} />}
+        </button>
+
+        {/* Back Button (visible when not on dashboard) */}
+        {!isHome && (
+          <button
+            type="button"
+            className="header-icon-action-btn header-back-btn"
+            onClick={() => navigate(-1)}
+            title="Go Back"
+            aria-label="Go Back"
+          >
+            <ArrowLeft size={22} strokeWidth={2.2} />
+          </button>
+        )}
+      </div>
+
       <div className="header-title-group">
         <h1 className="header-page-title">{title}</h1>
         <p className="header-subtitle">{subtitle}</p>
-      </div>
-
-      <div className="header-actions">
-        <div className="header-status-chip">
-          <Shield size={14} style={{ color: '#4f46e5' }} />
-          <span>{t ? t('statusReady') : 'System Ready'}</span>
-        </div>
       </div>
     </header>
   );
 };
 
 export default Header;
+
+

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getScenarioById } from '../data/scenarios';
+import { validateNegotiationConfig } from '../utils/configurationValidator';
 
 const SCENARIO_STORAGE_KEY = 'mans_selected_scenario_id';
 const PERSONALITIES_STORAGE_KEY = 'mans_agent_personalities';
@@ -41,19 +42,34 @@ export const ScenarioProvider = ({ children }) => {
     }
   });
 
-  // Initialize personalities: check workspace persistence first if enabled, else sessionStorage
+  // Initialize personalities scoped strictly to the selected scenario
   const [agentPersonalities, setAgentPersonalities] = useState(() => {
     try {
       const { rememberWorkspace } = getSettingsPreferences();
+      let raw = null;
       if (rememberWorkspace) {
-        const persisted = localStorage.getItem(WORKSPACE_PERSONALITIES_KEY);
-        if (persisted) return JSON.parse(persisted);
+        raw = localStorage.getItem(WORKSPACE_PERSONALITIES_KEY);
       }
-      const saved = sessionStorage.getItem(PERSONALITIES_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      if (!raw) {
+        raw = sessionStorage.getItem(PERSONALITIES_STORAGE_KEY);
+      }
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const scenario = selectedScenarioId ? getScenarioById(selectedScenarioId) : null;
+        if (scenario && scenario.agents) {
+          const validIds = new Set(scenario.agents.map((a) => a.id));
+          const cleaned = {};
+          scenario.agents.forEach((agent) => {
+            cleaned[agent.id] = (validIds.has(agent.id) && parsed[agent.id]) || agent.defaultPersonality;
+          });
+          return cleaned;
+        }
+        return parsed;
+      }
     } catch {
       return {};
     }
+    return {};
   });
 
   const [lastDraftSaved, setLastDraftSaved] = useState(() => {
@@ -66,6 +82,24 @@ export const ScenarioProvider = ({ children }) => {
   });
 
   const selectedScenario = selectedScenarioId ? getScenarioById(selectedScenarioId) : null;
+
+  // Sanitize agentPersonalities whenever scenario changes to ensure no rogue agents from previous scenarios leak in
+  useEffect(() => {
+    if (selectedScenario && selectedScenario.agents) {
+      const validIds = new Set(selectedScenario.agents.map((a) => a.id));
+      const currentKeys = Object.keys(agentPersonalities);
+      const hasRogueKeys = currentKeys.some((k) => !validIds.has(k));
+      const hasMissingKeys = selectedScenario.agents.some((a) => !agentPersonalities[a.id]);
+
+      if (hasRogueKeys || hasMissingKeys) {
+        const cleaned = {};
+        selectedScenario.agents.forEach((agent) => {
+          cleaned[agent.id] = agentPersonalities[agent.id] || agent.defaultPersonality;
+        });
+        setAgentPersonalities(cleaned);
+      }
+    }
+  }, [selectedScenarioId]);
 
   // Sync selectedScenarioId with sessionStorage and localStorage (if rememberWorkspace is ON)
   useEffect(() => {
@@ -120,17 +154,16 @@ export const ScenarioProvider = ({ children }) => {
     }
   }, [agentPersonalities, selectedScenarioId]);
 
-  // Initialize or re-align personalities when scenario changes
+  // Initialize or re-align personalities when scenario changes (strictly scoped to the selected scenario)
   const selectScenario = (id) => {
     setSelectedScenarioId(id);
     const scenario = getScenarioById(id);
     if (scenario && scenario.agents) {
-      const initialPersonalities = {};
+      const scenarioPersonalities = {};
       scenario.agents.forEach((agent) => {
-        initialPersonalities[agent.id] =
-          agentPersonalities[agent.id] || agent.defaultPersonality;
+        scenarioPersonalities[agent.id] = agent.defaultPersonality;
       });
-      setAgentPersonalities((prev) => ({ ...prev, ...initialPersonalities }));
+      setAgentPersonalities(scenarioPersonalities);
     }
   };
 
@@ -147,13 +180,23 @@ export const ScenarioProvider = ({ children }) => {
       selectedScenario.agents.forEach((agent) => {
         resetMap[agent.id] = agent.defaultPersonality;
       });
-      setAgentPersonalities((prev) => ({ ...prev, ...resetMap }));
+      setAgentPersonalities(resetMap);
     }
   };
 
   const clearSelection = () => {
     setSelectedScenarioId(null);
     setAgentPersonalities({});
+  };
+
+  const validateCurrentConfig = () => {
+    const scoped = {};
+    if (selectedScenario && selectedScenario.agents) {
+      selectedScenario.agents.forEach((a) => {
+        scoped[a.id] = agentPersonalities[a.id] || a.defaultPersonality;
+      });
+    }
+    return validateNegotiationConfig(selectedScenarioId || selectedScenario, scoped);
   };
 
   const discardDraft = () => {
@@ -175,6 +218,7 @@ export const ScenarioProvider = ({ children }) => {
         updateAgentPersonality,
         resetAgentPersonalities,
         clearSelection,
+        validateCurrentConfig,
         lastDraftSaved,
         discardDraft,
       }}

@@ -14,6 +14,7 @@ import {
   PERSONALITY_DESCRIPTIONS
 } from '../data/scenarios';
 import { useSettings } from '../context/SettingsContext';
+import AgentFaceAvatar from './AgentFaceAvatar';
 
 const personalityIcons = {
   [PERSONALITIES.AGGRESSIVE]: Flame,
@@ -53,6 +54,8 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
   const agentKey = agent.id.replace(/-/g, '_');
   const agentName = t ? (t(`agent_${agentKey}_name`) || agent.name) : agent.name;
   const agentStakeholder = t ? (t(`agent_${agentKey}_stakeholder`) || agent.stakeholder) : agent.stakeholder;
+  const agentRoleDesc = t ? (t(`agent_${agentKey}_role_desc`) || agent.roleDescription) : agent.roleDescription;
+  const agentPrimaryGoal = t ? (t(`agent_${agentKey}_primary_goal`) || agent.primaryGoal) : agent.primaryGoal;
 
   const getPersonalityLabel = (p) => {
     if (!t) return p;
@@ -70,6 +73,12 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
     return PERSONALITY_DESCRIPTIONS[p];
   };
 
+  const getConstraintText = (constraint, idx) => {
+    if (!t) return constraint;
+    const key = `agent_${agentKey}_constraint_${idx}`;
+    return t(key) || constraint;
+  };
+
   return (
     <div
       className="agent-role-card"
@@ -81,16 +90,8 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
     >
       {/* Card Header: Avatar, Name, and Stakeholder */}
       <div className="agent-card-header">
-        <div
-          className="agent-avatar"
-          style={{
-            backgroundColor: `${scenarioAccent || '#4f46e5'}18`,
-            color: scenarioAccent || '#4f46e5',
-            borderColor: `${scenarioAccent || '#4f46e5'}40`
-          }}
-        >
-          {agent.avatarText || <User size={20} />}
-        </div>
+        {/* Animated Face Avatar */}
+        <AgentFaceAvatar agentId={agent.id} accentColor={scenarioAccent} />
 
         <div className="agent-identity">
           <div className="agent-stakeholder-badge">{agentStakeholder}</div>
@@ -99,7 +100,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
       </div>
 
       {/* Role Description */}
-      <p className="agent-role-desc">{agent.roleDescription}</p>
+      <p className="agent-role-desc">{agentRoleDesc}</p>
 
       {/* Primary Goal / Objective Section */}
       <div className="agent-section-box agent-goal-box">
@@ -107,7 +108,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
           <Target size={15} className="section-icon goal-icon" />
           <span>{t ? t('primaryGoalTitle') : 'Primary Goal & Target'}</span>
         </div>
-        <p className="agent-goal-text">{agent.primaryGoal}</p>
+        <p className="agent-goal-text">{agentPrimaryGoal}</p>
       </div>
 
       {/* Key Constraints Section */}
@@ -120,7 +121,7 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
           {agent.keyConstraints?.map((constraint, idx) => (
             <li key={idx} className="agent-constraint-item">
               <span className="constraint-bullet" />
-              <span>{constraint}</span>
+              <span>{getConstraintText(constraint, idx)}</span>
             </li>
           ))}
         </ul>

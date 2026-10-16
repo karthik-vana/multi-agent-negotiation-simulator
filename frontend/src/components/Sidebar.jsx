@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Layers,
-  Users,
-  Swords,
+  Bot,
+  GraduationCap,
   FileText,
   Settings,
   Search,
@@ -14,12 +13,18 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useScenario } from '../context/ScenarioContext';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const { currentUser, logout } = useAuth();
   const { t } = useSettings();
+  const { selectedScenarioId } = useScenario();
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Active status for the 3-step Simulation Mode workflow
+  const isSimulationActive = ['/scenarios', '/agents', '/arena', '/simulation'].includes(location.pathname);
 
   // Search state and indexing
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,37 +40,30 @@ const Sidebar = () => {
       keywords: ['home', 'overview', 'summary', 'workspace', 'start']
     },
     {
-      name: t ? t('scenarios') : 'Scenarios',
+      name: t ? t('simulationMode') : 'Simulation Mode',
       path: '/scenarios',
       section: t ? t('mainMenu') : 'Main Menu',
-      icon: Layers,
-      keywords: ['vendor', 'pricing', 'job offer', 'budget', 'allocation', 'templates']
+      icon: Bot,
+      keywords: ['simulation', 'mode', 'scenarios', 'agents', 'arena', 'ai vs ai', 'autonomous', 'vendor', 'pricing', 'job offer', 'budget']
     },
     {
-      name: t ? t('agentConfig') : 'Agent Configuration',
-      path: '/agents',
+      name: t ? t('practiceMode') : 'Practice Mode',
+      path: '/practice',
       section: t ? t('mainMenu') : 'Main Menu',
-      icon: Users,
-      keywords: ['personality', 'aggressive', 'collaborative', 'risk-averse', 'persona', 'roles', 'goals', 'constraints']
-    },
-    {
-      name: t ? t('arena') : 'Negotiation Arena',
-      path: '/arena',
-      section: t ? t('simulationSection') : 'Simulation',
-      icon: Swords,
-      keywords: ['chat', 'transcript', 'live', 'turns', 'simulation', 'practice']
+      icon: GraduationCap,
+      keywords: ['practice', 'opponent', 'human vs ai', 'skills', 'training', 'learn', 'interactive']
     },
     {
       name: t ? t('history') : 'History & Reports',
       path: '/history',
-      section: t ? t('simulationSection') : 'Simulation',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: FileText,
       keywords: ['analytics', 'outcome', 'metrics', 'concession', 'curves', 'archive']
     },
     {
       name: t ? t('profileAndSettings') : 'Profile & Settings',
       path: '/settings',
-      section: t ? t('systemSection') : 'System',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: Settings,
       keywords: ['profile', 'settings', 'account', 'avatar', 'preferences', 'appearance', 'language', 'theme']
     }
@@ -94,7 +92,16 @@ const Sidebar = () => {
   }, []);
 
   const handleSelectModule = (path) => {
-    navigate(path);
+    if (onClose) onClose();
+    if (path === '/agents' && !selectedScenarioId) {
+      navigate('/scenarios', {
+        state: {
+          error: t ? t('pleaseSelectScenario') : 'Please select a negotiation scenario before proceeding to agent configuration.'
+        }
+      });
+    } else {
+      navigate(path);
+    }
     setSearchQuery('');
     setIsSearchOpen(false);
   };
@@ -115,18 +122,37 @@ const Sidebar = () => {
   const displayEmail = currentUser?.email || 'lead@simulator.ai';
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
       {/* Brand Header */}
       <div className="sidebar-header">
-        <div className="brand-wrapper">
+        <div
+          className="brand-wrapper"
+          onClick={() => {
+            if (onClose) onClose();
+            navigate('/');
+          }}
+          style={{ cursor: 'pointer' }}
+          title="Go to Dashboard"
+        >
           <img src="/favicon.svg" alt="Negotiator AI" className="brand-logo" />
           <div className="brand-title">Negotiator AI</div>
         </div>
+
+        {/* Mobile Close Button (shown on mobile screens) */}
+        <button
+          type="button"
+          className="sidebar-mobile-close-btn"
+          onClick={onClose}
+          aria-label="Close navigation"
+          title="Close menu"
+        >
+          <X size={24} strokeWidth={2.2} />
+        </button>
       </div>
 
       {/* Interactive Search Input with Dropdown */}
       <div className="sidebar-search" ref={searchContainerRef}>
-        <Search size={15} className="sidebar-search-icon" />
+        <Search size={16} className="sidebar-search-icon" />
         <input
           type="text"
           placeholder={t ? t('searchPlaceholder') : 'Search modules...'}
@@ -156,7 +182,7 @@ const Sidebar = () => {
             }}
             title="Clear search"
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         )}
 
@@ -172,7 +198,7 @@ const Sidebar = () => {
                     className="search-result-item"
                     onClick={() => handleSelectModule(mod.path)}
                   >
-                    <Icon size={16} className="search-result-icon" />
+                    <Icon size={18} className="search-result-icon" />
                     <div className="search-result-info">
                       <span className="search-result-title">{mod.name}</span>
                       <span className="search-result-section">{mod.section}</span>
@@ -191,65 +217,55 @@ const Sidebar = () => {
 
       {/* Navigation List */}
       <nav className="sidebar-nav">
-
-        {/* Section 1: Main Menu */}
+        {/* Only one main menu heading */}
         <div className="nav-section-title">{t ? t('mainMenu') : 'Main Menu'}</div>
 
         <NavLink
           to="/"
           end
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
-          <LayoutDashboard size={18} className="nav-icon" />
+          <LayoutDashboard size={22} className="nav-icon" />
           <span>{t ? t('dashboard') : 'Dashboard'}</span>
           <span className="nav-badge">{t ? t('overview') : 'Overview'}</span>
         </NavLink>
 
         <NavLink
           to="/scenarios"
-          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          onClick={onClose}
+          className={`nav-link ${isSimulationActive ? 'active' : ''}`}
+          title={t ? t('simulationModeDesc') : 'Watch AI agents negotiate autonomously.'}
         >
-          <Layers size={18} className="nav-icon" />
-          <span>{t ? t('scenarios') : 'Scenarios'}</span>
-          <span className="nav-badge">3</span>
+          <Bot size={22} className="nav-icon" />
+          <span>{t ? t('simulationMode') : 'Simulation Mode'}</span>
         </NavLink>
 
         <NavLink
-          to="/agents"
+          to="/practice"
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          title={t ? t('practiceModeDesc') : 'Practice negotiation skills with an AI opponent.'}
         >
-          <Users size={18} className="nav-icon" />
-          <span>{t ? t('agentConfig') : 'Agent Configuration'}</span>
-        </NavLink>
-
-        {/* Section 2: Negotiation Execution */}
-        <div className="nav-section-title">{t ? t('simulationSection') : 'Simulation'}</div>
-
-        <NavLink
-          to="/arena"
-          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-        >
-          <Swords size={18} className="nav-icon" />
-          <span>{t ? t('arena') : 'Negotiation Arena'}</span>
-          <span className="nav-badge nav-badge-pill">{t ? t('live') : 'Live'}</span>
+          <GraduationCap size={22} className="nav-icon" />
+          <span>{t ? t('practiceMode') : 'Practice Mode'}</span>
         </NavLink>
 
         <NavLink
           to="/history"
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
-          <FileText size={18} className="nav-icon" />
+          <FileText size={22} className="nav-icon" />
           <span>{t ? t('history') : 'History & Reports'}</span>
         </NavLink>
 
-        {/* Section 3: System */}
-        <div className="nav-section-title">{t ? t('systemSection') : 'System'}</div>
-
         <NavLink
           to="/settings"
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
-          <Settings size={18} className="nav-icon" />
+          <Settings size={22} className="nav-icon" />
           <span>{t ? t('settings') : 'Settings'}</span>
         </NavLink>
       </nav>
@@ -258,7 +274,10 @@ const Sidebar = () => {
       <div className="sidebar-footer">
         <div
           className="user-card"
-          onClick={() => navigate('/settings')}
+          onClick={() => {
+            if (onClose) onClose();
+            navigate('/settings');
+          }}
           style={{ cursor: 'pointer' }}
           title="Open Profile & Settings"
         >

@@ -1,0 +1,218 @@
+.practice-mode-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.practice-hero-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 48px 40px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.practice-ambient-glow {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 420px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme="dark"] .practice-ambient-glow {
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.2) 0%, rgba(129, 140, 248, 0) 70%);
+}
+
+.practice-content {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.practice-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.practice-dev-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+[data-theme="dark"] .practice-dev-badge {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.practice-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+}
+
+.status-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.practice-icon-wrapper {
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(79, 70, 229, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px -6px rgba(79, 70, 229, 0.2);
+}
+
+[data-theme="dark"] .practice-icon-wrapper {
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.2), rgba(99, 102, 241, 0.1));
+  border-color: rgba(129, 140, 248, 0.3);
+  color: #a5b4fc;
+}
+
+.practice-heading {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  margin: 0 0 16px 0;
+  line-height: 1.25;
+}
+
+.practice-description {
+  font-size: 1rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin: 0 0 32px 0;
+}
+
+.practice-features-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .practice-features-preview {
+    grid-template-columns: 1fr;
+  }
+}
+
+.preview-feature-card {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 18px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-feature-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.preview-feature-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.practice-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.btn-practice-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-practice-back:hover {
+  background: var(--border-color);
+  transform: translateX(-2px);
+}
+
+@media (max-width: 600px) {
+  .practice-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .btn-practice-back {
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    font-size: 0.92rem;
+  }
+}
