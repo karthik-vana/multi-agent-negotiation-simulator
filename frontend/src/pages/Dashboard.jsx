@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Play, ArrowRight, FileText, Users, Lightbulb, TrendingUp } from 'lucide-react';
+import { Sparkles, Play, FileText, Users, Lightbulb, TrendingUp } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import './Dashboard.css';
 
@@ -90,21 +90,12 @@ const Dashboard = () => {
       <div className="dashboard-steps-grid" id="dashboard-steps-grid">
         {/* Step 1: Scenario Selection */}
         <div
-          role="button"
-          tabIndex={0}
           id="dashboard-step-scenarios"
           className="dashboard-step-card"
           style={{
             '--step-accent': '#2563eb',
             '--step-bg': '#eff6ff',
             '--step-glow': 'rgba(37, 99, 235, 0.28)',
-          }}
-          onClick={() => handleNavigate('/scenarios')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handleNavigate('/scenarios');
-            }
           }}
         >
           <div className="step-card-image-wrap">
@@ -124,9 +115,6 @@ const Dashboard = () => {
                 </div>
                 <h3 className="step-card-title">{t ? t('step1Title') : 'Scenario Selection'}</h3>
               </div>
-              <div className="step-arrow-circle" aria-hidden="true">
-                <ArrowRight size={16} />
-              </div>
             </div>
 
             <p className="step-card-desc">
@@ -139,21 +127,12 @@ const Dashboard = () => {
 
         {/* Step 2: Agent Configuration */}
         <div
-          role="button"
-          tabIndex={0}
           id="dashboard-step-agents"
           className="dashboard-step-card"
           style={{
             '--step-accent': '#7c3aed',
             '--step-bg': '#f5f3ff',
             '--step-glow': 'rgba(124, 58, 237, 0.28)',
-          }}
-          onClick={() => handleNavigate('/agents')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handleNavigate('/agents');
-            }
           }}
         >
           <div className="step-card-image-wrap">
@@ -178,9 +157,6 @@ const Dashboard = () => {
                 </div>
                 <h3 className="step-card-title">{t ? t('step2Title') : 'Agent Configuration'}</h3>
               </div>
-              <div className="step-arrow-circle" aria-hidden="true">
-                <ArrowRight size={16} />
-              </div>
             </div>
 
             <p className="step-card-desc">
@@ -193,21 +169,12 @@ const Dashboard = () => {
 
         {/* Step 3: Live Negotiation Arena */}
         <div
-          role="button"
-          tabIndex={0}
           id="dashboard-step-arena"
           className="dashboard-step-card"
           style={{
             '--step-accent': '#10b981',
             '--step-bg': '#ecfdf5',
             '--step-glow': 'rgba(16, 185, 129, 0.28)',
-          }}
-          onClick={() => handleNavigate('/arena')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handleNavigate('/arena');
-            }
           }}
         >
           <div className="step-card-image-wrap">
@@ -231,9 +198,6 @@ const Dashboard = () => {
                   <Play size={18} />
                 </div>
                 <h3 className="step-card-title">{t ? t('step3Title') : 'Live Negotiation Arena'}</h3>
-              </div>
-              <div className="step-arrow-circle" aria-hidden="true">
-                <ArrowRight size={16} />
               </div>
             </div>
 

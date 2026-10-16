@@ -1,6 +1,5 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Sparkles, Shield } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
 const Header = () => {
@@ -55,13 +54,6 @@ const Header = () => {
       <div className="header-title-group">
         <h1 className="header-page-title">{title}</h1>
         <p className="header-subtitle">{subtitle}</p>
-      </div>
-
-      <div className="header-actions">
-        <div className="header-status-chip">
-          <Shield size={14} style={{ color: '#4f46e5' }} />
-          <span>{t ? t('statusReady') : 'System Ready'}</span>
-        </div>
       </div>
     </header>
   );
