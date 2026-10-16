@@ -101,7 +101,7 @@ const Dashboard = () => {
           <div className="step-card-image-wrap">
             <span className="step-number-badge">1</span>
             <img
-              src="/images/dashboard/step1-scenarios.jpg"
+              src="/images/dashboard/card1.png"
               alt="Scenario Selection"
               className="step-card-img"
             />
@@ -143,7 +143,7 @@ const Dashboard = () => {
               2
             </span>
             <img
-              src="/images/dashboard/step2-agents.jpg"
+              src="/images/dashboard/card2.png"
               alt="Agent Configuration"
               className="step-card-img"
             />
@@ -185,7 +185,7 @@ const Dashboard = () => {
               3
             </span>
             <img
-              src="/images/dashboard/step3-arena.jpg"
+              src="/images/dashboard/card3.png"
               alt="Live Negotiation Arena"
               className="step-card-img"
             />
