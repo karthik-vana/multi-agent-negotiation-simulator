@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Layers,
-  Users,
-  Swords,
+  Bot,
+  GraduationCap,
   FileText,
   Settings,
   Search,
@@ -22,6 +21,10 @@ const Sidebar = () => {
   const { selectedScenarioId } = useScenario();
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Active status for the 3-step Simulation Mode workflow
+  const isSimulationActive = ['/scenarios', '/agents', '/arena', '/simulation'].includes(location.pathname);
 
   // Search state and indexing
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,25 +40,18 @@ const Sidebar = () => {
       keywords: ['home', 'overview', 'summary', 'workspace', 'start']
     },
     {
-      name: t ? t('scenarios') : 'Scenarios',
+      name: t ? t('simulationMode') : 'Simulation Mode',
       path: '/scenarios',
       section: t ? t('mainMenu') : 'Main Menu',
-      icon: Layers,
-      keywords: ['vendor', 'pricing', 'job offer', 'budget', 'allocation', 'templates']
+      icon: Bot,
+      keywords: ['simulation', 'mode', 'scenarios', 'agents', 'arena', 'ai vs ai', 'autonomous', 'vendor', 'pricing', 'job offer', 'budget']
     },
     {
-      name: t ? t('agentConfig') : 'Agent Configuration',
-      path: '/agents',
-      section: t ? t('mainMenu') : 'Main Menu',
-      icon: Users,
-      keywords: ['personality', 'aggressive', 'collaborative', 'risk-averse', 'persona', 'roles', 'goals', 'constraints']
-    },
-    {
-      name: t ? t('arena') : 'Negotiation Arena',
-      path: '/arena',
-      section: t ? t('simulationSection') : 'Simulation',
-      icon: Swords,
-      keywords: ['chat', 'transcript', 'live', 'turns', 'simulation', 'practice']
+      name: t ? t('practiceMode') : 'Practice Mode',
+      path: '/practice',
+      section: t ? t('practiceSection') : 'Practice',
+      icon: GraduationCap,
+      keywords: ['practice', 'opponent', 'human vs ai', 'skills', 'training', 'learn', 'interactive']
     },
     {
       name: t ? t('history') : 'History & Reports',
@@ -217,42 +213,28 @@ const Sidebar = () => {
 
         <NavLink
           to="/scenarios"
-          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          className={`nav-link ${isSimulationActive ? 'active' : ''}`}
+          title={t ? t('simulationModeDesc') : 'Watch AI agents negotiate autonomously.'}
         >
-          <Layers size={18} className="nav-icon" />
-          <span>{t ? t('scenarios') : 'Scenarios'}</span>
-          <span className="nav-badge">3</span>
+          <Bot size={18} className="nav-icon" />
+          <span>{t ? t('simulationMode') : 'Simulation Mode'}</span>
         </NavLink>
+
+        {/* Section 2: Practice */}
+        <div className="nav-section-title">{t ? t('practiceSection') : 'Practice'}</div>
 
         <NavLink
-          to="/agents"
-          onClick={(e) => {
-            if (!selectedScenarioId) {
-              e.preventDefault();
-              navigate('/scenarios', {
-                state: {
-                  error: t ? t('pleaseSelectScenario') : 'Please select a negotiation scenario before proceeding to agent configuration.'
-                }
-              });
-            }
-          }}
+          to="/practice"
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          title={t ? t('practiceModeDesc') : 'Practice negotiation skills with an AI opponent.'}
         >
-          <Users size={18} className="nav-icon" />
-          <span>{t ? t('agentConfig') : 'Agent Configuration'}</span>
+          <GraduationCap size={18} className="nav-icon" />
+          <span>{t ? t('practiceMode') : 'Practice Mode'}</span>
+          <span className="nav-badge nav-badge-dev">{t ? t('underDevelopment') : 'Under Dev'}</span>
         </NavLink>
 
-        {/* Section 2: Negotiation Execution */}
+        {/* Section 3: Simulation */}
         <div className="nav-section-title">{t ? t('simulationSection') : 'Simulation'}</div>
-
-        <NavLink
-          to="/arena"
-          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-        >
-          <Swords size={18} className="nav-icon" />
-          <span>{t ? t('arena') : 'Negotiation Arena'}</span>
-          <span className="nav-badge nav-badge-pill">{t ? t('live') : 'Live'}</span>
-        </NavLink>
 
         <NavLink
           to="/history"
@@ -262,7 +244,7 @@ const Sidebar = () => {
           <span>{t ? t('history') : 'History & Reports'}</span>
         </NavLink>
 
-        {/* Section 3: System */}
+        {/* Section 4: System */}
         <div className="nav-section-title">{t ? t('systemSection') : 'System'}</div>
 
         <NavLink

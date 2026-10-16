@@ -25,8 +25,13 @@ const Header = () => {
         };
       case '/arena':
         return {
-          title: t ? t('arena') : 'Negotiation Arena',
-          subtitle: t ? t('headerSubtitleArena') : 'Real-time multi-agent negotiation execution and turn-by-turn reasoning'
+          title: 'AI Negotiation Arena',
+          subtitle: t ? t('headerSubtitleArena') : 'Autonomous AI vs AI negotiation execution'
+        };
+      case '/practice':
+        return {
+          title: t ? t('practiceMode') : 'Practice Mode',
+          subtitle: t ? t('headerSubtitlePractice') : 'Practice negotiation skills with an AI opponent'
         };
       case '/history':
         return {

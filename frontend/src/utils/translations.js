@@ -6,12 +6,19 @@ export const TRANSLATIONS = {
     // Navigation & Sections
     mainMenu: "Main Menu",
     simulationSection: "Simulation",
+    practiceSection: "Practice",
     systemSection: "System",
     dashboard: "Dashboard",
     scenarios: "Scenarios",
     agentConfig: "Agent Configuration",
     arena: "Negotiation Arena",
     history: "History & Reports",
+    simulationMode: "Simulation Mode",
+    simulationModeDesc: "Watch AI agents negotiate autonomously.",
+    practiceMode: "Practice Mode",
+    practiceModeDesc: "Practice negotiation skills with an AI opponent.",
+    underDevelopment: "Under Development",
+    comingSoon: "Coming Soon",
     profileAndSettings: "Profile & Settings",
     settings: "Settings",
     overview: "Overview",
@@ -25,6 +32,8 @@ export const TRANSLATIONS = {
 
     // Header Subtitles
     headerSubtitleDashboard: "Welcome to the Multi-Agent Negotiation Simulator platform",
+    headerSubtitleSimulation: "Watch AI agents negotiate autonomously in multi-step scenarios",
+    headerSubtitlePractice: "Interactive negotiation practice with an AI opponent",
     headerSubtitleScenarios: "Pre-built negotiation contexts and problem templates",
     headerSubtitleAgents: "Define agent roles, negotiation personalities, and boundary constraints",
     headerSubtitleArena: "Real-time multi-agent negotiation execution and turn-by-turn reasoning",
