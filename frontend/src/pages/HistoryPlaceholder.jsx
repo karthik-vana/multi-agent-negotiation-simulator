@@ -29,7 +29,7 @@ const HistoryPlaceholder = () => {
             }}
           >
             <Sparkles size={13} />
-            <span>Under Development</span>
+            <span>{t ? t('underDevelopment') : 'Under Development'}</span>
           </span>
         </div>
 
@@ -53,7 +53,7 @@ const HistoryPlaceholder = () => {
             lineHeight: 1.6,
           }}
         >
-          The History & Reports analytics engine is under development. Soon, you'll be able to review archived negotiation transcripts, concession curves, and comprehensive outcome analytics.
+          {t ? t('historyUnderDevDesc') : "The History & Reports analytics engine is under development. Soon, you'll be able to review archived negotiation transcripts, concession curves, and comprehensive outcome analytics."}
         </p>
 
         {/* Navigation Action */}
@@ -64,7 +64,7 @@ const HistoryPlaceholder = () => {
             onClick={() => navigate('/')}
           >
             <ArrowLeft size={16} />
-            <span>Back to Dashboard</span>
+            <span>{t ? t('backToDashboard') : 'Back to Dashboard'}</span>
           </button>
           <button
             type="button"
@@ -72,7 +72,7 @@ const HistoryPlaceholder = () => {
             onClick={() => navigate('/scenarios')}
           >
             <Bot size={16} />
-            <span>Explore Simulation Mode</span>
+            <span>{t ? t('exploreSimulationMode') : 'Explore Simulation Mode'}</span>
           </button>
         </div>
       </div>

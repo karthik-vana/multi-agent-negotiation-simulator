@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Swords, ArrowLeft, Bot, Sliders, CheckCircle2, Layers, Sparkles } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -7,8 +7,7 @@ import { getScenarioById } from '../data/scenarios';
 
 const NegotiationArenaPlaceholder = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { selectedScenarioId, selectedScenario, agentPersonalities } = useScenario();
+  const { selectedScenarioId, selectedScenario } = useScenario();
   const { t } = useSettings();
 
   const activeScenario =
@@ -30,12 +29,12 @@ const NegotiationArenaPlaceholder = () => {
           title="Back to Agent Configuration"
         >
           <ArrowLeft size={16} />
-          <span>{activeScenario ? 'Back to Agent Configuration' : 'Select Scenario'}</span>
+          <span>{activeScenario ? (t ? t('backToAgentConfig') : 'Back to Agent Configuration') : (t ? t('selectScenario') : 'Select Scenario')}</span>
         </button>
 
         <div className="agent-stepper-pill">
           <Bot size={14} />
-          <span>Step 3 of 3 • Autonomous AI vs AI Arena</span>
+          <span>{t ? t('step3Arena') : 'Step 3 of 3 • Autonomous AI vs AI Arena'}</span>
         </div>
       </div>
 
@@ -60,7 +59,7 @@ const NegotiationArenaPlaceholder = () => {
             </div>
 
             <div className="scenario-banner-info">
-              <span className="scenario-banner-label">Ready for Simulation Execution</span>
+              <span className="scenario-banner-label">{t ? t('readyForSimulation') : 'Ready for Simulation Execution'}</span>
               <h2 className="scenario-banner-name">{scenarioName}</h2>
             </div>
           </div>
@@ -68,7 +67,7 @@ const NegotiationArenaPlaceholder = () => {
           <div className="scenario-banner-meta">
             <span className="banner-pill agents-pill">
               <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-              {activeScenario.participantCount} Configured Agents
+              {activeScenario.participantCount} {t ? t('configuredAgents') : 'Configured Agents'}
             </span>
             <button
               type="button"
@@ -77,7 +76,7 @@ const NegotiationArenaPlaceholder = () => {
               title="Edit agent roles and personalities"
             >
               <Sliders size={14} />
-              <span>Edit Agents</span>
+              <span>{t ? t('editAgents') : 'Edit Agents'}</span>
             </button>
           </div>
         </div>
@@ -104,7 +103,7 @@ const NegotiationArenaPlaceholder = () => {
             }}
           >
             <Sparkles size={13} />
-            <span>Under Development</span>
+            <span>{t ? t('underDevelopment') : 'Under Development'}</span>
           </span>
         </div>
 
@@ -115,10 +114,10 @@ const NegotiationArenaPlaceholder = () => {
 
         {/* Heading */}
         <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px', letterSpacing: '-0.02em' }}>
-          AI Negotiation Arena
+          {t ? t('aiNegotiationArena') : 'AI Negotiation Arena'}
         </h2>
 
-        {/* Exact Description requested by user */}
+        {/* Description */}
         <p
           style={{
             maxWidth: '580px',
@@ -128,7 +127,7 @@ const NegotiationArenaPlaceholder = () => {
             lineHeight: 1.6,
           }}
         >
-          The AI vs AI negotiation engine is under development. Soon, you'll be able to observe autonomous agents exchange offers, evaluate proposals, and work toward mutually acceptable agreements.
+          {t ? t('aiArenaDesc') : "The AI vs AI negotiation engine is under development. Soon, you'll be able to observe autonomous agents exchange offers, evaluate proposals, and work toward mutually acceptable agreements."}
         </p>
 
         {/* Workflow Action Buttons */}
@@ -140,7 +139,7 @@ const NegotiationArenaPlaceholder = () => {
             style={{ textDecoration: 'none' }}
           >
             <Sliders size={16} />
-            <span>Review Agent Configuration</span>
+            <span>{t ? t('reviewAgentConfig') : 'Review Agent Configuration'}</span>
           </button>
           <button
             type="button"
@@ -149,7 +148,7 @@ const NegotiationArenaPlaceholder = () => {
             style={{ textDecoration: 'none' }}
           >
             <Layers size={16} />
-            <span>Change Scenario</span>
+            <span>{t ? t('changeScenario') : 'Change Scenario'}</span>
           </button>
         </div>
       </div>

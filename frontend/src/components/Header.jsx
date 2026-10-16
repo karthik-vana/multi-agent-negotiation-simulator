@@ -25,7 +25,7 @@ const Header = () => {
         };
       case '/arena':
         return {
-          title: 'AI Negotiation Arena',
+          title: t ? t('aiNegotiationArena') : 'AI Negotiation Arena',
           subtitle: t ? t('headerSubtitleArena') : 'Autonomous AI vs AI negotiation execution'
         };
       case '/practice':
