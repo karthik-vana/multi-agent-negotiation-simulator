@@ -1,10 +1,14 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
-const Header = () => {
+const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useSettings();
+
+  const isHome = location.pathname === '/';
 
   const getPageMeta = () => {
     switch (location.pathname) {
@@ -56,6 +60,46 @@ const Header = () => {
 
   return (
     <header className="app-header">
+      <div className="header-nav-controls">
+        {/* Mobile Sidebar Hamburger Toggle */}
+        <button
+          type="button"
+          className="header-mobile-toggle-btn"
+          onClick={onToggleMobileNav}
+          aria-label={isMobileNavOpen ? 'Close navigation drawer' : 'Open navigation drawer'}
+          title={isMobileNavOpen ? 'Close menu' : 'Open menu'}
+        >
+          {isMobileNavOpen ? <X size={26} strokeWidth={2.2} /> : <Menu size={26} strokeWidth={2.2} />}
+        </button>
+
+        {/* Back Button (visible when not on dashboard) */}
+        {!isHome && (
+          <button
+            type="button"
+            className="header-icon-action-btn header-back-btn"
+            onClick={() => navigate(-1)}
+            title="Go Back"
+            aria-label="Go Back"
+          >
+            <ArrowLeft size={22} strokeWidth={2.2} />
+          </button>
+        )}
+
+        {/* Direct Back to Dashboard Navigation Button with Large Icon */}
+        <button
+          type="button"
+          className={`header-icon-action-btn header-dashboard-btn ${isHome ? 'active' : ''}`}
+          onClick={() => navigate('/')}
+          title={t ? t('backToDashboard') : 'Back to Dashboard'}
+          aria-label={t ? t('backToDashboard') : 'Back to Dashboard'}
+        >
+          <LayoutDashboard size={22} strokeWidth={2.2} />
+          <span className="header-dashboard-label">
+            {t ? (isHome ? t('dashboard') : t('backToDashboard')) : (isHome ? 'Dashboard' : 'Dashboard')}
+          </span>
+        </button>
+      </div>
+
       <div className="header-title-group">
         <h1 className="header-page-title">{title}</h1>
         <p className="header-subtitle">{subtitle}</p>
@@ -65,3 +109,4 @@ const Header = () => {
 };
 
 export default Header;
+

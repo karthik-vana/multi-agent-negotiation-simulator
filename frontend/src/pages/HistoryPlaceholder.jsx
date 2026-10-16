@@ -57,7 +57,7 @@ const HistoryPlaceholder = () => {
         </p>
 
         {/* Navigation Action */}
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             className="btn-practice-back"

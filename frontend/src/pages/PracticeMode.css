@@ -201,3 +201,18 @@
   background: var(--border-color);
   transform: translateX(-2px);
 }
+
+@media (max-width: 600px) {
+  .practice-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .btn-practice-back {
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    font-size: 0.92rem;
+  }
+}

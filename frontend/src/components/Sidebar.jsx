@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useScenario } from '../context/ScenarioContext';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const { currentUser, logout } = useAuth();
   const { t } = useSettings();
   const { selectedScenarioId } = useScenario();
@@ -92,6 +92,7 @@ const Sidebar = () => {
   }, []);
 
   const handleSelectModule = (path) => {
+    if (onClose) onClose();
     if (path === '/agents' && !selectedScenarioId) {
       navigate('/scenarios', {
         state: {
@@ -121,18 +122,37 @@ const Sidebar = () => {
   const displayEmail = currentUser?.email || 'lead@simulator.ai';
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
       {/* Brand Header */}
       <div className="sidebar-header">
-        <div className="brand-wrapper">
+        <div
+          className="brand-wrapper"
+          onClick={() => {
+            if (onClose) onClose();
+            navigate('/');
+          }}
+          style={{ cursor: 'pointer' }}
+          title="Go to Dashboard"
+        >
           <img src="/favicon.svg" alt="Negotiator AI" className="brand-logo" />
           <div className="brand-title">Negotiator AI</div>
         </div>
+
+        {/* Mobile Close Button (shown on mobile screens) */}
+        <button
+          type="button"
+          className="sidebar-mobile-close-btn"
+          onClick={onClose}
+          aria-label="Close navigation"
+          title="Close menu"
+        >
+          <X size={24} strokeWidth={2.2} />
+        </button>
       </div>
 
       {/* Interactive Search Input with Dropdown */}
       <div className="sidebar-search" ref={searchContainerRef}>
-        <Search size={15} className="sidebar-search-icon" />
+        <Search size={16} className="sidebar-search-icon" />
         <input
           type="text"
           placeholder={t ? t('searchPlaceholder') : 'Search modules...'}
@@ -162,7 +182,7 @@ const Sidebar = () => {
             }}
             title="Clear search"
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         )}
 
@@ -178,7 +198,7 @@ const Sidebar = () => {
                     className="search-result-item"
                     onClick={() => handleSelectModule(mod.path)}
                   >
-                    <Icon size={16} className="search-result-icon" />
+                    <Icon size={18} className="search-result-icon" />
                     <div className="search-result-info">
                       <span className="search-result-title">{mod.name}</span>
                       <span className="search-result-section">{mod.section}</span>
@@ -197,51 +217,55 @@ const Sidebar = () => {
 
       {/* Navigation List */}
       <nav className="sidebar-nav">
-
         {/* Only one main menu heading */}
         <div className="nav-section-title">{t ? t('mainMenu') : 'Main Menu'}</div>
 
         <NavLink
           to="/"
           end
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
-          <LayoutDashboard size={18} className="nav-icon" />
+          <LayoutDashboard size={22} className="nav-icon" />
           <span>{t ? t('dashboard') : 'Dashboard'}</span>
           <span className="nav-badge">{t ? t('overview') : 'Overview'}</span>
         </NavLink>
 
         <NavLink
           to="/scenarios"
+          onClick={onClose}
           className={`nav-link ${isSimulationActive ? 'active' : ''}`}
           title={t ? t('simulationModeDesc') : 'Watch AI agents negotiate autonomously.'}
         >
-          <Bot size={18} className="nav-icon" />
+          <Bot size={22} className="nav-icon" />
           <span>{t ? t('simulationMode') : 'Simulation Mode'}</span>
         </NavLink>
 
         <NavLink
           to="/practice"
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           title={t ? t('practiceModeDesc') : 'Practice negotiation skills with an AI opponent.'}
         >
-          <GraduationCap size={18} className="nav-icon" />
+          <GraduationCap size={22} className="nav-icon" />
           <span>{t ? t('practiceMode') : 'Practice Mode'}</span>
         </NavLink>
 
         <NavLink
           to="/history"
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
-          <FileText size={18} className="nav-icon" />
+          <FileText size={22} className="nav-icon" />
           <span>{t ? t('history') : 'History & Reports'}</span>
         </NavLink>
 
         <NavLink
           to="/settings"
+          onClick={onClose}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
-          <Settings size={18} className="nav-icon" />
+          <Settings size={22} className="nav-icon" />
           <span>{t ? t('settings') : 'Settings'}</span>
         </NavLink>
       </nav>
@@ -250,7 +274,10 @@ const Sidebar = () => {
       <div className="sidebar-footer">
         <div
           className="user-card"
-          onClick={() => navigate('/settings')}
+          onClick={() => {
+            if (onClose) onClose();
+            navigate('/settings');
+          }}
           style={{ cursor: 'pointer' }}
           title="Open Profile & Settings"
         >
