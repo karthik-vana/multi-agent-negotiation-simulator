@@ -49,21 +49,21 @@ const Sidebar = () => {
     {
       name: t ? t('practiceMode') : 'Practice Mode',
       path: '/practice',
-      section: t ? t('practiceSection') : 'Practice',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: GraduationCap,
       keywords: ['practice', 'opponent', 'human vs ai', 'skills', 'training', 'learn', 'interactive']
     },
     {
       name: t ? t('history') : 'History & Reports',
       path: '/history',
-      section: t ? t('simulationSection') : 'Simulation',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: FileText,
       keywords: ['analytics', 'outcome', 'metrics', 'concession', 'curves', 'archive']
     },
     {
       name: t ? t('profileAndSettings') : 'Profile & Settings',
       path: '/settings',
-      section: t ? t('systemSection') : 'System',
+      section: t ? t('mainMenu') : 'Main Menu',
       icon: Settings,
       keywords: ['profile', 'settings', 'account', 'avatar', 'preferences', 'appearance', 'language', 'theme']
     }
@@ -198,7 +198,7 @@ const Sidebar = () => {
       {/* Navigation List */}
       <nav className="sidebar-nav">
 
-        {/* Section 1: Main Menu */}
+        {/* Only one main menu heading */}
         <div className="nav-section-title">{t ? t('mainMenu') : 'Main Menu'}</div>
 
         <NavLink
@@ -220,9 +220,6 @@ const Sidebar = () => {
           <span>{t ? t('simulationMode') : 'Simulation Mode'}</span>
         </NavLink>
 
-        {/* Section 2: Practice */}
-        <div className="nav-section-title">{t ? t('practiceSection') : 'Practice'}</div>
-
         <NavLink
           to="/practice"
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
@@ -230,11 +227,7 @@ const Sidebar = () => {
         >
           <GraduationCap size={18} className="nav-icon" />
           <span>{t ? t('practiceMode') : 'Practice Mode'}</span>
-          <span className="nav-badge nav-badge-dev">{t ? t('underDevelopment') : 'Under Dev'}</span>
         </NavLink>
-
-        {/* Section 3: Simulation */}
-        <div className="nav-section-title">{t ? t('simulationSection') : 'Simulation'}</div>
 
         <NavLink
           to="/history"
@@ -243,9 +236,6 @@ const Sidebar = () => {
           <FileText size={18} className="nav-icon" />
           <span>{t ? t('history') : 'History & Reports'}</span>
         </NavLink>
-
-        {/* Section 4: System */}
-        <div className="nav-section-title">{t ? t('systemSection') : 'System'}</div>
 
         <NavLink
           to="/settings"
