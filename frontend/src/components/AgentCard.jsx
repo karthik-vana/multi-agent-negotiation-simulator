@@ -14,6 +14,7 @@ import {
   PERSONALITY_DESCRIPTIONS
 } from '../data/scenarios';
 import { useSettings } from '../context/SettingsContext';
+import AgentFaceAvatar from './AgentFaceAvatar';
 
 const personalityIcons = {
   [PERSONALITIES.AGGRESSIVE]: Flame,
@@ -89,16 +90,8 @@ const AgentCard = ({ agent, currentPersonality, onPersonalityChange, scenarioAcc
     >
       {/* Card Header: Avatar, Name, and Stakeholder */}
       <div className="agent-card-header">
-        <div
-          className="agent-avatar"
-          style={{
-            backgroundColor: `${scenarioAccent || '#4f46e5'}18`,
-            color: scenarioAccent || '#4f46e5',
-            borderColor: `${scenarioAccent || '#4f46e5'}40`
-          }}
-        >
-          {agent.avatarText || <User size={20} />}
-        </div>
+        {/* Animated Face Avatar */}
+        <AgentFaceAvatar agentId={agent.id} accentColor={scenarioAccent} />
 
         <div className="agent-identity">
           <div className="agent-stakeholder-badge">{agentStakeholder}</div>

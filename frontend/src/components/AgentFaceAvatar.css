@@ -1,0 +1,112 @@
+/* ==========================================================================
+   Animated Agent Face Avatars
+   ========================================================================== */
+
+.agent-face-avatar-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--face-accent-border, #cbd5e1);
+  background: var(--face-accent-bg, #f1f5f9);
+  box-shadow: 0 4px 12px -2px var(--face-accent-glow, rgba(0, 0, 0, 0.08));
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.agent-role-card:hover .agent-face-avatar-wrap {
+  transform: scale(1.08) translateY(-1px);
+  box-shadow: 0 8px 20px -2px var(--face-accent-glow, rgba(0, 0, 0, 0.16));
+}
+
+.agent-face-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  animation: agentFaceFloat 3.5s ease-in-out infinite;
+}
+
+/* Subtle breathing / bobbing animation */
+@keyframes agentFaceFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-1.5px) scale(1.02);
+  }
+}
+
+/* Animated blinking eyes */
+.agent-eye-blink {
+  transform-origin: center;
+  animation: agentBlinkCycle 4s ease-in-out infinite;
+}
+
+.agent-eye-blink-alt {
+  transform-origin: center;
+  animation: agentBlinkCycle 4s ease-in-out infinite 0.2s;
+}
+
+@keyframes agentBlinkCycle {
+  0%, 88%, 94%, 100% {
+    transform: scaleY(1);
+  }
+  91% {
+    transform: scaleY(0.08);
+  }
+}
+
+/* Animated eyebrow movement on card hover */
+.agent-eyebrow {
+  transition: transform 0.25s ease;
+  transform-origin: center;
+}
+
+.agent-role-card:hover .agent-eyebrow {
+  transform: translateY(-1.5px);
+}
+
+/* Animated smiling mouth on card hover */
+.agent-mouth {
+  transition: transform 0.25s ease;
+  transform-origin: center;
+}
+
+.agent-role-card:hover .agent-mouth {
+  transform: scaleX(1.1) translateY(-0.5px);
+}
+
+/* Tech glasses / accessory shine animation */
+.agent-glasses-shine {
+  animation: glassesShimmer 5s ease-in-out infinite;
+}
+
+@keyframes glassesShimmer {
+  0%, 75%, 100% {
+    opacity: 0.25;
+  }
+  85% {
+    opacity: 0.85;
+  }
+}
+
+/* Pulse indicator dot */
+.agent-live-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .agent-live-dot {
+  border-color: #1e293b;
+}
