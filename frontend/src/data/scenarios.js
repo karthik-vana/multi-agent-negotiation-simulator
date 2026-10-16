@@ -75,12 +75,12 @@ const vendorPricing = {
   iconName: 'ShoppingCart',
   accentColor: '#4f46e5',
   participantCount: 2,
-  keyLevers: ['Unit Price', 'Order Quantity', 'Delivery Schedule', 'Payment Terms'],
+  keyLevers: ['Unit Pricing', 'Order Volume', 'Payment Terms (Net 30/60)', 'Delivery SLA'],
   estimatedRounds: '8 - 12 Turns',
   complexity: 'Standard (2 Agents)',
   name: 'Vendor Pricing Negotiation',
   description:
-    'A purchasing manager and a vendor sales representative negotiate price and commercial terms for a bulk product order.',
+    'Negotiate product pricing, purchasing terms, order quantities, and delivery conditions between a buyer and a vendor.',
   context:
     'The organization needs to purchase a batch of standard products. The buyer wants a competitive price at required quality and delivery standards; the vendor wants a profitable sale with an acceptable margin.',
   topics: [
@@ -172,12 +172,12 @@ const jobOffer = {
   iconName: 'Briefcase',
   accentColor: '#06b6d4',
   participantCount: 2,
-  keyLevers: ['Base Salary', 'Benefits', 'Joining Date', 'Remote Flexibility'],
+  keyLevers: ['Base Salary', 'Equity Stock Grants', 'Sign-On Bonus', 'Remote Flexibility'],
   estimatedRounds: '6 - 10 Turns',
   complexity: 'Standard (2 Agents)',
   name: 'Job Offer Negotiation',
   description:
-    'A job candidate and a hiring manager negotiate compensation, start date, and working conditions for an open role.',
+    'Negotiate employment terms between a job candidate and an employer, including salary, benefits, joining date, and work arrangements.',
   context:
     'The candidate has received an offer and wants a package and working arrangement that meet their needs. The employer wants to hire within the approved salary budget and company policies.',
   topics: [
@@ -265,12 +265,12 @@ const projectBudget = {
   iconName: 'PieChart',
   accentColor: '#10b981',
   participantCount: 2,
-  keyLevers: ['Budget Share', 'Project Priorities', 'Shared Resources', 'Delivery Timelines'],
-  estimatedRounds: '8 - 12 Turns',
+  keyLevers: ['Capital Share %', 'Priority Milestones', 'Headcount Quota', 'ROI Projections'],
+  estimatedRounds: '10 - 15 Turns',
   complexity: 'Standard (2 Agents)',
   name: 'Project Budget Allocation',
   description:
-    'Two departments negotiate how to divide a limited project budget and shared resources between their priority initiatives.',
+    'Negotiate how a limited project budget should be distributed among competing departments or project stakeholders.',
   context:
     'Combined funding requests exceed the available budget, and both departments rely on the same shared team. They must agree on an allocation that covers each department\'s minimum operational needs.',
   topics: [

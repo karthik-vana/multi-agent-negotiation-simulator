@@ -1,24 +1,30 @@
 import React from 'react';
 import {
-  ShoppingCart,
-  Briefcase,
-  PieChart,
+  ShoppingBag,
   Users,
-  CheckCircle2,
+  PieChart,
   Clock,
+  CheckCircle2,
   Sparkles
 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
-const iconMap = {
-  ShoppingCart: ShoppingCart,
-  Briefcase: Briefcase,
-  PieChart: PieChart
+const scenarioImageMap = {
+  'vendor-pricing': '/images/scenarios/vendor-pricing.png',
+  'job-offer': '/images/scenarios/job-offer.png',
+  'project-budget': '/images/scenarios/project-budget.png',
+};
+
+const categoryIconMap = {
+  'vendor-pricing': ShoppingBag,
+  'job-offer': Users,
+  'project-budget': PieChart,
 };
 
 const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
   const { t } = useSettings();
-  const IconComponent = iconMap[scenario.iconName] || Sparkles;
+  const CategoryIcon = categoryIconMap[scenario.id] || Sparkles;
+  const scenarioImage = scenarioImageMap[scenario.id] || scenario.image;
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -32,6 +38,9 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
   const scenarioCategory = t ? (t(`scenario_${scenarioKey}_category`) || scenario.category) : scenario.category;
   const scenarioDesc = t ? (t(`scenario_${scenarioKey}_desc`) || scenario.shortDescription) : scenario.shortDescription;
 
+  // Participant count matching reference design: 3 for project-budget, 2 for vendor/job
+  const displayParticipantCount = scenario.id === 'project-budget' ? 3 : scenario.participantCount;
+
   return (
     <div
       role="button"
@@ -42,47 +51,36 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
       className={`scenario-card ${isSelected ? 'selected' : ''}`}
       id={`scenario-card-${scenario.id}`}
       style={{
-        '--card-accent': scenario.accentColor
+        '--card-accent': scenario.accentColor || '#2563eb'
       }}
     >
-      {/* Top Banner with Category & Status Indicator */}
-      <div className="scenario-card-top">
-        <div
-          className="scenario-icon-wrapper"
-          style={{
-            backgroundColor: `${scenario.accentColor}18`,
-            color: scenario.accentColor
-          }}
-        >
-          <IconComponent size={22} />
-        </div>
-
-        <div className="scenario-top-badges">
-          <span className="scenario-category-pill">{scenarioCategory}</span>
-          <div
-            className={`scenario-select-indicator ${isSelected ? 'active' : ''}`}
-            title={isSelected ? (t ? t('clickToDeselect') : 'Click to deselect scenario') : (t ? t('selectScenario') : 'Click to select')}
-          >
-            {isSelected ? (
-              <CheckCircle2 size={18} className="indicator-check" />
-            ) : (
-              <span className="indicator-empty" />
-            )}
-          </div>
-        </div>
+      {/* Top Illustration Banner */}
+      <div className="scenario-card-image-wrap">
+        <img
+          src={scenarioImage}
+          alt={scenarioName}
+          className="scenario-card-img"
+        />
       </div>
 
-      {/* Title & Description */}
-      <div className="scenario-card-body">
+      {/* Card Content Section */}
+      <div className="scenario-card-inner">
+        {/* Category Pill with Icon */}
+        <div className="scenario-category-pill">
+          <CategoryIcon size={14} className="category-pill-icon" />
+          <span>{scenarioCategory}</span>
+        </div>
+
+        {/* Title & Description */}
         <h3 className="scenario-card-title">{scenarioName}</h3>
         <p className="scenario-card-desc">{scenarioDesc}</p>
 
-        {/* Metadata badges row: Agents & Estimated Duration */}
+        {/* Metadata Badges Row: Agents & Estimated Duration */}
         <div className="scenario-meta-row">
           <div className="scenario-meta-chip">
             <Users size={14} className="meta-icon" />
             <span>
-              <strong>{scenario.participantCount}</strong> {t ? t('participatingAgents') : 'Participating Agents'}
+              {displayParticipantCount} {t ? t('participatingAgents') : 'Participating Agents'}
             </span>
           </div>
 
@@ -95,7 +93,7 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
         {/* Key Negotiation Levers */}
         {scenario.keyLevers && scenario.keyLevers.length > 0 && (
           <div className="scenario-levers-section">
-            <span className="scenario-levers-label">{t ? t('coreLevers') : 'Core Negotiation Levers:'}</span>
+            <span className="scenario-levers-label">{t ? t('coreLevers') : 'CORE NEGOTIATION LEVERS:'}</span>
             <div className="scenario-levers-list">
               {scenario.keyLevers.map((lever, idx) => (
                 <span key={idx} className="scenario-lever-tag">
@@ -105,28 +103,28 @@ const ScenarioCard = ({ scenario, isSelected, onSelect }) => {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Bottom Selection Button */}
-      <div className="scenario-card-footer">
-        <button
-          type="button"
-          className={`scenario-select-btn ${isSelected ? 'btn-selected' : ''}`}
-          title={isSelected ? (t ? t('clickToDeselect') : 'Click to deselect scenario') : (t ? t('selectScenario') : 'Click to select')}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(scenario.id);
-          }}
-        >
-          {isSelected ? (
-            <>
-              <CheckCircle2 size={16} />
-              <span>{t ? t('selectedContext') : 'Selected Context'}</span>
-            </>
-          ) : (
-            <span>{t ? t('selectScenario') : 'Select Scenario'}</span>
-          )}
-        </button>
+        {/* Bottom Selection Button */}
+        <div className="scenario-card-footer">
+          <button
+            type="button"
+            className={`scenario-select-btn ${isSelected ? 'btn-selected' : ''}`}
+            title={isSelected ? (t ? t('clickToDeselect') : 'Click to deselect scenario') : (t ? t('selectScenario') : 'Click to select')}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(scenario.id);
+            }}
+          >
+            {isSelected ? (
+              <>
+                <CheckCircle2 size={16} />
+                <span>{t ? t('selectedContext') : 'Selected Scenario'}</span>
+              </>
+            ) : (
+              <span>{t ? t('selectScenario') : 'Select Scenario'}</span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
