@@ -712,7 +712,6 @@ body {
 .scenario-page-subtitle {
   font-size: 0.94rem;
   color: var(--text-muted);
-  max-width: 760px;
   line-height: 1.6;
 }
 
@@ -1198,7 +1197,6 @@ body {
   font-size: 0.94rem;
   color: var(--text-muted);
   line-height: 1.6;
-  max-width: 820px;
 }
 
 /* Active Scenario Context Banner */
