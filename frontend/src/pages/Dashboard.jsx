@@ -71,6 +71,20 @@ const Dashboard = () => {
       </div>
 
       {/* ==========================================================================
+          Section Heading: Explore the Platform
+          ========================================================================== */}
+      <div className="dashboard-section-header">
+        <h2 className="dashboard-section-title">
+          {t ? t('explorePlatformTitle') : 'Explore the Platform'}
+        </h2>
+        <p className="dashboard-section-subtitle">
+          {t
+            ? t('explorePlatformSubtitle')
+            : 'Choose a scenario, configure your agents, and experience intelligent negotiations.'}
+        </p>
+      </div>
+
+      {/* ==========================================================================
           3 Workflow Step Cards
           ========================================================================== */}
       <div className="dashboard-steps-grid" id="dashboard-steps-grid">

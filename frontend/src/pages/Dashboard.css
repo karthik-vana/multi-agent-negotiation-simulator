@@ -272,6 +272,34 @@
 }
 
 /* ==========================================================================
+   Section Heading (Explore the Platform)
+   ========================================================================== */
+
+.dashboard-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 2px;
+}
+
+.dashboard-section-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.dashboard-section-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
    3-Step Workflow Cards Grid
    ========================================================================== */
 
@@ -497,6 +525,10 @@
 
   .hero-title {
     font-size: 1.85rem;
+  }
+
+  .dashboard-section-title {
+    font-size: 1.3rem;
   }
 
   .dashboard-steps-grid {
