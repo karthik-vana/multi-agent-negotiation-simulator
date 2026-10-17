@@ -96,7 +96,7 @@ Task 1 establishes the operational context, stakeholder boundary definitions, an
 
 ## Features
 
-### Completed Features (Task 1)
+### Completed Features (Milestone 1 & Milestone 2 Task 1)
 
 * **Pre-Built Negotiation Scenarios:** 3 fully populated templates (*Vendor Pricing*, *Job Offer*, *Project Budget Allocation*).
 * **Agent Role Cards with Animated Avatars:** Interactive SVG face avatars with dynamic expressions and breathing micro-animations.
@@ -106,14 +106,17 @@ Task 1 establishes the operational context, stakeholder boundary definitions, an
 * **Full-Width Modern Layout:** Clean SaaS interface adhering to WCAG contrast standards.
 * **Multi-Language Support (i18n):** Complete localization across 6 languages (**English, Hindi, Bengali, Telugu, Tamil, Marathi**).
 * **Responsive Mobile Experience:** Touch-friendly slide-out drawer, navigation back controls, and responsive grid layouts.
+* **Negotiation Arena UI (`/arena`):** Real-time conversational simulation UI matching the reference design, featuring live transcript bubbles, offer tags, agent status cards, and live metrics (Round, Offers Exchanged, Current Gap, Agreement Likelihood).
+* **Node.js/Express Backend:** RESTful simulation session engine managing turns, sessions, and persistence on port `5000`.
+* **Python/FastAPI Gemini Service:** Autonomous agent inference server utilizing Google Gemini (`gemini-2.5-flash`) on port `8000`.
+* **Neon PostgreSQL Cloud Database:** Serverless PostgreSQL cluster storing simulations, agents, message transcripts, offers, and agreements.
 
-### Planned Features (Downstream Tasks)
+### Planned Features (Remaining Milestone 2 Modules)
 
-* [ ] Turn-taking Orchestrator Agent to manage conversational state and detect deadlocks.
-* [ ] LLM-powered offer generation and concession decision modules (OpenAI, Gemini, Anthropic).
-* [ ] Chat-style Negotiation Arena with turn-by-turn reasoning and live stance indicators.
+* [ ] Full Orchestrator Agent for multi-party arbitration and deadlock resolution.
+* [ ] Advanced AI counteroffer evaluation and dynamic concession curves.
 * [ ] Interactive Human vs. AI Practice Mode.
-* [ ] Final outcome evaluation screen with concession curves, Pareto efficiency scoring, and downloadable transcripts.
+* [ ] Final outcome evaluation screen with Pareto efficiency scoring and downloadable transcripts.
 
 ---
 
@@ -125,8 +128,12 @@ Task 1 establishes the operational context, stakeholder boundary definitions, an
 | **Vite 6** | Build Tool & Dev Server | Fast Hot Module Replacement (HMR) and optimized bundling |
 | **React Router 7** | Client-Side Routing | Multi-step workflow navigation without page reloads |
 | **Lucide React** | Icon System | Modern SVG icons throughout the interface |
-| **Node Test Runner** | Unit Testing | Native Node.js test suite for configuration validation |
-| **Vanilla CSS** | Styling System | Custom CSS variables, responsive breakpoints, and animations (`index.css`) |
+| **Node.js / Express** | Backend Engine | REST API, session state machine, and turn orchestration |
+| **Python 3.12 / FastAPI** | AI Agent Service | Autonomous agent reasoning and negotiation moves |
+| **Google Gemini API** | Large Language Model | Powers intelligent, personality-driven agent dialogue |
+| **Neon PostgreSQL** | Cloud Database | Serverless PostgreSQL storing simulations, offers, and transcripts |
+| **Node Test Runner** | Unit Testing | Native Node.js test suite with 21 automated tests |
+| **Vanilla CSS** | Styling System | Custom CSS variables, responsive breakpoints, and animations |
 
 ---
 
@@ -135,87 +142,101 @@ Task 1 establishes the operational context, stakeholder boundary definitions, an
 Verify that the following tools are installed on your machine:
 
 * **Node.js:** `v18.0.0` or higher (tested on `v20+` / `v24+`)
+* **Python:** `3.10+` (tested on `3.12+`)
 * **npm:** `v9.0.0` or higher
 * **Git:** Installed and configured
 
 Verify versions by running:
 ```bash
 node -v
+python --version
 npm -v
 git --version
 ```
 
 ---
 
-## Quick Start
+## Quick Start (Running All Services)
 
-Get the application running locally in four commands:
+Run the full simulator stack locally across three terminals:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/karthik-vana/multi-agent-negotiation-simulator.git
+# 1. Start the Python FastAPI AI Service
+cd ai-service
+pip install -r requirements.txt
+python main.py
+# AI service runs at http://localhost:8000
 
-# 2. Navigate to the frontend directory
-cd multi-agent-negotiation-simulator/frontend
-
-# 3. Install dependencies
+# 2. Start the Express Backend
+cd backend
 npm install
-
-# 4. Start the development server
 npm run dev
-```
+# Backend runs at http://localhost:5000
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
----
-
-## Installation and Setup
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/karthik-vana/multi-agent-negotiation-simulator.git
-```
-
-### 2. Navigate to Frontend Directory
-```bash
-cd multi-agent-negotiation-simulator/frontend
-```
-
-### 3. Install Dependencies
-```bash
+# 3. Start the React Frontend
+cd frontend
 npm install
+npm run dev
+# Frontend runs at http://localhost:5173
 ```
 
-### 4. Set Up Environment Variables (Firebase Authentication)
-Copy the provided environment template:
-```bash
-cp .env.example .env
-```
+Open [http://localhost:5173/arena](http://localhost:5173/arena) in your browser to view the live Negotiation Arena.
 
 ---
 
 ## Environment Variables
 
-The application uses **Firebase Authentication** for user accounts, profile details, and session management.
-
-Create a `.env` file in the `frontend/` directory (you can copy from `frontend/.env.example`):
-
+### 1. Frontend Environment (`frontend/.env`)
+Copy from `frontend/.env.example`:
 ```bash
 cd frontend
 cp .env.example .env
 ```
 
-### Required Firebase Configuration Keys:
-
-| Variable | Description | Example / Location |
+| Variable | Description | Example / Default |
 | :--- | :--- | :--- |
+| `VITE_BACKEND_URL` | Express Backend API URL | `http://localhost:5000` |
 | `VITE_FIREBASE_API_KEY` | Firebase Web API Key | Firebase Console > Project Settings |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Authentication Domain | `your-project.firebaseapp.com` |
 | `VITE_FIREBASE_PROJECT_ID` | Firebase Project Identifier | `your-project-id` |
 | `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage Bucket | `your-project.firebasestorage.app` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Cloud Messaging Sender ID | Numeric project sender ID |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID`| Cloud Messaging Sender ID | Numeric project sender ID |
 | `VITE_FIREBASE_APP_ID` | Firebase Web Application ID | `1:xxx:web:xxx` |
-| `VITE_FIREBASE_MEASUREMENT_ID` | Google Analytics Measurement ID (optional) | `G-XXXXXXXXXX` |
+
+---
+
+### 2. Backend Environment (`backend/.env`)
+Copy from `backend/.env.example`:
+```bash
+cd backend
+cp .env.example .env
+```
+
+| Variable | Description | Example / Default |
+| :--- | :--- | :--- |
+| `PORT` | Express Server Port | `5000` |
+| `NODE_ENV` | Environment mode | `development` |
+| `DATABASE_URL` | Neon PostgreSQL connection URI | `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require` |
+| `AI_SERVICE_URL` | Python FastAPI AI service URL | `http://localhost:8000` |
+| `GEMINI_API_KEY` | Google Gemini API Key | `AIzaSy...` (Optional, if calling direct) |
+
+> **Note:** If `DATABASE_URL` is omitted, the backend automatically uses an In-Memory Store so local development is never blocked.
+
+---
+
+### 3. AI Service Environment (`ai-service/.env`)
+Copy from `ai-service/.env.example`:
+```bash
+cd ai-service
+cp .env.example .env
+```
+
+| Variable | Description | Example / Default |
+| :--- | :--- | :--- |
+| `PORT` | FastAPI Service Port | `8000` |
+| `HOST` | Bind host address | `0.0.0.0` |
+| `GEMINI_API_KEY` | Google Gemini API Key | `AIzaSy...` (from Google AI Studio) |
+| `GEMINI_MODEL` | Gemini LLM model identifier | `gemini-2.5-flash` |
 
 > **Local Fallback:** If Firebase credentials are not provided or connectivity fails, the platform automatically activates a local mock session, allowing all Task 1 modules (*Scenario Selection*, *Agent Configuration*, and *Validation*) to run seamlessly without blocking development.
 
