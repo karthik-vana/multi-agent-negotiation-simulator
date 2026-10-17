@@ -4,7 +4,7 @@ import AppLayout from './components/AppLayout';
 import Dashboard from './pages/Dashboard';
 import ScenarioSelection from './pages/ScenarioSelection';
 import AgentConfiguration from './pages/AgentConfiguration';
-import NegotiationArenaPlaceholder from './pages/NegotiationArenaPlaceholder';
+import NegotiationArena from './pages/NegotiationArena';
 import HistoryPlaceholder from './pages/HistoryPlaceholder';
 import Settings from './pages/Settings';
 import PracticeMode from './pages/PracticeMode';
@@ -45,7 +45,7 @@ function App() {
                 <Route path="simulation" element={<Navigate to="/scenarios" replace />} />
                 <Route path="scenarios" element={<ScenarioSelection />} />
                 <Route path="agents" element={<AgentConfiguration />} />
-                <Route path="arena" element={<NegotiationArenaPlaceholder />} />
+                <Route path="arena" element={<NegotiationArena />} />
                 <Route path="practice" element={<PracticeMode />} />
                 <Route path="history" element={<HistoryPlaceholder />} />
                 <Route path="settings" element={<Settings />} />
