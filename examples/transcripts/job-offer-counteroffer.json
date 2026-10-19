@@ -1,0 +1,205 @@
+{
+  "_meta": {
+    "type": "REFERENCE_SAMPLE_TRANSCRIPT",
+    "description": "Sample negotiation transcript demonstrating multi-issue context-aware counteroffer evaluation and package trade-offs. Manually authored reference example, not an automated Gemini output.",
+    "scenario_id": "job-offer",
+    "scenario_title": "Job Offer Negotiation",
+    "outcome": "COUNTEROFFER_CONVERGENCE"
+  },
+  "simulation": {
+    "id": "sample-sim-job-counteroffer-002",
+    "scenario_id": "job-offer",
+    "scenario_title": "Job Offer Negotiation",
+    "domain": "Talent & Human Resources",
+    "status": "COMPLETED",
+    "outcome": "AGREEMENT_REACHED",
+    "current_round": 4,
+    "max_rounds": 8,
+    "initial_gap": 12000.0,
+    "final_gap": 0.0,
+    "agreement_likelihood": 100
+  },
+  "agents": [
+    {
+      "id": "job-candidate",
+      "role": "Job Candidate",
+      "stakeholder": "Prospective Employee",
+      "personality": "Collaborative",
+      "primaryGoal": "Obtain an acceptable compensation package and suitable working conditions.",
+      "target_value": 100000.0,
+      "reservation_value": 90000.0,
+      "current_offer": 97000.0,
+      "stance": "Agreement confirmed",
+      "constraints": [
+        "Base salary must be >= $90,000 USD/year",
+        "Joining date must be >= 30 days from offer (contractual notice period)",
+        "Must have >= 2 remote work days per week"
+      ]
+    },
+    {
+      "id": "hiring-director",
+      "role": "Hiring Manager",
+      "stakeholder": "Hiring Organization",
+      "personality": "Risk-Averse",
+      "primaryGoal": "Hire a suitable candidate within the approved compensation budget and company policies.",
+      "target_value": 90000.0,
+      "reservation_value": 105000.0,
+      "current_offer": 97000.0,
+      "stance": "Agreement confirmed",
+      "constraints": [
+        "Base salary must not exceed $105,000 USD/year",
+        "Joining date must be <= 60 days from offer",
+        "Remote work days must not exceed 3 days per week",
+        "Annual bonus must not exceed 10% of base"
+      ]
+    }
+  ],
+  "rounds": [
+    {
+      "round_number": 1,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Hiring Manager",
+          "sender_type": "AGENT",
+          "personality": "Risk-Averse",
+          "action": "OFFER",
+          "offer_value": 92000.0,
+          "currency": "$",
+          "terms": {
+            "baseSalary": 92000.0,
+            "annualBonusPercent": 5,
+            "joiningDays": 30,
+            "remoteDaysPerWeek": 2
+          },
+          "message": "We are excited to extend an initial offer with a base salary of $92,000, a 5% performance bonus, starting in 30 days, with 2 remote days per week.",
+          "decision_explanation": "Opened at conservative $92k to stay safely within the $105k approved band while meeting candidate minimum $90k requirement.",
+          "timestamp_label": "2:00 PM"
+        },
+        {
+          "sender_role": "Job Candidate",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "COUNTER_OFFER",
+          "offer_value": 102000.0,
+          "currency": "$",
+          "terms": {
+            "baseSalary": 102000.0,
+            "annualBonusPercent": 8,
+            "joiningDays": 45,
+            "remoteDaysPerWeek": 3
+          },
+          "message": "Thank you for the offer. Based on my specialized AI engineering experience and market benchmarks, I am targeting a base of $102,000 with an 8% bonus and 3 remote days. I would be able to start in 45 days after completing my transition.",
+          "decision_explanation": "Acknowledged offer meets baseline ($92k >= $90k), but counteroffered near upper range ($102k) with 45-day start date and 3 remote days.",
+          "timestamp_label": "2:04 PM"
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Hiring Manager",
+          "sender_type": "AGENT",
+          "personality": "Risk-Averse",
+          "action": "COUNTER_OFFER",
+          "offer_value": 95000.0,
+          "currency": "$",
+          "terms": {
+            "baseSalary": 95000.0,
+            "annualBonusPercent": 6,
+            "joiningDays": 35,
+            "remoteDaysPerWeek": 2
+          },
+          "message": "A base salary of $102,000 exceeds our internal equity benchmarks for this role tier. We can increase the base to $95,000 with a 6% bonus ($5,700). However, the team requires your on-site presence at 3 days per week, and we need you to start within 35 days.",
+          "decision_explanation": "Evaluated candidate counteroffer. Pushed base from $92k to $95k, but held remote work to 2 days to satisfy team collaboration policy.",
+          "timestamp_label": "2:10 PM"
+        },
+        {
+          "sender_role": "Job Candidate",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "COUNTER_OFFER",
+          "offer_value": 98000.0,
+          "currency": "$",
+          "terms": {
+            "baseSalary": 98000.0,
+            "annualBonusPercent": 8,
+            "joiningDays": 35,
+            "remoteDaysPerWeek": 2
+          },
+          "message": "I am willing to compromise on the schedule by agreeing to your 35-day start date and the 2 days remote arrangement. In return, I request that we adjust the base salary to $98,000 with an 8% bonus to bridge the overall value gap.",
+          "decision_explanation": "Made significant concessions on start date (45d -> 35d) and remote days (3d -> 2d). Counteroffered by demanding a smaller price move to $98k base.",
+          "timestamp_label": "2:15 PM"
+        }
+      ]
+    },
+    {
+      "round_number": 3,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Hiring Manager",
+          "sender_type": "AGENT",
+          "personality": "Risk-Averse",
+          "action": "COUNTER_OFFER",
+          "offer_value": 97000.0,
+          "currency": "$",
+          "terms": {
+            "baseSalary": 97000.0,
+            "annualBonusPercent": 8,
+            "joiningDays": 35,
+            "remoteDaysPerWeek": 2
+          },
+          "message": "We appreciate your flexibility on the start date and on-site commitments. We can stretch our base salary authorization to $97,000 and approve the 8% annual performance bonus ($7,760), bringing your total compensation potential to $104,760.",
+          "decision_explanation": "Evaluated total package: $97k base is comfortably under $105k cap. Approved 8% bonus (under 10% policy cap). Proposed near candidate's target.",
+          "timestamp_label": "2:20 PM"
+        },
+        {
+          "sender_role": "Job Candidate",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "ACCEPT",
+          "offer_value": 97000.0,
+          "currency": "$",
+          "terms": {
+            "baseSalary": 97000.0,
+            "annualBonusPercent": 8,
+            "joiningDays": 35,
+            "remoteDaysPerWeek": 2
+          },
+          "message": "With total compensation reaching $104,760, a $97,000 base, 2 remote days per week, and a 35-day start, this package satisfies all my core objectives. I am delighted to accept your offer.",
+          "decision_explanation": "Accepted offer. $97k base exceeds $90k reservation limit; total compensation exceeds $100k target; start date (35d >= 30d) and remote (2d >= 2d) satisfied.",
+          "timestamp_label": "2:23 PM"
+        },
+        {
+          "sender_role": "Orchestrator Agent",
+          "sender_type": "ORCHESTRATOR",
+          "action": "STATUS",
+          "message": "Negotiation concluded successfully via multi-issue counteroffers in Round 3. All employer constraints (salary <= $105k, bonus <= 10%, start <= 60d) and candidate constraints (salary >= $90k, start >= 30d, remote >= 2d) verified.",
+          "timestamp_label": "2:23 PM"
+        }
+      ]
+    }
+  ],
+  "final_agreement": {
+    "outcome": "AGREEMENT_REACHED",
+    "final_base_salary": 97000.0,
+    "annual_bonus_percent": 8,
+    "total_estimated_package": 104760.0,
+    "currency": "USD",
+    "terms": {
+      "joiningDaysFromOffer": 35,
+      "remoteDaysPerWeek": 2
+    },
+    "settlement_round": 3,
+    "constraint_validation": {
+      "candidate_min_salary_check": "PASSED ($97,000 >= $90,000)",
+      "employer_max_salary_check": "PASSED ($97,000 <= $105,000)",
+      "employer_bonus_cap_check": "PASSED (8% <= 10%)",
+      "notice_period_check": "PASSED (35 days >= 30 days)",
+      "remote_flexibility_check": "PASSED (2 days >= 2 days and <= 3 days)"
+    }
+  }
+}
