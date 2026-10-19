@@ -1,0 +1,235 @@
+{
+  "_meta": {
+    "type": "REFERENCE_SAMPLE_TRANSCRIPT",
+    "description": "Sample negotiation transcript demonstrating a Negotiation Breakdown (Deadlock) where opposing agents reject irreconcilable proposals. Manually authored reference example, not an automated Gemini output.",
+    "scenario_id": "project-budget",
+    "scenario_title": "Project Budget Allocation",
+    "outcome": "DEADLOCK"
+  },
+  "simulation": {
+    "id": "sample-sim-budget-deadlock-003",
+    "scenario_id": "project-budget",
+    "scenario_title": "Project Budget Allocation",
+    "domain": "Corporate Strategy & Finance",
+    "status": "DEADLOCK",
+    "outcome": "DEADLOCK",
+    "current_round": 4,
+    "max_rounds": 4,
+    "initial_gap": 150000.0,
+    "final_gap": 60000.0,
+    "agreement_likelihood": 12
+  },
+  "shared_resource_caps": {
+    "totalBudget": 1000000.0,
+    "totalSharedHours": 2000,
+    "currency": "USD"
+  },
+  "agents": [
+    {
+      "id": "department-a",
+      "role": "Department A Representative",
+      "stakeholder": "Core Engineering Department",
+      "personality": "Aggressive",
+      "primaryGoal": "Secure sufficient funding for its highest-priority initiatives.",
+      "project_cost_estimate": 600000.0,
+      "min_operational_funding": 250000.0,
+      "requested_shared_hours": 1200,
+      "min_shared_hours": 700,
+      "current_offer": 560000.0,
+      "stance": "Holding firm on critical compliance scope",
+      "constraints": [
+        "Combined departmental funding must not exceed $1,000,000 total budget",
+        "Must receive >= $250,000 minimum operational funding",
+        "Must receive >= 700 minimum shared hours",
+        "Must not request funding above $600,000 project estimate",
+        "Must not drop top-priority initiative to fund lower-priority tasks"
+      ]
+    },
+    {
+      "id": "department-b",
+      "role": "Department B Representative",
+      "stakeholder": "Growth & Marketing Department",
+      "personality": "Aggressive",
+      "primaryGoal": "Obtain sufficient funding to execute its own priority initiatives.",
+      "project_cost_estimate": 550000.0,
+      "min_operational_funding": 200000.0,
+      "requested_shared_hours": 1000,
+      "min_shared_hours": 600,
+      "current_offer": 500000.0,
+      "stance": "Refusing cuts that breach committed client launches",
+      "constraints": [
+        "Combined departmental funding must not exceed $1,000,000 total budget",
+        "Must receive >= $200,000 minimum operational funding",
+        "Must receive >= 600 minimum shared hours",
+        "Must not request funding above $550,000 project estimate",
+        "Must not agree to an allocation that makes an already committed delivery date impossible"
+      ]
+    }
+  ],
+  "rounds": [
+    {
+      "round_number": 1,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Department A Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "OFFER",
+          "offer_value": 600000.0,
+          "currency": "$",
+          "terms": {
+            "departmentAFunding": 600000.0,
+            "departmentBFunding": 400000.0,
+            "departmentASharedHours": 1200,
+            "departmentBSharedHours": 800
+          },
+          "message": "Our infrastructure modernization is the foundation for all platform services. We request our full estimated budget of $600,000 and 1,200 shared engineering hours, leaving $400,000 and 800 hours for Department B.",
+          "decision_explanation": "Opened aggressively with 100% of internal cost estimate ($600k) and 60% of total hours (1,200/2,000h) to safeguard priority systems.",
+          "timestamp_label": "11:00 AM"
+        },
+        {
+          "sender_role": "Department B Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "REJECT",
+          "offer_value": 520000.0,
+          "currency": "$",
+          "terms": {
+            "departmentAFunding": 480000.0,
+            "departmentBFunding": 520000.0,
+            "departmentASharedHours": 1000,
+            "departmentBSharedHours": 1000
+          },
+          "message": "We reject this proposal. A $400,000 allocation would immediately compromise our Q3 contractual launch commitments. We require $520,000 and at least 1,000 shared engineering hours, leaving $480,000 and 1,000 hours for Department A.",
+          "decision_explanation": "Rejected Dept A proposal as violating our policy constraint: $400k allocation makes existing client delivery dates unachievable. Counter-demanded $520k.",
+          "timestamp_label": "11:04 AM"
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Department A Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "COUNTER_OFFER",
+          "offer_value": 580000.0,
+          "currency": "$",
+          "terms": {
+            "departmentAFunding": 580000.0,
+            "departmentBFunding": 420000.0,
+            "departmentASharedHours": 1150,
+            "departmentBSharedHours": 850
+          },
+          "message": "Reducing Department A to $480,000 would halt mandatory security compliance audits. The most we can concede is reducing our ask to $580,000 and 1,150 hours, permitting Department B to receive $420,000 and 850 hours.",
+          "decision_explanation": "Made minimal $20k concession ($600k -> $580k). Stated security compliance cannot permit lower allocations.",
+          "timestamp_label": "11:09 AM"
+        },
+        {
+          "sender_role": "Department B Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "REJECT",
+          "offer_value": 500000.0,
+          "currency": "$",
+          "terms": {
+            "departmentAFunding": 500000.0,
+            "departmentBFunding": 500000.0,
+            "departmentASharedHours": 1000,
+            "departmentBSharedHours": 1000
+          },
+          "message": "We cannot accept $420,000; our contract penalty liabilities exceed any savings. The only viable path is an equal 50/50 split of the $1,000,000 budget ($500,000 each) and 1,000 shared hours each.",
+          "decision_explanation": "Rejected $420k offer. Countered with rigid 50/50 division ($500k/1,000h) as non-negotiable floor.",
+          "timestamp_label": "11:15 AM"
+        }
+      ]
+    },
+    {
+      "round_number": 3,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Department A Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "COUNTER_OFFER",
+          "offer_value": 560000.0,
+          "currency": "$",
+          "terms": {
+            "departmentAFunding": 560000.0,
+            "departmentBFunding": 440000.0,
+            "departmentASharedHours": 1100,
+            "departmentBSharedHours": 900
+          },
+          "message": "An equal $500,000 split is fundamentally unacceptable because our non-deferrable infrastructure migration requires a minimum hard floor of $560,000 and 1,100 hours. This is our final concession.",
+          "decision_explanation": "Conceded to $560k but established absolute walkaway line. Stated anything lower violates core operational requirements.",
+          "timestamp_label": "11:21 AM"
+        },
+        {
+          "sender_role": "Department B Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "REJECT",
+          "offer_value": 500000.0,
+          "currency": "$",
+          "terms": {
+            "departmentAFunding": 500000.0,
+            "departmentBFunding": 500000.0,
+            "departmentASharedHours": 1000,
+            "departmentBSharedHours": 1000
+          },
+          "message": "At $440,000, Department B would incur severe contractual defaults on enterprise partner deliverables. Since you refuse to accept $500,000, we have reached an impasse and cannot concede further.",
+          "decision_explanation": "Rejected $440k proposal. Reaffirmed that accepting under $500k violates contractual delivery policy. Held position.",
+          "timestamp_label": "11:25 AM"
+        }
+      ]
+    },
+    {
+      "round_number": 4,
+      "status": "COMPLETED",
+      "turns": [
+        {
+          "sender_role": "Department A Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "REJECT",
+          "message": "We formally reject any allocation below $560,000 and 1,100 shared hours. As both parties have reached their hard constraint limits, we declare formal impasse.",
+          "decision_explanation": "Formally declared negotiation failure as Department B demands would cause infrastructure failure.",
+          "timestamp_label": "11:29 AM"
+        },
+        {
+          "sender_role": "Department B Representative",
+          "sender_type": "AGENT",
+          "personality": "Aggressive",
+          "action": "REJECT",
+          "message": "Department B concurs. We cannot sign off on an agreement that forces project default. Negotiation terminated without consensus.",
+          "decision_explanation": "Formally concurred with impasse. Constraints cannot be reconciled within the $1,000,000 cap.",
+          "timestamp_label": "11:30 AM"
+        },
+        {
+          "sender_role": "Orchestrator Agent",
+          "sender_type": "ORCHESTRATOR",
+          "action": "STATUS",
+          "message": "DEADLOCK DETECTED: Mutual rejection reached at Round 4. Department A bottom line ($560,000) + Department B bottom line ($500,000) = $1,060,000, exceeding total available budget ($1,000,000) by $60,000. Shared hours demand (1,100 + 1,000 = 2,100h) exceeds capacity (2,000h) by 100h. Simulation concluded in deadlock. Escalating to executive arbitration.",
+          "timestamp_label": "11:30 AM"
+        }
+      ]
+    }
+  ],
+  "final_outcome": {
+    "outcome": "DEADLOCK",
+    "status": "DEADLOCK",
+    "final_round": 4,
+    "unresolved_gap": 60000.0,
+    "unresolved_hours_gap": 100,
+    "reason": "Both departments held rigid non-negotiable baselines: Dept A ($560,000, 1,100h) + Dept B ($500,000, 1,000h) = $1,060,000 and 2,100h, exceeding total budget ($1,000,000) and capacity (2,000h).",
+    "breakdown_analysis": {
+      "budget_overage": "$60,000 above total budget ceiling",
+      "hours_overage": "100 hours above shared capacity ceiling",
+      "policy_clash": "Department A infrastructure security policy clashed directly with Department B client delivery commitment policy."
+    }
+  }
+}
