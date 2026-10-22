@@ -1,4 +1,9 @@
-const { Pool } = require('pg');
+let Pool = null;
+try {
+  ({ Pool } = require('pg'));
+} catch (err) {
+  // pg module not installed; fallback to inMemoryStore
+}
 const fs = require('fs');
 const path = require('path');
 
@@ -20,9 +25,8 @@ const inMemoryStore = {
 const initDbConnection = async () => {
   const connectionString = process.env.DATABASE_URL;
 
-  if (!connectionString || connectionString.trim() === '') {
-    console.log('[Neon DB] DATABASE_URL not set in .env. Running with robust In-Memory Store.');
-    console.log('[Neon DB] See setup instructions to connect your Neon PostgreSQL instance.');
+  if (!Pool || !connectionString || connectionString.trim() === '') {
+    console.log('[Neon DB] Running with robust In-Memory Store.');
     isNeonConnected = false;
     return false;
   }
