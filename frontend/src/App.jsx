@@ -14,13 +14,15 @@ import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { ScenarioProvider } from './context/ScenarioContext';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { NegotiationProvider } from './context/NegotiationContext';
 
 function App() {
   return (
     <AuthProvider>
       <SettingsProvider>
         <ScenarioProvider>
-          <BrowserRouter>
+          <NegotiationProvider>
+            <BrowserRouter>
             <Routes>
               {/* Public authentication routes */}
               <Route
@@ -54,9 +56,10 @@ function App() {
               </Route>
             </Routes>
           </BrowserRouter>
-        </ScenarioProvider>
-      </SettingsProvider>
-    </AuthProvider>
+        </NegotiationProvider>
+      </ScenarioProvider>
+    </SettingsProvider>
+  </AuthProvider>
   );
 }
 
