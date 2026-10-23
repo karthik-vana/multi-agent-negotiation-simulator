@@ -1,0 +1,214 @@
+{
+  "_meta": {
+    "type": "REFERENCE_SAMPLE_TRANSCRIPT",
+    "description": "Sample negotiation transcript demonstrating a Successful Agreement with concessions respecting all constraints. Manually authored reference example, not an automated Gemini output.",
+    "scenario_id": "vendor-pricing",
+    "scenario_title": "Vendor Pricing Negotiation",
+    "outcome": "AGREEMENT_REACHED"
+  },
+  "simulation": {
+    "id": "sample-sim-vendor-agreement-001",
+    "scenario_id": "vendor-pricing",
+    "scenario_title": "Vendor Pricing Negotiation",
+    "domain": "Procurement & Sales",
+    "status": "COMPLETED",
+    "outcome": "AGREEMENT_REACHED",
+    "current_round": 3,
+    "max_rounds": 10,
+    "initial_gap": 18000.0,
+    "final_gap": 0.0,
+    "agreement_likelihood": 100
+  },
+  "agents": [
+    {
+      "id": "buyer-procurement",
+      "role": "Purchasing Manager",
+      "stakeholder": "Enterprise Buyer Organization",
+      "personality": "Collaborative",
+      "primaryGoal": "Obtain a competitive price while maintaining required product quality and delivery standards.",
+      "target_value": 80.0,
+      "reservation_value": 100.0,
+      "current_offer": 90.0,
+      "stance": "Agreement confirmed",
+      "constraints": [
+        "Must not exceed total purchasing budget ($110,000 USD)",
+        "Must not agree to unit price above $100 USD/unit",
+        "Must not accept quality below Grade 3",
+        "Delivery time must be <= 30 days",
+        "Payment terms <= 60 days Net"
+      ]
+    },
+    {
+      "id": "vendor-sales",
+      "role": "Sales Representative",
+      "stakeholder": "Supplier Organization",
+      "personality": "Collaborative",
+      "primaryGoal": "Secure a profitable sale while maintaining an acceptable commercial margin.",
+      "target_value": 100.0,
+      "reservation_value": 80.0,
+      "current_offer": 90.0,
+      "stance": "Agreement confirmed",
+      "constraints": [
+        "Unit price must be >= $80 USD/unit",
+        "Unit price must stay above supply cost ($65 USD/unit)",
+        "Lead time must be >= 14 days",
+        "Order quantity must be <= 1,200 units"
+      ]
+    }
+  ],
+  "rounds": [
+    {
+      "round_number": 1,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Purchasing Manager",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "OFFER",
+          "offer_value": 82.0,
+          "currency": "$",
+          "terms": {
+            "unitPrice": 82.0,
+            "quantity": 1000,
+            "paymentTermsDays": 60,
+            "deliveryDays": 21,
+            "qualityGrade": 4
+          },
+          "message": "We would like to place an order for 1,000 units at an opening price of $82 per unit with Net-60 payment terms and delivery in 21 days.",
+          "decision_explanation": "Opening move seeking to anchor near the low end of the feasible zone while remaining within the $110,000 budget and satisfying our delivery window.",
+          "timestamp_label": "10:00 AM"
+        },
+        {
+          "sender_role": "Sales Representative",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "COUNTER_OFFER",
+          "offer_value": 96.0,
+          "currency": "$",
+          "terms": {
+            "unitPrice": 96.0,
+            "quantity": 1000,
+            "paymentTermsDays": 30,
+            "deliveryDays": 14,
+            "qualityGrade": 4
+          },
+          "message": "Thank you for the opening proposal. $82 is below our target commercial margin. We can commit to 1,000 Grade 4 units at $96 per unit with standard Net-30 terms and fast 14-day delivery.",
+          "decision_explanation": "Rejected $82 as yielding an inadequate margin over $65 cost. Countered with $96 offering expedited 14-day delivery to justify the premium.",
+          "timestamp_label": "10:02 AM"
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "status": "ACTIVE",
+      "turns": [
+        {
+          "sender_role": "Purchasing Manager",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "COUNTER_OFFER",
+          "offer_value": 88.0,
+          "currency": "$",
+          "terms": {
+            "unitPrice": 88.0,
+            "quantity": 1000,
+            "paymentTermsDays": 45,
+            "deliveryDays": 18,
+            "qualityGrade": 4
+          },
+          "message": "We appreciate the fast turnaround offer, but $96 stretches our allocation. We can move our price up to $88 per unit and adjust payment terms to Net-45 if you can meet us on an 18-day schedule.",
+          "decision_explanation": "Made a $6 concession towards vendor's position and compromised on payment terms to demonstrate collaborative intent.",
+          "timestamp_label": "10:05 AM"
+        },
+        {
+          "sender_role": "Sales Representative",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "COUNTER_OFFER",
+          "offer_value": 92.0,
+          "currency": "$",
+          "terms": {
+            "unitPrice": 92.0,
+            "quantity": 1000,
+            "paymentTermsDays": 30,
+            "deliveryDays": 18,
+            "qualityGrade": 4
+          },
+          "message": "We value this partnership. We can accept the 18-day delivery schedule and lower our unit price to $92, provided we keep payment terms at Net-30 to manage our working capital.",
+          "decision_explanation": "Conceded $4 from previous counteroffer ($96 -> $92) and agreed to 18-day delivery while holding Net-30 terms for cash flow security.",
+          "timestamp_label": "10:07 AM"
+        }
+      ]
+    },
+    {
+      "round_number": 3,
+      "status": "COMPLETED",
+      "turns": [
+        {
+          "sender_role": "Purchasing Manager",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "COUNTER_OFFER",
+          "offer_value": 90.0,
+          "currency": "$",
+          "terms": {
+            "unitPrice": 90.0,
+            "quantity": 1000,
+            "paymentTermsDays": 30,
+            "deliveryDays": 18,
+            "qualityGrade": 4
+          },
+          "message": "If we agree to your Net-30 payment condition, can we split the difference and close the contract at $90 per unit for the 1,000 units?",
+          "decision_explanation": "Proposed a midpoint settlement at $90/unit. Total expenditure $90,000 is well below the $110,000 budget cap and within the $100 ceiling.",
+          "timestamp_label": "10:10 AM"
+        },
+        {
+          "sender_role": "Sales Representative",
+          "sender_type": "AGENT",
+          "personality": "Collaborative",
+          "action": "ACCEPT",
+          "offer_value": 90.0,
+          "currency": "$",
+          "terms": {
+            "unitPrice": 90.0,
+            "quantity": 1000,
+            "paymentTermsDays": 30,
+            "deliveryDays": 18,
+            "qualityGrade": 4
+          },
+          "message": "We have an agreement. At $90 per unit with Net-30 terms and 18-day delivery, this deal meets our profitability thresholds. We confirm acceptance.",
+          "decision_explanation": "Evaluated that $90 >= $80 floor and provides a healthy $25/unit gross margin above $65 cost. Accepted proposal.",
+          "timestamp_label": "10:11 AM"
+        },
+        {
+          "sender_role": "Orchestrator Agent",
+          "sender_type": "ORCHESTRATOR",
+          "action": "STATUS",
+          "message": "Agreement confirmed in Round 3. All buyer constraints (budget <= $110k, price <= $100, lead time <= 30d) and vendor constraints (price >= $80, lead time >= 14d) fully satisfied.",
+          "timestamp_label": "10:11 AM"
+        }
+      ]
+    }
+  ],
+  "final_agreement": {
+    "outcome": "AGREEMENT_REACHED",
+    "final_unit_price": 90.0,
+    "quantity": 1000,
+    "total_value": 90000.0,
+    "currency": "USD",
+    "terms": {
+      "paymentTerms": "Net 30",
+      "deliveryLeadTimeDays": 18,
+      "qualityGrade": 4
+    },
+    "settlement_round": 3,
+    "constraint_validation": {
+      "buyer_budget_check": "PASSED ($90,000 <= $110,000)",
+      "buyer_price_cap_check": "PASSED ($90 <= $100)",
+      "vendor_price_floor_check": "PASSED ($90 >= $80)",
+      "vendor_cost_check": "PASSED ($90 > $65)",
+      "delivery_window_check": "PASSED (14d <= 18d <= 30d)"
+    }
+  }
+}
