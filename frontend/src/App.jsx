@@ -4,7 +4,7 @@ import AppLayout from './components/AppLayout';
 import Dashboard from './pages/Dashboard';
 import ScenarioSelection from './pages/ScenarioSelection';
 import AgentConfiguration from './pages/AgentConfiguration';
-import NegotiationArenaPlaceholder from './pages/NegotiationArenaPlaceholder';
+import NegotiationArena from './pages/NegotiationArena';
 import HistoryPlaceholder from './pages/HistoryPlaceholder';
 import Settings from './pages/Settings';
 import PracticeMode from './pages/PracticeMode';
@@ -14,13 +14,15 @@ import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { ScenarioProvider } from './context/ScenarioContext';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { NegotiationProvider } from './context/NegotiationContext';
 
 function App() {
   return (
     <AuthProvider>
       <SettingsProvider>
         <ScenarioProvider>
-          <BrowserRouter>
+          <NegotiationProvider>
+            <BrowserRouter>
             <Routes>
               {/* Public authentication routes */}
               <Route
@@ -45,7 +47,7 @@ function App() {
                 <Route path="simulation" element={<Navigate to="/scenarios" replace />} />
                 <Route path="scenarios" element={<ScenarioSelection />} />
                 <Route path="agents" element={<AgentConfiguration />} />
-                <Route path="arena" element={<NegotiationArenaPlaceholder />} />
+                <Route path="arena" element={<NegotiationArena />} />
                 <Route path="practice" element={<PracticeMode />} />
                 <Route path="history" element={<HistoryPlaceholder />} />
                 <Route path="settings" element={<Settings />} />
@@ -54,9 +56,10 @@ function App() {
               </Route>
             </Routes>
           </BrowserRouter>
-        </ScenarioProvider>
-      </SettingsProvider>
-    </AuthProvider>
+        </NegotiationProvider>
+      </ScenarioProvider>
+    </SettingsProvider>
+  </AuthProvider>
   );
 }
 
