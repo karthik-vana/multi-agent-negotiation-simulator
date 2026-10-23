@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import logging
 from typing import List, Optional, Dict, Any
@@ -6,6 +6,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+from reasoning import build_reasoning_prompt, parse_reasoning_response
+from decision.config import get_scenario
+from decision.evaluator import normalize_offer
+from decision.scoring import hard_violations
 
 # Load environment variables
 load_dotenv()
@@ -37,11 +41,11 @@ if GEMINI_API_KEY:
     try:
         from google import genai
         gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-        logger.info(f"✅ Gemini client initialized successfully with model: {GEMINI_MODEL}")
+        logger.info(f"âœ… Gemini client initialized successfully with model: {GEMINI_MODEL}")
     except Exception as e:
-        logger.warning(f"⚠️ Failed to initialize Gemini client: {e}")
+        logger.warning(f"âš ï¸ Failed to initialize Gemini client: {e}")
 else:
-    logger.info("ℹ️ GEMINI_API_KEY not set in .env. Service will use high-fidelity domain reasoning fallback.")
+    logger.info("â„¹ï¸ GEMINI_API_KEY not set in .env. Service will use high-fidelity domain reasoning fallback.")
 
 
 # ============================================================================
@@ -77,18 +81,21 @@ class NegotiationTurnRequest(BaseModel):
     conversation_history: Optional[List[Dict[str, Any]]] = []
 
 
+
 class NegotiationTurnResponse(BaseModel):
     agent_role: str
     agent_name: str
     message: str
     action: str = Field(..., description="OFFER, COUNTER_OFFER, ACCEPT, REJECT")
     offer_value: Optional[float] = None
-    currency: str = "₹"
+    proposed_offer: Dict[str, Any] = Field(default_factory=dict)
+    currency: str = "â‚¹"
     stance: str = "Seeking agreement"
     progress_percent: int = 50
     reasoning: Optional[str] = ""
     agreement_reached: bool = False
-    terms: Optional[Dict[str, Any]] = {}
+    terms: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
 
 
 # ============================================================================
@@ -131,138 +138,297 @@ async def generate_agent_response(request: NegotiationTurnRequest):
 # Gemini Generation Logic
 # ============================================================================
 
+
 async def call_gemini_model(req: NegotiationTurnRequest) -> Optional[NegotiationTurnResponse]:
-    history_summary = []
-    for m in (req.conversation_history or [])[-6:]:  # Last 6 messages
-        sender = m.get("sender_role", "Speaker")
-        text = m.get("message", "")
-        offer = m.get("offer_value", "")
-        history_summary.append(f"- {sender}: \"{text}\" (Offer: {offer})")
+    """Generate and validate a context-aware negotiation move using Gemini."""
 
-    history_str = "\n".join(history_summary) if history_summary else "No prior offers yet. This is the opening move."
-
-    system_prompt = f"""
-You are an autonomous AI negotiating agent in a multi-stakeholder simulation platform called 'Negotiator AI'.
-Your Profile:
-- Role: {req.agent.role}
-- Name: {req.agent.name}
-- Personality: {req.agent.personality} (Reflect this strictly: Collaborative seeks mutual win-win; Aggressive holds firm and concedes slowly; Analytical demands structured tradeoffs)
-- Primary Goal: {req.agent.goal}
-- Target Outcome: {req.agent.target_value}
-- Reservation/Walkaway Limit: {req.agent.reservation_value}
-
-Negotiation Context:
-- Scenario: {req.scenario.title} ({req.scenario.domain})
-- Opponent: {req.counterpart_agent.role} ({req.counterpart_agent.personality})
-- Round: {req.round_number} of {req.max_rounds}
-- Currency: ₹
-
-Conversation History:
-{history_str}
-
-Task:
-Respond to the latest offer or propose your opening/counter offer.
-Return ONLY valid JSON matching this exact structure:
-{{
-  "message": "<1-2 sentence conversational negotiation response>",
-  "action": "<OFFER | COUNTER_OFFER | ACCEPT | REJECT>",
-  "offer_value": <numeric offer value, e.g. 9000>,
-  "stance": "<Short stance label, e.g. 'Seeking agreement' | 'Holding firm' | 'Exploring compromise'>",
-  "reasoning": "<1 sentence strategic internal explanation>",
-  "agreement_reached": <true if action is ACCEPT, otherwise false>
-}}
-"""
+    prompt = build_reasoning_prompt(
+        scenario=req.scenario.model_dump(),
+        agent=req.agent.model_dump(),
+        counterpart=req.counterpart_agent.model_dump(),
+        round_number=req.round_number,
+        max_rounds=req.max_rounds,
+        current_offer=req.current_offer,
+        conversation_history=req.conversation_history or [],
+    )
 
     response = gemini_client.models.generate_content(
         model=GEMINI_MODEL,
-        contents=system_prompt,
+        contents=prompt,
         config={
             "response_mime_type": "application/json",
             "temperature": 0.4,
         },
     )
 
-    if response and response.text:
-        parsed = json.loads(response.text)
-        action = parsed.get("action", "COUNTER_OFFER").upper()
-        offer_val = float(parsed.get("offer_value", req.agent.current_offer or req.agent.target_value or 9000))
-        agreement = bool(parsed.get("agreement_reached", False) or action == "ACCEPT")
+    if not response or not response.text:
+        return None
 
-        progress = min(100, max(20, int(35 + (req.round_number * 14))))
-        if agreement:
-            progress = 100
+    parsed = parse_reasoning_response(response.text)
+    if not parsed:
+        logger.warning("Gemini returned an invalid negotiation response.")
+        return None
 
-        return NegotiationTurnResponse(
-            agent_role=req.agent.role,
-            agent_name=req.agent.name or req.agent.role,
-            message=parsed.get("message", "We acknowledge your terms and present our adjusted position."),
-            action=action,
-            offer_value=offer_val,
-            currency="₹",
-            stance=parsed.get("stance", "Seeking agreement"),
-            progress_percent=progress,
-            reasoning=parsed.get("reasoning", "Strategic concession based on round constraints."),
-            agreement_reached=agreement,
-            terms={"unitPrice": offer_val, "round": req.round_number},
+    action = parsed["action"]
+    proposed_offer = parsed.get("proposed_offer") or {}
+
+    # Preserve the numeric offer expected by the existing backend.
+    offer_val = parsed.get("offer_value")
+    if offer_val is None:
+        for key in ("price", "base_salary", "engineering"):
+            if key in proposed_offer:
+                offer_val = proposed_offer[key]
+                break
+
+    if offer_val is None:
+        offer_val = (
+            req.agent.current_offer
+            if req.agent.current_offer is not None
+            else req.agent.target_value
         )
 
-    return None
+    agreement = (
+        action == "ACCEPT"
+        and parsed.get("agreement_reached") is True
+    )
+
+    progress = min(100, max(20, int(35 + req.round_number * 14)))
+    if agreement:
+        progress = 100
+
+    terms = {
+        "round": req.round_number,
+        "proposed_offer": proposed_offer,
+    }
+    if offer_val is not None:
+        terms["unitPrice"] = offer_val
+
+    return NegotiationTurnResponse(
+        agent_role=req.agent.role,
+        agent_name=req.agent.name or req.agent.role,
+        message=parsed["message"],
+        action=action,
+        offer_value=float(offer_val) if offer_val is not None else None,
+        currency="â‚¹",
+        stance=parsed.get("stance", "Seeking agreement"),
+        progress_percent=progress,
+        reasoning=parsed.get("decision_explanation", ""),
+        agreement_reached=agreement,
+        terms=terms,
+    )
+
 
 
 # ============================================================================
 # High-Fidelity Domain Concession Fallback Engine
 # ============================================================================
 
+
+
+
+def validate_proposed_offer(scenario_id: str, agent_id: str, offer: Dict[str, Any]) -> tuple:
+    """Validate an outgoing offer against the existing deterministic rules."""
+    import math
+
+    scenario = get_scenario(scenario_id)
+    profile = scenario.agent(agent_id)
+
+    if not isinstance(offer, dict):
+        return False, ["Offer must be a dictionary."]
+
+    expected_keys = {issue.key for issue in profile.issues}
+    if scenario.kind == "allocation":
+        expected_keys = set(scenario.issue_keys())
+
+    if set(offer) != expected_keys:
+        missing = sorted(expected_keys - set(offer))
+        extra = sorted(set(offer) - expected_keys)
+        errors = []
+        if missing:
+            errors.append(f"Missing required fields: {', '.join(missing)}")
+        if extra:
+            errors.append(f"Unexpected fields: {', '.join(extra)}")
+        return False, errors
+
+    for key, value in offer.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            return False, [f"{key} must be a finite number."]
+
+    normalized, errors = normalize_offer(
+        scenario=scenario,
+        offer=offer,
+        history=[],
+        agent_id=agent_id,
+    )
+    if errors or normalized is None:
+        return False, errors or ["Offer could not be normalized."]
+
+    violations = hard_violations(profile, normalized)
+    if violations:
+        return False, [item["message"] for item in violations]
+
+    return True, normalized
+
+
 def generate_domain_fallback_response(req: NegotiationTurnRequest) -> NegotiationTurnResponse:
-    """
-    Generates realistic, mathematical concession moves aligned with the reference design.
-    """
-    is_buyer = any(term in req.agent.role.lower() for term in ["buyer", "candidate", "client", "procurement"])
+    """Generate a scenario-aware move and validate its structured offer."""
+
+    scenario_id = req.scenario.id.lower()
+    role = req.agent.role.lower()
     personality = (req.agent.personality or "Collaborative").lower()
-    round_num = req.round_number
+    round_num = max(1, req.round_number)
 
-    if is_buyer:
-        if round_num == 1:
-            offer_val = 8000
-            msg = "We can offer ₹8,000 per unit for the initial order."
+    agent_ids = {
+        "vendor-pricing": (
+            "buyer-procurement" if any(
+                term in role for term in ("buyer", "procurement", "client")
+            ) else "vendor-sales"
+        ),
+        "job-offer": (
+            "job-candidate" if "candidate" in role else "hiring-director"
+        ),
+        "project-budget": (
+            "vp-engineering" if "engineering" in role
+            else "cmo-marketing" if "marketing" in role
+            else "head-product-ai"
+        ),
+    }
+
+    agent_id = agent_ids.get(scenario_id)
+    if not agent_id:
+        raise ValueError(f"Unsupported negotiation scenario: {scenario_id}")
+
+    action = "COUNTER_OFFER"
+    agreement = False
+    currency = "\u20b9"
+
+    if scenario_id == "vendor-pricing":
+        is_buyer = agent_id == "buyer-procurement"
+        if is_buyer:
+            offer_val = 95000 if round_num == 1 else min(100000, 95000 + (round_num - 1) * 1000)
+            proposed_offer = {
+                "price": offer_val,
+                "payment_days": 60,
+                "delivery_weeks": 4,
+            }
+            msg = f"We propose a contract value of {currency}{offer_val:,.0f}, with Net-60 payment and four-week delivery."
             stance = "Seeking agreement"
-        elif round_num == 2:
-            offer_val = 9000
-            msg = "I can increase to ₹9,000 if bulk delivery is included."
-            stance = "Seeking agreement"
-        elif round_num == 3:
-            offer_val = 9500
-            msg = "We can offer ₹9,500 with standard Net-30 payment terms."
-            stance = "Constructive progress"
         else:
-            offer_val = 10000
-            msg = "We agree to finalize at ₹10,000 as our mutual closing deal."
-            stance = "Agreement reached"
-
-        progress = 70 if round_num >= 2 else 50
-    else:
-        # Seller
-        if round_num == 1:
-            offer_val = 11000
-            msg = "That price is below our target. We can offer ₹11,000 per unit."
+            offer_val = max(90000, 110000 - (round_num - 1) * 3000)
+            proposed_offer = {
+                "price": offer_val,
+                "payment_days": 30,
+                "delivery_weeks": 6,
+            }
+            msg = f"We propose a contract value of {currency}{offer_val:,.0f}, subject to the contract terms."
             stance = "Holding firm" if personality == "aggressive" else "Negotiating terms"
-        elif round_num == 2:
-            offer_val = 10000
-            msg = "I can move to ₹10,000 with a larger order commitment."
-            stance = "Holding firm" if personality == "aggressive" else "Moderate concession"
-        elif round_num == 3:
-            offer_val = 9800
-            msg = "We can adjust to ₹9,800 under expedited 14-day delivery."
-            stance = "Final concessions"
+
+        terms = {**proposed_offer, "round": round_num}
+        progress = min(95, 45 + round_num * 10)
+
+    elif scenario_id == "job-offer":
+        is_candidate = agent_id == "job-candidate"
+
+        if is_candidate:
+            base_salary = max(160000, 175000 - (round_num - 1) * 3000)
+            proposed_offer = {
+                "base_salary": base_salary,
+                "sign_on_bonus": 20000,
+                "equity_pct": 0.25,
+                "office_days": 0,
+                "joining_days": 60,
+            }
+            msg = f"I propose a base salary of {currency}{base_salary:,.0f}, with a sign-on bonus and flexible working terms."
+            stance = "Advocating for candidate value"
         else:
-            offer_val = 10000
-            msg = "We confirm the agreement at ₹10,000 per unit."
-            stance = "Agreement confirmed"
+            base_salary = min(168000, 150000 + (round_num - 1) * 3000)
+            proposed_offer = {
+                "base_salary": base_salary,
+                "sign_on_bonus": 5000,
+                "equity_pct": 0.15,
+                "office_days": 3,
+                "joining_days": 30,
+            }
+            msg = f"We propose a base salary of {currency}{base_salary:,.0f}, with the remaining compensation terms specified."
+            stance = "Protecting hiring budget" if personality == "risk-averse" else "Negotiating compensation"
 
-        progress = 60 if round_num >= 2 else 45
+        offer_val = float(proposed_offer["base_salary"])
+        terms = {**proposed_offer, "round": round_num}
+        progress = min(95, 40 + round_num * 10)
 
-    action = "ACCEPT" if round_num >= 4 else "COUNTER_OFFER"
-    agreement = (action == "ACCEPT")
+    else:
+        if agent_id == "vp-engineering":
+            proposed_offer = {
+                "engineering": 450000,
+                "marketing": 300000,
+                "product_ai": 250000,
+            }
+            stance = "Prioritizing engineering"
+        elif agent_id == "cmo-marketing":
+            proposed_offer = {
+                "engineering": 350000,
+                "marketing": 350000,
+                "product_ai": 300000,
+            }
+            stance = "Advocating marketing investment"
+        else:
+            proposed_offer = {
+                "engineering": 350000,
+                "marketing": 350000,
+                "product_ai": 300000,
+            }
+            stance = "Seeking balanced allocation"
+
+        offer_val = float(proposed_offer[{
+            "vp-engineering": "engineering",
+            "cmo-marketing": "marketing",
+            "head-product-ai": "product_ai",
+        }[agent_id]])
+        msg = (
+            "I propose this budget split: "
+            f"engineering {proposed_offer['engineering']:,}, "
+            f"marketing {proposed_offer['marketing']:,}, "
+            f"product AI {proposed_offer['product_ai']:,}. "
+            "The total stays within the 1,000,000 budget."
+        )
+        terms = {**proposed_offer, "round": round_num}
+        progress = min(95, 45 + round_num * 8)
+
+    is_valid, validation_result = validate_proposed_offer(
+        scenario_id, agent_id, proposed_offer
+    )
+
+    if not is_valid:
+        logger.warning(
+            "Fallback offer failed validation for %s: %s",
+            scenario_id, validation_result,
+        )
+        proposed_offer = opening_offer_for_agent(scenario_id, agent_id)
+        is_valid, validation_result = validate_proposed_offer(
+            scenario_id, agent_id, proposed_offer
+        )
+        if not is_valid:
+            raise ValueError(
+                f"Deterministic opening offer failed validation: {validation_result}"
+            )
+        msg = "I propose a valid opening offer based on the scenario's negotiation rules."
+        action = "OFFER"
+        stance = "Seeking agreement"
+
+    if scenario_id == "vendor-pricing":
+        offer_val = float(proposed_offer["price"])
+        terms = {"unitPrice": offer_val, **proposed_offer, "round": round_num}
+    elif scenario_id == "job-offer":
+        offer_val = float(proposed_offer["base_salary"])
+        terms = {**proposed_offer, "round": round_num}
+    else:
+        issue_key = {
+            "vp-engineering": "engineering",
+            "cmo-marketing": "marketing",
+            "head-product-ai": "product_ai",
+        }[agent_id]
+        offer_val = float(proposed_offer[issue_key])
+        terms = {**proposed_offer, "round": round_num}
 
     return NegotiationTurnResponse(
         agent_role=req.agent.role,
@@ -270,13 +436,29 @@ def generate_domain_fallback_response(req: NegotiationTurnRequest) -> Negotiatio
         message=msg,
         action=action,
         offer_value=offer_val,
-        currency="₹",
+        proposed_offer=proposed_offer,
+        currency=currency,
         stance=stance,
         progress_percent=progress,
-        reasoning=f"Domain concession curve calibrated for {req.agent.personality} persona.",
+        reasoning=(
+            f"Validated scenario-aware fallback for {scenario_id}; "
+            f"personality: {req.agent.personality or 'Collaborative'}."
+        ),
         agreement_reached=agreement,
-        terms={"unitPrice": offer_val, "round": round_num},
+        terms=terms,
     )
+
+
+def opening_offer_for_agent(scenario_id: str, agent_id: str) -> Dict[str, Any]:
+    """Get a deterministic opening offer for the specified agent."""
+    scenario = get_scenario(scenario_id)
+    profile = scenario.agent(agent_id)
+
+    if scenario.kind == "allocation":
+        from decision.budget import opening_allocation
+        return opening_allocation(scenario, profile)
+
+    return {issue.key: issue.target for issue in profile.issues}
 
 
 if __name__ == "__main__":
