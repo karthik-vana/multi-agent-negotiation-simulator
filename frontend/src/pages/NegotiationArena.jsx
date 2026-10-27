@@ -42,11 +42,10 @@ const NegotiationArena = () => {
   const { selectedScenarioId } = useScenario();
   const { t } = useSettings();
 
-  // Active scenario
+  // Active scenario (locked to user selection)
   const [currentScenarioId, setCurrentScenarioId] = useState(
     selectedScenarioId || 'vendor-pricing'
   );
-  const [scenarioDropdownOpen, setScenarioDropdownOpen] = useState(false);
 
   // Simulation State
   const [simulation, setSimulation] = useState(null);
@@ -158,10 +157,6 @@ const NegotiationArena = () => {
     }
   };
 
-  const handleSelectScenario = (id) => {
-    setCurrentScenarioId(id);
-    setScenarioDropdownOpen(false);
-  };
 
   // Group messages by round
   const groupedMessages = (simulation?.messages || []).reduce((acc, msg) => {
@@ -220,11 +215,11 @@ const NegotiationArena = () => {
           2. Top Control Bar (Scenario, Status, Round Indicator, Buttons)
           ======================================================================== */}
       <div className="arena-control-bar">
-        {/* Scenario Selector Dropdown */}
+        {/* Active Scenario Display (Locked to active negotiation context) */}
         <div className="arena-scenario-dropdown-wrap">
           <div
-            className="arena-scenario-selector"
-            onClick={() => setScenarioDropdownOpen(!scenarioDropdownOpen)}
+            className="arena-scenario-selector locked"
+            title="Active Scenario selected for this simulation (locked during negotiation)"
           >
             <div className="arena-scenario-tag">
               <span className="arena-scenario-label">Scenario</span>
@@ -232,23 +227,8 @@ const NegotiationArena = () => {
             <div className="arena-scenario-current">
               <LayoutGrid size={15} className="arena-grid-icon" />
               <span className="arena-scenario-name">{currentScenarioObj.title}</span>
-              <ChevronDown size={14} className="arena-chevron" />
             </div>
           </div>
-
-          {scenarioDropdownOpen && (
-            <div className="arena-dropdown-popover">
-              {SCENARIO_OPTIONS.map((opt) => (
-                <div
-                  key={opt.id}
-                  className={`arena-dropdown-item ${opt.id === currentScenarioId ? 'active' : ''}`}
-                  onClick={() => handleSelectScenario(opt.id)}
-                >
-                  <span>{opt.title}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Live Status Badge */}
