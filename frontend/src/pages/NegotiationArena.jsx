@@ -42,10 +42,11 @@ const NegotiationArena = () => {
   const { selectedScenarioId } = useScenario();
   const { t } = useSettings();
 
-  // Active scenario (locked to user selection)
+  // Active scenario
   const [currentScenarioId, setCurrentScenarioId] = useState(
     selectedScenarioId || 'vendor-pricing'
   );
+  const [scenarioDropdownOpen, setScenarioDropdownOpen] = useState(false);
 
   // Simulation State
   const [simulation, setSimulation] = useState(null);
@@ -157,6 +158,10 @@ const NegotiationArena = () => {
     }
   };
 
+  const handleSelectScenario = (id) => {
+    setCurrentScenarioId(id);
+    setScenarioDropdownOpen(false);
+  };
 
   // Group messages by round
   const groupedMessages = (simulation?.messages || []).reduce((acc, msg) => {
@@ -215,11 +220,11 @@ const NegotiationArena = () => {
           2. Top Control Bar (Scenario, Status, Round Indicator, Buttons)
           ======================================================================== */}
       <div className="arena-control-bar">
-        {/* Active Scenario Display (Locked to active negotiation context) */}
+        {/* Scenario Selector Dropdown */}
         <div className="arena-scenario-dropdown-wrap">
           <div
-            className="arena-scenario-selector locked"
-            title="Active Scenario selected for this simulation (locked during negotiation)"
+            className="arena-scenario-selector"
+            onClick={() => setScenarioDropdownOpen(!scenarioDropdownOpen)}
           >
             <div className="arena-scenario-tag">
               <span className="arena-scenario-label">Scenario</span>
@@ -227,8 +232,23 @@ const NegotiationArena = () => {
             <div className="arena-scenario-current">
               <LayoutGrid size={15} className="arena-grid-icon" />
               <span className="arena-scenario-name">{currentScenarioObj.title}</span>
+              <ChevronDown size={14} className="arena-chevron" />
             </div>
           </div>
+
+          {scenarioDropdownOpen && (
+            <div className="arena-dropdown-popover">
+              {SCENARIO_OPTIONS.map((opt) => (
+                <div
+                  key={opt.id}
+                  className={`arena-dropdown-item ${opt.id === currentScenarioId ? 'active' : ''}`}
+                  onClick={() => handleSelectScenario(opt.id)}
+                >
+                  <span>{opt.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Live Status Badge */}
@@ -344,118 +364,142 @@ const NegotiationArena = () => {
 
                   {/* Messages inside this round */}
                   <div className="arena-messages-stream">
-                    {msgs.map((msg) => {
-                      const isOrchestrator = msg.sender_type === 'ORCHESTRATOR';
-                      const isBuyerMsg =
-                        !isOrchestrator &&
-                        (msg.sender_role?.toLowerCase().includes('buyer') ||
-                          msg.sender_role?.toLowerCase().includes('candidate'));
+                    {(() => {
+                      let turnIdx = 0;
+                      return msgs.map((msg) => {
+                        const isOrchestrator = msg.sender_type === 'ORCHESTRATOR';
 
-                      if (isOrchestrator) {
-                        return (
-                          <div key={msg.id} className="arena-orchestrator-row">
-                            <div className="arena-orchestrator-box">
-                              <div className="arena-orchestrator-avatar">
-                                <Bot size={18} />
-                              </div>
-                              <div className="arena-orchestrator-content">
-                                <div className="arena-orchestrator-header">
-                                  <span className="arena-orchestrator-name">
-                                    {msg.sender_name || 'Orchestrator Agent'}
-                                  </span>
-                                  <span className="arena-timestamp">
-                                    {msg.timestamp_label || '10:24 AM'}
-                                  </span>
+                        if (isOrchestrator) {
+                          return (
+                            <div key={msg.id} className="arena-orchestrator-row">
+                              <div className="arena-orchestrator-box">
+                                <div className="arena-orchestrator-avatar">
+                                  <Bot size={18} />
                                 </div>
-                                <p className="arena-orchestrator-text">{msg.message}</p>
+                                <div className="arena-orchestrator-content">
+                                  <div className="arena-orchestrator-header">
+                                    <span className="arena-orchestrator-name">
+                                      {msg.sender_name || 'Orchestrator Agent'}
+                                    </span>
+                                    <span className="arena-timestamp">
+                                      {msg.timestamp_label || '10:24 AM'}
+                                    </span>
+                                  </div>
+                                  <p className="arena-orchestrator-text">{msg.message}</p>
+                                </div>
                               </div>
                             </div>
+                          );
+                        }
+
+                        const isBuyerExplicit =
+                          msg.sender_role?.toLowerCase().includes('buyer') ||
+                          msg.sender_role?.toLowerCase().includes('candidate');
+                        const isSellerExplicit =
+                          msg.sender_role?.toLowerCase().includes('seller') ||
+                          msg.sender_role?.toLowerCase().includes('vendor') ||
+                          msg.sender_role?.toLowerCase().includes('recruiter') ||
+                          msg.sender_role?.toLowerCase().includes('hr');
+
+                        let isBuyerMsg = false;
+                        if (isBuyerExplicit) {
+                          isBuyerMsg = true;
+                        } else if (isSellerExplicit) {
+                          isBuyerMsg = false;
+                        } else {
+                          isBuyerMsg = (turnIdx % 2 === 0);
+                        }
+                        turnIdx++;
+
+                        const personalityClass = (msg.personality || '').toLowerCase().includes('aggressive')
+                          ? 'aggressive'
+                          : (msg.personality || '').toLowerCase().includes('risk')
+                          ? 'risk-averse'
+                          : 'collaborative';
+
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`arena-chat-row ${isBuyerMsg ? 'buyer-row' : 'seller-row'}`}
+                          >
+                            {/* Buyer Avatar on Left */}
+                            {isBuyerMsg && (
+                              <div className="arena-avatar-container buyer-avatar">
+                                <AgentFaceAvatar
+                                  personality={msg.personality || 'Collaborative'}
+                                  role="Buyer"
+                                  size={44}
+                                />
+                              </div>
+                            )}
+
+                            {/* Message Bubble + Attached Offer */}
+                            <div className={`arena-bubble-wrapper ${isBuyerMsg ? 'buyer' : 'seller'}`}>
+                              {/* Message Meta Info Header */}
+                              <div className="arena-bubble-meta">
+                                {isBuyerMsg ? (
+                                  <>
+                                    <span className="arena-agent-name">{msg.sender_role}</span>
+                                    <span className="arena-meta-bullet">•</span>
+                                    <span className={`arena-agent-personality ${personalityClass}`}>
+                                      {msg.personality || 'Collaborative'}
+                                    </span>
+                                    <span className="arena-meta-spacer" />
+                                    <span className="arena-timestamp">
+                                      {msg.timestamp_label || '10:21 AM'}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="arena-timestamp">
+                                      {msg.timestamp_label || '10:22 AM'}
+                                    </span>
+                                    <span className="arena-meta-spacer" />
+                                    <span className="arena-agent-name">{msg.sender_role}</span>
+                                    <span className="arena-meta-bullet">•</span>
+                                    <span className={`arena-agent-personality ${personalityClass}`}>
+                                      {msg.personality || 'Aggressive'}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+
+                              {/* Bubble Content Row (Text + Offer badge) */}
+                              <div className="arena-bubble-content-row">
+                                {/* Attached Offer Badge for Seller (Placed on left of text) */}
+                                {!isBuyerMsg && msg.offer_value && (
+                                  <div className="arena-attached-offer seller-offer">
+                                    <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
+                                  </div>
+                                )}
+
+                                <div className={`arena-speech-bubble ${isBuyerMsg ? 'buyer-bubble' : 'seller-bubble'}`}>
+                                  <p className="arena-bubble-text">{msg.message}</p>
+                                </div>
+
+                                {/* Attached Offer Badge for Buyer (Placed on right of text) */}
+                                {isBuyerMsg && msg.offer_value && (
+                                  <div className="arena-attached-offer buyer-offer">
+                                    <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Seller Avatar on Right */}
+                            {!isBuyerMsg && (
+                              <div className="arena-avatar-container seller-avatar">
+                                <AgentFaceAvatar
+                                  personality={msg.personality || 'Aggressive'}
+                                  role="Seller"
+                                  size={44}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
-                      }
-
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`arena-chat-row ${isBuyerMsg ? 'buyer-row' : 'seller-row'}`}
-                        >
-                          {/* Buyer Avatar on Left */}
-                          {isBuyerMsg && (
-                            <div className="arena-avatar-container buyer-avatar">
-                              <AgentFaceAvatar
-                                personality={msg.personality || 'Collaborative'}
-                                role="Buyer"
-                                size={44}
-                              />
-                            </div>
-                          )}
-
-                          {/* Message Bubble + Attached Offer */}
-                          <div className={`arena-bubble-wrapper ${isBuyerMsg ? 'buyer' : 'seller'}`}>
-                            {/* Message Meta Info Header */}
-                            <div className="arena-bubble-meta">
-                              {isBuyerMsg ? (
-                                <>
-                                  <span className="arena-agent-name">{msg.sender_role}</span>
-                                  <span className="arena-meta-bullet">•</span>
-                                  <span className="arena-agent-personality collaborative">
-                                    {msg.personality || 'Collaborative'}
-                                  </span>
-                                  <span className="arena-meta-spacer" />
-                                  <span className="arena-timestamp">
-                                    {msg.timestamp_label || '10:21 AM'}
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="arena-timestamp">
-                                    {msg.timestamp_label || '10:22 AM'}
-                                  </span>
-                                  <span className="arena-meta-spacer" />
-                                  <span className="arena-agent-name">{msg.sender_role}</span>
-                                  <span className="arena-meta-bullet">•</span>
-                                  <span className="arena-agent-personality aggressive">
-                                    {msg.personality || 'Aggressive'}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-
-                            {/* Bubble Content Row (Text + Offer badge) */}
-                            <div className="arena-bubble-content-row">
-                              {/* Attached Offer Badge for Seller (Placed on left of text) */}
-                              {!isBuyerMsg && msg.offer_value && (
-                                <div className="arena-attached-offer seller-offer">
-                                  <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
-                                </div>
-                              )}
-
-                              <div className={`arena-speech-bubble ${isBuyerMsg ? 'buyer-bubble' : 'seller-bubble'}`}>
-                                <p className="arena-bubble-text">{msg.message}</p>
-                              </div>
-
-                              {/* Attached Offer Badge for Buyer (Placed on right of text) */}
-                              {isBuyerMsg && msg.offer_value && (
-                                <div className="arena-attached-offer buyer-offer">
-                                  <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Seller Avatar on Right */}
-                          {!isBuyerMsg && (
-                            <div className="arena-avatar-container seller-avatar">
-                              <AgentFaceAvatar
-                                personality={msg.personality || 'Aggressive'}
-                                role="Seller"
-                                size={44}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                      });
+                    })()}
                   </div>
                 </div>
               ))
@@ -482,107 +526,70 @@ const NegotiationArena = () => {
             </div>
 
             <div className="arena-agents-list">
-              {/* Agent 1: Buyer */}
-              <div className="arena-agent-item-card">
-                <div className="arena-agent-item-top">
-                  <div className="arena-agent-avatar-small">
-                    <AgentFaceAvatar
-                      personality={buyerAgent.personality || 'Collaborative'}
-                      role="Buyer"
-                      size={42}
-                    />
-                  </div>
-                  <div className="arena-agent-item-id">
-                    <div className="arena-agent-item-name-row">
-                      <span className="arena-agent-main-role">{buyerAgent.role}</span>
-                      <span className="arena-role-pill collaborative">
-                        {buyerAgent.personality || 'Collaborative'}
+              {(simulation?.agents?.length > 0 ? simulation.agents : [buyerAgent, sellerAgent]).map((agent, idx) => {
+                const isFirst = idx === 0;
+                const roleType = isFirst ? 'Buyer' : 'Seller';
+                const rolePillClass = (agent.personality || '').toLowerCase().includes('aggressive')
+                  ? 'aggressive'
+                  : (agent.personality || '').toLowerCase().includes('risk')
+                  ? 'risk-averse'
+                  : 'collaborative';
+                const offerVal = agent.current_offer || (isFirst ? 9000 : 10000);
+                const stanceVal = agent.stance || (isFirst ? 'Seeking agreement' : 'Holding firm');
+                const progressVal = agent.progress_percent || (isFirst ? 70 : 60);
+
+                return (
+                  <div key={agent.id || `agent-item-${idx}`} className="arena-agent-item-card">
+                    <div className="arena-agent-item-top">
+                      <div className="arena-agent-avatar-small">
+                        <AgentFaceAvatar
+                          personality={agent.personality || (isFirst ? 'Collaborative' : 'Aggressive')}
+                          role={roleType}
+                          size={42}
+                        />
+                      </div>
+                      <div className="arena-agent-item-id">
+                        <div className="arena-agent-item-name-row">
+                          <span className="arena-agent-main-role">{agent.name || agent.role}</span>
+                          <span className={`arena-role-pill ${rolePillClass}`}>
+                            {agent.personality || (isFirst ? 'Collaborative' : 'Aggressive')}
+                          </span>
+                        </div>
+                        <span className="arena-agent-active-badge">Active</span>
+                      </div>
+                    </div>
+
+                    <p className="arena-agent-goal-text">
+                      Goal: {agent.goal || (isFirst ? 'Get best price with good terms' : 'Maximize profit with stable demand')}
+                    </p>
+
+                    <div className="arena-agent-offer-stance-row">
+                      <div className="arena-agent-stat-col">
+                        <span className="arena-stat-label">Current offer</span>
+                        <span className={`arena-stat-value ${isFirst ? 'buyer-val' : 'seller-val'}`}>
+                          ₹{Number(offerVal).toLocaleString()}{currentScenarioId === 'vendor-pricing' ? ' per unit' : ''}
+                        </span>
+                      </div>
+                      <div className="arena-agent-stat-col align-right">
+                        <span className="arena-stat-label">Stance</span>
+                        <span className={`arena-stat-stance ${isFirst ? 'buyer-stance' : 'seller-stance'}`}>
+                          {stanceVal}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="arena-agent-progress-wrap">
+                      <div
+                        className={`arena-agent-progress-bar ${isFirst ? 'buyer-progress' : 'seller-progress'}`}
+                        style={{ width: `${progressVal}%` }}
+                      />
+                      <span className="arena-progress-percent-label">
+                        {progressVal}%
                       </span>
                     </div>
-                    <span className="arena-agent-active-badge">Active</span>
                   </div>
-                </div>
-
-                <p className="arena-agent-goal-text">
-                  Goal: {buyerAgent.goal || 'Get best price with good terms'}
-                </p>
-
-                <div className="arena-agent-offer-stance-row">
-                  <div className="arena-agent-stat-col">
-                    <span className="arena-stat-label">Current offer</span>
-                    <span className="arena-stat-value buyer-val">
-                      ₹{Number(buyerAgent.current_offer || 9000).toLocaleString()} per unit
-                    </span>
-                  </div>
-                  <div className="arena-agent-stat-col align-right">
-                    <span className="arena-stat-label">Stance</span>
-                    <span className="arena-stat-stance buyer-stance">
-                      {buyerAgent.stance || 'Seeking agreement'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="arena-agent-progress-wrap">
-                  <div
-                    className="arena-agent-progress-bar buyer-progress"
-                    style={{ width: `${buyerAgent.progress_percent || 70}%` }}
-                  />
-                  <span className="arena-progress-percent-label">
-                    {buyerAgent.progress_percent || 70}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Agent 2: Seller */}
-              <div className="arena-agent-item-card">
-                <div className="arena-agent-item-top">
-                  <div className="arena-agent-avatar-small">
-                    <AgentFaceAvatar
-                      personality={sellerAgent.personality || 'Aggressive'}
-                      role="Seller"
-                      size={42}
-                    />
-                  </div>
-                  <div className="arena-agent-item-id">
-                    <div className="arena-agent-item-name-row">
-                      <span className="arena-agent-main-role">{sellerAgent.role}</span>
-                      <span className="arena-role-pill aggressive">
-                        {sellerAgent.personality || 'Aggressive'}
-                      </span>
-                    </div>
-                    <span className="arena-agent-active-badge">Active</span>
-                  </div>
-                </div>
-
-                <p className="arena-agent-goal-text">
-                  Goal: {sellerAgent.goal || 'Maximize profit with stable demand'}
-                </p>
-
-                <div className="arena-agent-offer-stance-row">
-                  <div className="arena-agent-stat-col">
-                    <span className="arena-stat-label">Current offer</span>
-                    <span className="arena-stat-value seller-val">
-                      ₹{Number(sellerAgent.current_offer || 10000).toLocaleString()} per unit
-                    </span>
-                  </div>
-                  <div className="arena-agent-stat-col align-right">
-                    <span className="arena-stat-label">Stance</span>
-                    <span className="arena-stat-stance seller-stance">
-                      {sellerAgent.stance || 'Holding firm'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="arena-agent-progress-wrap">
-                  <div
-                    className="arena-agent-progress-bar seller-progress"
-                    style={{ width: `${sellerAgent.progress_percent || 60}%` }}
-                  />
-                  <span className="arena-progress-percent-label">
-                    {sellerAgent.progress_percent || 60}%
-                  </span>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
 

@@ -96,8 +96,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 8px 16px;
-  cursor: default;
-  user-select: none;
+  cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
@@ -107,9 +106,9 @@
   border-color: #243147;
 }
 
-.arena-scenario-selector.locked {
-  cursor: default;
-  pointer-events: none;
+.arena-scenario-selector:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .arena-scenario-tag {
@@ -631,7 +630,24 @@
 }
 
 .arena-avatar-container {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arena-avatar-container .agent-face-avatar-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.arena-avatar-container .agent-live-dot {
+  display: none !important;
 }
 
 .arena-bubble-wrapper {
@@ -929,6 +945,19 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arena-agent-avatar-small .agent-face-avatar-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.arena-agent-avatar-small .agent-live-dot {
+  display: none !important;
 }
 
 .arena-agent-item-id {
@@ -971,6 +1000,12 @@
   color: #9333ea;
 }
 
+.arena-role-pill.risk-averse,
+.arena-role-pill.risk_averse {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .arena-agent-active-badge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -991,15 +1026,18 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .arena-agent-stat-col {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .arena-agent-stat-col.align-right {
   align-items: flex-end;
+  text-align: right;
 }
 
 .arena-stat-label {
@@ -1009,9 +1047,10 @@
 }
 
 .arena-stat-value {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: #0f172a;
+  white-space: nowrap;
 }
 
 [data-theme="dark"] .arena-stat-value {
@@ -1019,15 +1058,21 @@
 }
 
 .arena-stat-stance.buyer-stance {
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #2563eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .arena-stat-stance.seller-stance {
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #9333ea;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .arena-agent-progress-wrap {
