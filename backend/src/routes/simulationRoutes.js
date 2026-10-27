@@ -10,12 +10,14 @@ const {
   resumeSimulation,
   endSimulation,
   restartSimulation,
+  exportSimulation,
 } = require('../controllers/simulationController');
 
 // Routes
 router.post('/start', startSimulation);
 router.get('/', listSimulations);
 router.get('/:id', getSimulationState);
+router.get('/:id/export', exportSimulation);
 router.post('/:id/step', advanceSimulationStep);
 router.post('/:id/run', runFullSimulation);
 router.post('/:id/pause', pauseSimulation);

@@ -118,12 +118,16 @@ const db = {
         );
 
         for (const agent of agents) {
+          const scopedAgentId = `${id}_${agent.id || agent.role.toLowerCase()}`;
           await client.query(
             `INSERT INTO agents (id, simulation_id, name, role, personality, goal, target_value, reservation_value, current_offer, stance, progress_percent)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             ON CONFLICT (id) DO NOTHING`,
+             ON CONFLICT (id) DO UPDATE SET
+               current_offer = EXCLUDED.current_offer,
+               stance = EXCLUDED.stance,
+               progress_percent = EXCLUDED.progress_percent`,
             [
-              agent.id || `${id}_${agent.role.toLowerCase()}`,
+              scopedAgentId,
               id,
               agent.name,
               agent.role,
@@ -208,10 +212,37 @@ const db = {
   /**
    * List all simulations
    */
-  async listSimulations(limit = 20) {
+  async listSimulations(limit = 50) {
     if (isNeonConnected && pool) {
       try {
-        const res = await pool.query('SELECT * FROM simulations ORDER BY created_at DESC LIMIT $1', [limit]);
+        const res = await pool.query(`
+          SELECT s.*, 
+            COALESCE(
+              json_agg(
+                DISTINCT jsonb_build_object(
+                  'id', a.id,
+                  'name', a.name,
+                  'role', a.role,
+                  'personality', a.personality,
+                  'goal', a.goal,
+                  'target_value', a.target_value,
+                  'reservation_value', a.reservation_value,
+                  'current_offer', a.current_offer,
+                  'stance', a.stance,
+                  'progress_percent', a.progress_percent
+                )
+              ) FILTER (WHERE a.id IS NOT NULL), '[]'
+            ) AS agents,
+            COALESCE(
+              (SELECT row_to_json(ag) FROM agreements ag WHERE ag.simulation_id = s.id LIMIT 1),
+              NULL
+            ) AS agreement
+          FROM simulations s
+          LEFT JOIN agents a ON a.simulation_id = s.id
+          GROUP BY s.id
+          ORDER BY s.created_at DESC
+          LIMIT $1
+        `, [limit]);
         return res.rows;
       } catch (err) {
         console.warn('[Neon DB] Error in listSimulations, using cache:', err.message);
@@ -220,7 +251,12 @@ const db = {
 
     return Array.from(inMemoryStore.simulations.values())
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, limit);
+      .slice(0, limit)
+      .map(sim => ({
+        ...sim,
+        agents: inMemoryStore.agents.get(sim.id) || [],
+        agreement: inMemoryStore.agreements.get(sim.id) || null
+      }));
   },
 
   /**

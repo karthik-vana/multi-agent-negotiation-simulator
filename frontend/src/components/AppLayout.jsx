@@ -61,7 +61,7 @@ const AppLayout = () => {
         />
 
         {/* Dynamic Page Container */}
-        <main className="page-container">
+        <main className={`page-container ${location.pathname === '/arena' ? 'arena-page-container' : ''}`}>
           <Outlet />
         </main>
       </div>

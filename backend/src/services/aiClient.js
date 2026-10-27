@@ -156,47 +156,46 @@ function generateDeterministicAgentMove({
     const isCandidate = role.includes('candidate') || role.includes('engineer');
     if (isCandidate) {
       if (roundNumber === 1) {
-        proposedOffer = 120000;
-        message = 'Based on market benchmarks for senior AI engineers, I am targeting ₹120,000 base salary with equity.';
+        proposedOffer = 175000;
+        message = 'Based on senior AI engineering market benchmarks, I propose a base salary of ₹175,000 with remote flexibility.';
         stance = 'Seeking target compensation';
         action = 'OFFER';
       } else if (roundNumber === 2) {
-        proposedOffer = 110000;
-        message = 'I can adjust to ₹110,000 if flexible remote work and joining bonus are confirmed.';
+        proposedOffer = 170000;
+        message = 'I can adjust my salary expectation to ₹170,000 if flexible remote work is confirmed.';
         stance = 'Moderate concession';
         action = 'COUNTER_OFFER';
       } else if (roundNumber === 3) {
-        proposedOffer = 105000;
-        message = 'We can advance to ₹105,000 with performance bonus milestones.';
-        stance = 'Close to agreement';
+        proposedOffer = 166000;
+        message = 'I am willing to move to ₹166,000 base salary given the stock option structure.';
+        stance = 'Closing compensation gap';
         action = 'COUNTER_OFFER';
       } else {
-        proposedOffer = 100000;
-        message = 'I am delighted to accept ₹100,000 base salary with the agreed benefits package.';
-        stance = 'Offer accepted';
-        action = 'ACCEPT';
-        agreementReached = true;
+        proposedOffer = 163000;
+        message = 'To reach a win-win agreement, I propose a compromise base salary of ₹163,000.';
+        stance = 'Proposing mutual compromise';
+        action = 'COUNTER_OFFER';
       }
     } else {
       // Recruiter / Hiring Director
       if (roundNumber === 1) {
-        proposedOffer = 90000;
-        message = 'Our approved salary band for this grade starts at ₹90,000 with standard health and retirement benefits.';
+        proposedOffer = 152000;
+        message = 'Our approved salary band for this grade starts at ₹152,000 with standard health and retirement benefits.';
         stance = 'Within departmental budget';
-        action = 'OFFER';
+        action = 'COUNTER_OFFER';
       } else if (roundNumber === 2) {
-        proposedOffer = 95000;
-        message = 'With VP approval, we can increase the base salary to ₹95,000 plus an initial signing bonus.';
+        proposedOffer = 156000;
+        message = 'With departmental approval, we can increase the base salary to ₹156,000 plus a signing bonus.';
         stance = 'Exploring compromise';
         action = 'COUNTER_OFFER';
       } else if (roundNumber === 3) {
-        proposedOffer = 98000;
-        message = 'We can stretch our maximum band to ₹98,000 with annual equity refreshers.';
-        stance = 'Final concessions';
+        proposedOffer = 160000;
+        message = 'We can stretch our budget band to ₹160,000 with annual equity refreshers.';
+        stance = 'Approaching agreement';
         action = 'COUNTER_OFFER';
       } else {
-        proposedOffer = 100000;
-        message = 'We are pleased to meet at ₹100,000 and officially extend the formal offer.';
+        proposedOffer = 163000;
+        message = 'We are pleased to accept your proposed base salary of ₹163,000 with the agreed benefits package. Welcome to the team!';
         stance = 'Agreement reached';
         action = 'ACCEPT';
         agreementReached = true;
@@ -212,48 +211,47 @@ function generateDeterministicAgentMove({
 
     if (isBuyer) {
       if (roundNumber === 1) {
-        proposedOffer = 8000;
-        message = 'We can offer ₹8,000 per unit for the initial order.';
-        stance = personality === 'aggressive' ? 'Firm on budget' : 'Seeking agreement';
+        proposedOffer = 95000;
+        message = 'We propose an opening contract value of ₹95,000 with Net-60 payment and four-week delivery.';
+        stance = 'Seeking agreement';
         action = 'OFFER';
       } else if (roundNumber === 2) {
-        proposedOffer = 9000;
-        message = 'I can increase to ₹9,000 if bulk delivery is included.';
-        stance = personality === 'aggressive' ? 'Moderate concession' : 'Seeking agreement';
+        proposedOffer = 96500;
+        message = 'We can increase our purchasing budget to ₹96,500 if 4-week delivery is committed.';
+        stance = 'Moderate concession';
         action = 'COUNTER_OFFER';
       } else if (roundNumber === 3) {
-        proposedOffer = 9500;
-        message = 'We can advance to ₹9,500 with standard 30-day payment terms.';
+        proposedOffer = 98000;
+        message = 'We can advance our offer to ₹98,000 with standard Net-45 terms.';
         stance = 'Close to agreement';
         action = 'COUNTER_OFFER';
       } else {
-        proposedOffer = 10000;
-        message = 'We can accept ₹10,000 as our final mutual agreement.';
-        stance = 'Agreement reached';
-        action = 'ACCEPT';
-        agreementReached = true;
+        proposedOffer = 99000;
+        message = 'As our best offer to close this contract, we propose settling at ₹99,000.';
+        stance = 'Proposing compromise';
+        action = 'COUNTER_OFFER';
       }
     } else {
       // Seller
       if (roundNumber === 1) {
-        proposedOffer = 11000;
-        message = 'That price is below our target. We can offer ₹11,000 per unit.';
+        proposedOffer = 110000;
+        message = 'Our standard rate is ₹110,000 to maintain dedicated enterprise SLAs.';
         stance = personality === 'collaborative' ? 'Negotiating terms' : 'Holding firm';
-        action = 'OFFER';
+        action = 'COUNTER_OFFER';
       } else if (roundNumber === 2) {
-        proposedOffer = 10000;
-        message = 'I can move to ₹10,000 with a larger order commitment.';
-        stance = personality === 'aggressive' ? 'Holding firm' : 'Exploring compromise';
+        proposedOffer = 105000;
+        message = 'We can offer a volume discount down to ₹105,000 with dedicated technical support.';
+        stance = 'Exploring concession';
         action = 'COUNTER_OFFER';
       } else if (roundNumber === 3) {
-        proposedOffer = 9800;
-        message = 'We can meet near the middle at ₹9,800 under expedited delivery.';
-        stance = 'Final concessions';
+        proposedOffer = 101000;
+        message = 'We can concede further to ₹101,000 with standard 30-day payment terms.';
+        stance = 'Closing the gap';
         action = 'COUNTER_OFFER';
       } else {
-        proposedOffer = 10000;
-        message = 'We confirm agreement at ₹10,000 per unit with 14-day delivery SLA.';
-        stance = 'Agreement confirmed';
+        proposedOffer = 99000;
+        message = 'We are pleased to accept your proposed contract value of ₹99,000 with the agreed delivery terms.';
+        stance = 'Agreement reached';
         action = 'ACCEPT';
         agreementReached = true;
       }

@@ -134,7 +134,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           style={{ cursor: 'pointer' }}
           title="Go to Dashboard"
         >
-          <img src="/favicon.svg" alt="Negotiator AI" className="brand-logo" />
+          <img src="/logo.png" alt="Negotiator AI" className="brand-logo" />
           <div className="brand-title">Negotiator AI</div>
         </div>
 

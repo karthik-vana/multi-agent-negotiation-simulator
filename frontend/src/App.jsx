@@ -5,7 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ScenarioSelection from './pages/ScenarioSelection';
 import AgentConfiguration from './pages/AgentConfiguration';
 import NegotiationArena from './pages/NegotiationArena';
-import HistoryPlaceholder from './pages/HistoryPlaceholder';
+import HistoryReports from './pages/HistoryReports';
 import Settings from './pages/Settings';
 import PracticeMode from './pages/PracticeMode';
 import Login from './pages/Login';
@@ -47,7 +47,8 @@ function App() {
                 <Route path="agents" element={<AgentConfiguration />} />
                 <Route path="arena" element={<NegotiationArena />} />
                 <Route path="practice" element={<PracticeMode />} />
-                <Route path="history" element={<HistoryPlaceholder />} />
+                <Route path="history" element={<HistoryReports />} />
+                <Route path="history/:simulationId" element={<HistoryReports />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="profile" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

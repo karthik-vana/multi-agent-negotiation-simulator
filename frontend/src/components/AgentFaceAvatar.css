@@ -3,8 +3,8 @@
    ========================================================================== */
 
 .agent-face-avatar-wrap {
-  width: 48px;
-  height: 48px;
+  width: var(--face-size, 48px);
+  height: var(--face-size, 48px);
   border-radius: 14px;
   display: flex;
   align-items: center;

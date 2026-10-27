@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Swords,
   Pause,
@@ -20,9 +20,11 @@ import {
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
+import { getScenarioById, SCENARIOS } from '../data/scenarios';
 import AgentFaceAvatar from '../components/AgentFaceAvatar';
 import {
   startSimulation,
+  getSimulationState,
   stepSimulation,
   pauseSimulation,
   resumeSimulation,
@@ -39,36 +41,75 @@ const SCENARIO_OPTIONS = [
 
 const NegotiationArena = () => {
   const navigate = useNavigate();
-  const { selectedScenarioId } = useScenario();
+  const location = useLocation();
+  const { selectedScenarioId, selectedScenario, agentPersonalities } = useScenario();
   const { t } = useSettings();
 
-  // Active scenario
-  const [currentScenarioId, setCurrentScenarioId] = useState(
-    selectedScenarioId || 'vendor-pricing'
-  );
-  const [scenarioDropdownOpen, setScenarioDropdownOpen] = useState(false);
+  // Active scenario strictly locked to selection
+  const currentScenarioId =
+    location.state?.scenarioId ||
+    selectedScenarioId ||
+    'vendor-pricing';
 
-  // Simulation State
+  const effectivePersonalities = {
+    ...(agentPersonalities || {}),
+    ...(location.state?.agentPersonalities || {}),
+  };
+
+  const scenarioMeta =
+    location.state?.scenario ||
+    selectedScenario ||
+    getScenarioById(currentScenarioId) ||
+    SCENARIOS[0];
+
+  // Simulation State: always enter in full screen mode by default
   const [simulation, setSimulation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen] = useState(true);
   const [turnRunning, setTurnRunning] = useState(false);
 
   const transcriptEndRef = useRef(null);
   const timerRef = useRef(null);
 
-  // 1. Initialize Simulation on mount or scenario change
+  // 1. Initialize Simulation on mount or scenario change (restoring active session if returning from report)
   useEffect(() => {
     let isMounted = true;
 
     async function initArena() {
       setLoading(true);
       try {
-        const simData = await startSimulation(currentScenarioId);
+        // If returning from report or active arena session exists, restore it instead of creating duplicate
+        const activeSimId = sessionStorage.getItem('active_arena_sim_id');
+        if (activeSimId) {
+          try {
+            const existingSim = await getSimulationState(activeSimId);
+            if (isMounted && existingSim && existingSim.id) {
+              setSimulation(existingSim);
+              setIsPaused(existingSim.status !== 'RUNNING');
+              setLoading(false);
+              return;
+            }
+          } catch (restoreErr) {
+            console.warn('Could not restore previous active simulation:', restoreErr);
+            sessionStorage.removeItem('active_arena_sim_id');
+          }
+        }
+
+        const customAgents = scenarioMeta?.agents?.map((a) => ({
+          id: a.id,
+          role: a.role,
+          name: a.name,
+          goal: a.primaryGoal || a.goal,
+          personality: effectivePersonalities?.[a.id] || a.personality || a.defaultPersonality || 'Collaborative',
+        }));
+        const simData = await startSimulation(currentScenarioId, customAgents);
         if (isMounted && simData) {
           setSimulation(simData);
           setIsPaused(false);
+          if (simData.id) {
+            sessionStorage.setItem('active_arena_sim_id', simData.id);
+          }
         }
       } catch (err) {
         console.error('Failed to init simulation:', err);
@@ -83,7 +124,7 @@ const NegotiationArena = () => {
       isMounted = false;
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [currentScenarioId]);
+  }, [currentScenarioId, selectedScenario, agentPersonalities, location.state]);
 
   // 2. Real-time turn progression timer (runs every 3.5 seconds when active)
   useEffect(() => {
@@ -124,9 +165,36 @@ const NegotiationArena = () => {
     }
   }, [simulation?.messages?.length]);
 
+  // Status Helpers
+  const isDeadlock = simulation?.status === 'DEADLOCK';
+  const isCompleted = simulation?.status === 'COMPLETED' || simulation?.status === 'AGREEMENT_REACHED';
+  const isTerminated = isDeadlock || isCompleted;
+  const isReallyPaused = isPaused && !isTerminated;
+
+  const [showExitWarning, setShowExitWarning] = useState(false);
+  const allowExitRef = useRef(false);
+
+  // Exit guard: lock browser back button in Arena until simulation is explicitly ended
+  useEffect(() => {
+    window.history.pushState({ arenaLocked: true }, '', window.location.href);
+
+    const handlePopState = () => {
+      if (!allowExitRef.current && !isTerminated) {
+        window.history.pushState({ arenaLocked: true }, '', window.location.href);
+        setShowExitWarning(true);
+        setTimeout(() => setShowExitWarning(false), 3500);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isTerminated]);
+
   // Handle Controls
   const handleTogglePause = async () => {
-    if (!simulation) return;
+    if (!simulation || isTerminated) return;
     if (isPaused) {
       setIsPaused(false);
       await resumeSimulation(simulation.id);
@@ -136,31 +204,64 @@ const NegotiationArena = () => {
     }
   };
 
+  // End simulation: clear active session, do NOT show report in arena, redirect directly to Scenario Selection
   const handleEndSimulation = async () => {
-    if (!simulation) return;
+    sessionStorage.removeItem('active_arena_sim_id');
+    allowExitRef.current = true;
     setIsPaused(true);
-    const updated = await endSimulation(simulation.id);
-    if (updated) setSimulation(updated);
+    if (timerRef.current) clearInterval(timerRef.current);
+    const isAlreadyFinished = isCompleted || isDeadlock || simulation?.status === 'COMPLETED' || simulation?.status === 'AGREEMENT_REACHED' || simulation?.status === 'DEADLOCK' || Boolean(simulation?.agreement);
+    if (simulation?.id && !isAlreadyFinished) {
+      try {
+        await endSimulation(simulation.id, 'User left in between before completion');
+      } catch (err) {
+        console.warn('Failed to end simulation cleanly:', err);
+      }
+    }
+    navigate('/scenarios');
   };
 
-  const handleRestart = async () => {
-    setLoading(true);
-    setIsPaused(false);
-    try {
-      const restarted = await restartSimulation(simulation?.id || currentScenarioId);
-      if (restarted) setSimulation(restarted);
-    } catch (err) {
-      console.warn('Restart failed, restarting fresh:', err);
-      const fresh = await startSimulation(currentScenarioId);
-      if (fresh) setSimulation(fresh);
-    } finally {
-      setLoading(false);
+  // Direct navigation to negotiation report (includes ?from=arena so report page has a "Back to Negotiation Arena" button)
+  const handleViewReport = () => {
+    allowExitRef.current = true;
+    if (simulation?.id) {
+      navigate(`/history?id=${simulation.id}&from=arena`);
+    } else {
+      navigate('/history?from=arena');
     }
   };
 
-  const handleSelectScenario = (id) => {
-    setCurrentScenarioId(id);
-    setScenarioDropdownOpen(false);
+  const handleRestart = async () => {
+    sessionStorage.removeItem('active_arena_sim_id');
+    setLoading(true);
+    setIsPaused(false);
+    try {
+      const customAgents = scenarioMeta?.agents?.map((a) => ({
+        id: a.id,
+        role: a.role,
+        name: a.name,
+        goal: a.primaryGoal || a.goal,
+        personality: effectivePersonalities?.[a.id] || a.personality || a.defaultPersonality || 'Collaborative',
+      }));
+      const restarted = await startSimulation(currentScenarioId, customAgents);
+      if (restarted) {
+        setSimulation(restarted);
+        if (restarted.id) {
+          sessionStorage.setItem('active_arena_sim_id', restarted.id);
+        }
+      }
+    } catch (err) {
+      console.warn('Restart failed, restarting fresh:', err);
+      const fresh = await startSimulation(currentScenarioId);
+      if (fresh) {
+        setSimulation(fresh);
+        if (fresh.id) {
+          sessionStorage.setItem('active_arena_sim_id', fresh.id);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Group messages by round
@@ -174,23 +275,43 @@ const NegotiationArena = () => {
   const currentScenarioObj =
     SCENARIO_OPTIONS.find((s) => s.id === currentScenarioId) || SCENARIO_OPTIONS[0];
 
-  const agents = simulation?.agents || [];
-  const buyerAgent = agents[0] || {
-    role: 'Buyer',
-    personality: 'Collaborative',
-    goal: 'Get best price with good terms',
-    current_offer: 9000,
-    stance: 'Seeking agreement',
-    progress_percent: 70,
-  };
-  const sellerAgent = agents[1] || {
-    role: 'Seller',
-    personality: 'Aggressive',
-    goal: 'Maximize profit with stable demand',
-    current_offer: 10000,
-    stance: 'Holding firm',
-    progress_percent: 60,
-  };
+  const simulationAgents = simulation?.agents || [];
+  const activeAgentsList = (scenarioMeta?.agents || simulationAgents).map((metaAgent, idx) => {
+    const simAgent =
+      simulationAgents.find(
+        (a) => a.id === metaAgent.id || a.role?.toLowerCase() === metaAgent.role?.toLowerCase()
+      ) ||
+      simulationAgents[idx] ||
+      {};
+
+    const agentId = metaAgent.id || simAgent.id || (idx === 0 ? 'job-candidate' : 'hiring-director');
+    const configuredPersonality =
+      effectivePersonalities?.[agentId] ||
+      effectivePersonalities?.[metaAgent.id] ||
+      (idx === 0
+        ? (effectivePersonalities?.['job-candidate'] || effectivePersonalities?.['buyer-procurement'] || effectivePersonalities?.['department-a'])
+        : (effectivePersonalities?.['hiring-director'] || effectivePersonalities?.['vendor-sales'] || effectivePersonalities?.['department-b'])) ||
+      simAgent.personality ||
+      metaAgent.personality ||
+      metaAgent.defaultPersonality ||
+      'Collaborative';
+
+    return {
+      ...metaAgent,
+      ...simAgent,
+      id: agentId,
+      name: simAgent.name || metaAgent.name || metaAgent.role,
+      role: simAgent.role || metaAgent.role,
+      goal: simAgent.goal || metaAgent.primaryGoal || metaAgent.goal,
+      personality: configuredPersonality,
+      current_offer: simAgent.current_offer || (currentScenarioId === 'job-offer' ? (idx === 0 ? 175000 : 152000) : currentScenarioId === 'project-budget' ? (idx === 0 ? 450000 : (idx === 1 ? 350000 : 300000)) : (idx === 0 ? 95000 : 110000)),
+      stance: simAgent.stance || (idx === 0 ? 'Seeking agreement' : 'Evaluating terms'),
+      progress_percent: simAgent.progress_percent || 50,
+    };
+  });
+
+  const buyerAgent = activeAgentsList[0] || {};
+  const sellerAgent = activeAgentsList[1] || {};
 
   const currentRound = simulation?.current_round || 1;
   const maxRounds = simulation?.max_rounds || currentScenarioObj.maxRounds || 10;
@@ -216,51 +337,107 @@ const NegotiationArena = () => {
         </div>
       </div>
 
+      {/* Exit Warning Toast when user tries to go back without ending simulation */}
+      {showExitWarning && (
+        <div className="arena-exit-toast">
+          <AlertCircle size={18} />
+          <span>Active negotiation in progress. Click <strong>End Simulation</strong> to exit to Scenario Selection.</span>
+        </div>
+      )}
+
+      {/* In-page Negotiation Outcome Message (NO popup modal, NO Scenario Selection button) */}
+      {isTerminated && (
+        <div className={`arena-outcome-banner ${isDeadlock ? 'banner-deadlock' : 'banner-completed'}`}>
+          <div className="arena-outcome-banner-left">
+            {isDeadlock ? (
+              <AlertCircle size={22} className="outcome-banner-icon text-danger" />
+            ) : (
+              <CheckCircle2 size={22} className="outcome-banner-icon text-success" />
+            )}
+            <div className="arena-outcome-banner-text">
+              <span className="outcome-banner-title">
+                {isDeadlock ? 'Deadlock Detected' : 'Agreement Reached'}
+              </span>
+              <span className="outcome-banner-desc">
+                {isDeadlock
+                  ? `Negotiation reached an impasse in Round ${currentRound}. You can inspect the negotiation report below.`
+                  : `Negotiation successfully completed in Round ${currentRound} of ${maxRounds}. You can inspect the negotiation report below.`}
+              </span>
+            </div>
+          </div>
+          <div className="arena-outcome-banner-actions">
+            <button
+              type="button"
+              className="btn-banner-report"
+              onClick={handleViewReport}
+              title="Show full negotiation audit report"
+            >
+              <FileText size={16} />
+              <span>Show Negotiation Report</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ========================================================================
           2. Top Control Bar (Scenario, Status, Round Indicator, Buttons)
           ======================================================================== */}
       <div className="arena-control-bar">
-        {/* Scenario Selector Dropdown */}
+        {/* Scenario Display Pill (Not a dropdown) */}
         <div className="arena-scenario-dropdown-wrap">
-          <div
-            className="arena-scenario-selector"
-            onClick={() => setScenarioDropdownOpen(!scenarioDropdownOpen)}
-          >
+          <div className="arena-scenario-selector" title="Active Scenario">
             <div className="arena-scenario-tag">
               <span className="arena-scenario-label">Scenario</span>
             </div>
             <div className="arena-scenario-current">
               <LayoutGrid size={15} className="arena-grid-icon" />
               <span className="arena-scenario-name">{currentScenarioObj.title}</span>
-              <ChevronDown size={14} className="arena-chevron" />
             </div>
           </div>
-
-          {scenarioDropdownOpen && (
-            <div className="arena-dropdown-popover">
-              {SCENARIO_OPTIONS.map((opt) => (
-                <div
-                  key={opt.id}
-                  className={`arena-dropdown-item ${opt.id === currentScenarioId ? 'active' : ''}`}
-                  onClick={() => handleSelectScenario(opt.id)}
-                >
-                  <span>{opt.title}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Live Status Badge */}
         <div className="arena-status-card">
           <div className="arena-status-indicator">
-            <span className={`arena-pulse-dot ${isPaused ? 'paused' : 'live'}`} />
-            <span className="arena-status-text">
-              {isPaused ? 'SIMULATION PAUSED' : 'LIVE SIMULATION'}
+            <span
+              className={`arena-pulse-dot ${
+                isDeadlock
+                  ? 'deadlock'
+                  : isCompleted
+                  ? 'completed'
+                  : isReallyPaused
+                  ? 'paused'
+                  : 'live'
+              }`}
+            />
+            <span
+              className={`arena-status-text ${
+                isDeadlock
+                  ? 'status-deadlock'
+                  : isCompleted
+                  ? 'status-completed'
+                  : isReallyPaused
+                  ? 'status-paused'
+                  : 'status-live'
+              }`}
+            >
+              {isDeadlock
+                ? 'DEADLOCK DETECTED'
+                : isCompleted
+                ? 'AGREEMENT REACHED'
+                : isReallyPaused
+                ? 'SIMULATION PAUSED'
+                : 'LIVE SIMULATION'}
             </span>
           </div>
           <span className="arena-status-subtext">
-            {isPaused ? 'Waiting for user action' : 'AI agents are negotiating'}
+            {isDeadlock
+              ? 'Negotiation reached an impasse'
+              : isCompleted
+              ? 'Consensus finalized successfully'
+              : isReallyPaused
+              ? 'Waiting for user action'
+              : 'AI agents are negotiating'}
           </span>
         </div>
 
@@ -287,21 +464,23 @@ const NegotiationArena = () => {
 
         {/* Simulation Control Buttons */}
         <div className="arena-actions-group">
-          <button
-            type="button"
-            className={`btn-arena-pause ${isPaused ? 'paused' : ''}`}
-            onClick={handleTogglePause}
-            title={isPaused ? 'Resume simulation' : 'Pause simulation'}
-          >
-            {isPaused ? <Play size={15} /> : <Pause size={15} />}
-            <span>{isPaused ? 'Resume' : 'Pause'}</span>
-          </button>
+          {!isTerminated && (
+            <button
+              type="button"
+              className={`btn-arena-pause ${isReallyPaused ? 'paused' : ''}`}
+              onClick={handleTogglePause}
+              title={isReallyPaused ? 'Resume simulation' : 'Pause simulation'}
+            >
+              {isReallyPaused ? <Play size={15} /> : <Pause size={15} />}
+              <span>{isReallyPaused ? 'Resume' : 'Pause'}</span>
+            </button>
+          )}
 
           <button
             type="button"
             className="btn-arena-end"
             onClick={handleEndSimulation}
-            title="End simulation"
+            title="End simulation and return to Scenario Selection"
           >
             <Square size={14} />
             <span>End Simulation</span>
@@ -336,14 +515,6 @@ const NegotiationArena = () => {
                 <span className="arena-live-pill-dot" />
                 <span>Live</span>
               </span>
-              <button
-                type="button"
-                className="btn-transcript-expand"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                title={isFullscreen ? 'Exit Fullscreen' : 'Expand Fullscreen'}
-              >
-                {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              </button>
             </div>
           </div>
 
@@ -364,118 +535,146 @@ const NegotiationArena = () => {
 
                   {/* Messages inside this round */}
                   <div className="arena-messages-stream">
-                    {msgs.map((msg) => {
-                      const isOrchestrator = msg.sender_type === 'ORCHESTRATOR';
-                      const isBuyerMsg =
-                        !isOrchestrator &&
-                        (msg.sender_role?.toLowerCase().includes('buyer') ||
-                          msg.sender_role?.toLowerCase().includes('candidate'));
+                    {(() => {
+                      let turnIdx = 0;
+                      return msgs.map((msg) => {
+                        const isOrchestrator = msg.sender_type === 'ORCHESTRATOR';
 
-                      if (isOrchestrator) {
-                        return (
-                          <div key={msg.id} className="arena-orchestrator-row">
-                            <div className="arena-orchestrator-box">
-                              <div className="arena-orchestrator-avatar">
-                                <Bot size={18} />
-                              </div>
-                              <div className="arena-orchestrator-content">
-                                <div className="arena-orchestrator-header">
-                                  <span className="arena-orchestrator-name">
-                                    {msg.sender_name || 'Orchestrator Agent'}
-                                  </span>
-                                  <span className="arena-timestamp">
-                                    {msg.timestamp_label || '10:24 AM'}
-                                  </span>
+                        if (isOrchestrator) {
+                          return (
+                            <div key={msg.id} className="arena-orchestrator-row">
+                              <div className="arena-orchestrator-box">
+                                <div className="arena-orchestrator-avatar">
+                                  <Bot size={18} />
                                 </div>
-                                <p className="arena-orchestrator-text">{msg.message}</p>
+                                <div className="arena-orchestrator-content">
+                                  <div className="arena-orchestrator-header">
+                                    <span className="arena-orchestrator-name">
+                                      {msg.sender_name || 'Orchestrator Agent'}
+                                    </span>
+                                    <span className="arena-timestamp">
+                                      {msg.timestamp_label || '10:24 AM'}
+                                    </span>
+                                  </div>
+                                  <p className="arena-orchestrator-text">{msg.message}</p>
+                                </div>
                               </div>
                             </div>
+                          );
+                        }
+
+                        const isBuyerExplicit =
+                          msg.sender_role?.toLowerCase().includes('buyer') ||
+                          msg.sender_role?.toLowerCase().includes('candidate');
+                        const isSellerExplicit =
+                          msg.sender_role?.toLowerCase().includes('seller') ||
+                          msg.sender_role?.toLowerCase().includes('vendor') ||
+                          msg.sender_role?.toLowerCase().includes('recruiter') ||
+                          msg.sender_role?.toLowerCase().includes('hr');
+
+                        let isBuyerMsg = false;
+                        if (isBuyerExplicit) {
+                          isBuyerMsg = true;
+                        } else if (isSellerExplicit) {
+                          isBuyerMsg = false;
+                        } else {
+                          isBuyerMsg = (turnIdx % 2 === 0);
+                        }
+                        turnIdx++;
+
+                        const activeAgentForMsg = isBuyerMsg ? activeAgentsList[0] : activeAgentsList[1];
+                        const displayPersonality = activeAgentForMsg?.personality || msg.personality || (isBuyerMsg ? 'Collaborative' : 'Collaborative');
+                        const personalityClass = (displayPersonality || '').toLowerCase().includes('aggressive')
+                          ? 'aggressive'
+                          : (displayPersonality || '').toLowerCase().includes('risk')
+                          ? 'risk-averse'
+                          : 'collaborative';
+
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`arena-chat-row ${isBuyerMsg ? 'buyer-row' : 'seller-row'}`}
+                          >
+                            {/* Buyer Avatar on Left */}
+                            {isBuyerMsg && (
+                              <div className="arena-avatar-container buyer-avatar">
+                                <AgentFaceAvatar
+                                  agentId={activeAgentsList[0]?.id}
+                                  personality={displayPersonality}
+                                  role={activeAgentsList[0]?.role || "Buyer"}
+                                  size={44}
+                                />
+                              </div>
+                            )}
+
+                            {/* Message Bubble + Attached Offer */}
+                            <div className={`arena-bubble-wrapper ${isBuyerMsg ? 'buyer' : 'seller'}`}>
+                              {/* Message Meta Info Header */}
+                              <div className="arena-bubble-meta">
+                                {isBuyerMsg ? (
+                                  <>
+                                    <span className="arena-agent-name">{msg.sender_role}</span>
+                                    <span className="arena-meta-bullet">•</span>
+                                    <span className={`arena-agent-personality ${personalityClass}`}>
+                                      {displayPersonality}
+                                    </span>
+                                    <span className="arena-meta-spacer" />
+                                    <span className="arena-timestamp">
+                                      {msg.timestamp_label || '10:21 AM'}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="arena-timestamp">
+                                      {msg.timestamp_label || '10:22 AM'}
+                                    </span>
+                                    <span className="arena-meta-spacer" />
+                                    <span className="arena-agent-name">{msg.sender_role}</span>
+                                    <span className="arena-meta-bullet">•</span>
+                                    <span className={`arena-agent-personality ${personalityClass}`}>
+                                      {displayPersonality}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+
+                              {/* Bubble Content Row (Text + Offer badge) */}
+                              <div className="arena-bubble-content-row">
+                                {/* Attached Offer Badge for Seller (Placed on left of text) */}
+                                {!isBuyerMsg && msg.offer_value && (
+                                  <div className="arena-attached-offer seller-offer">
+                                    <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
+                                  </div>
+                                )}
+
+                                <div className={`arena-speech-bubble ${isBuyerMsg ? 'buyer-bubble' : 'seller-bubble'}`}>
+                                  <p className="arena-bubble-text">{msg.message}</p>
+                                </div>
+
+                                {/* Attached Offer Badge for Buyer (Placed on right of text) */}
+                                {isBuyerMsg && msg.offer_value && (
+                                  <div className="arena-attached-offer buyer-offer">
+                                    <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Seller Avatar on Right */}
+                            {!isBuyerMsg && (
+                              <div className="arena-avatar-container seller-avatar">
+                                <AgentFaceAvatar
+                                  agentId={activeAgentsList[1]?.id}
+                                  personality={activeAgentsList[1]?.personality || msg.personality || 'Aggressive'}
+                                  role={activeAgentsList[1]?.role || "Seller"}
+                                  size={44}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
-                      }
-
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`arena-chat-row ${isBuyerMsg ? 'buyer-row' : 'seller-row'}`}
-                        >
-                          {/* Buyer Avatar on Left */}
-                          {isBuyerMsg && (
-                            <div className="arena-avatar-container buyer-avatar">
-                              <AgentFaceAvatar
-                                personality={msg.personality || 'Collaborative'}
-                                role="Buyer"
-                                size={44}
-                              />
-                            </div>
-                          )}
-
-                          {/* Message Bubble + Attached Offer */}
-                          <div className={`arena-bubble-wrapper ${isBuyerMsg ? 'buyer' : 'seller'}`}>
-                            {/* Message Meta Info Header */}
-                            <div className="arena-bubble-meta">
-                              {isBuyerMsg ? (
-                                <>
-                                  <span className="arena-agent-name">{msg.sender_role}</span>
-                                  <span className="arena-meta-bullet">•</span>
-                                  <span className="arena-agent-personality collaborative">
-                                    {msg.personality || 'Collaborative'}
-                                  </span>
-                                  <span className="arena-meta-spacer" />
-                                  <span className="arena-timestamp">
-                                    {msg.timestamp_label || '10:21 AM'}
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="arena-timestamp">
-                                    {msg.timestamp_label || '10:22 AM'}
-                                  </span>
-                                  <span className="arena-meta-spacer" />
-                                  <span className="arena-agent-name">{msg.sender_role}</span>
-                                  <span className="arena-meta-bullet">•</span>
-                                  <span className="arena-agent-personality aggressive">
-                                    {msg.personality || 'Aggressive'}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-
-                            {/* Bubble Content Row (Text + Offer badge) */}
-                            <div className="arena-bubble-content-row">
-                              {/* Attached Offer Badge for Seller (Placed on left of text) */}
-                              {!isBuyerMsg && msg.offer_value && (
-                                <div className="arena-attached-offer seller-offer">
-                                  <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
-                                </div>
-                              )}
-
-                              <div className={`arena-speech-bubble ${isBuyerMsg ? 'buyer-bubble' : 'seller-bubble'}`}>
-                                <p className="arena-bubble-text">{msg.message}</p>
-                              </div>
-
-                              {/* Attached Offer Badge for Buyer (Placed on right of text) */}
-                              {isBuyerMsg && msg.offer_value && (
-                                <div className="arena-attached-offer buyer-offer">
-                                  <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Seller Avatar on Right */}
-                          {!isBuyerMsg && (
-                            <div className="arena-avatar-container seller-avatar">
-                              <AgentFaceAvatar
-                                personality={msg.personality || 'Aggressive'}
-                                role="Seller"
-                                size={44}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                      });
+                    })()}
                   </div>
                 </div>
               ))
@@ -502,107 +701,70 @@ const NegotiationArena = () => {
             </div>
 
             <div className="arena-agents-list">
-              {/* Agent 1: Buyer */}
-              <div className="arena-agent-item-card">
-                <div className="arena-agent-item-top">
-                  <div className="arena-agent-avatar-small">
-                    <AgentFaceAvatar
-                      personality={buyerAgent.personality || 'Collaborative'}
-                      role="Buyer"
-                      size={42}
-                    />
-                  </div>
-                  <div className="arena-agent-item-id">
-                    <div className="arena-agent-item-name-row">
-                      <span className="arena-agent-main-role">{buyerAgent.role}</span>
-                      <span className="arena-role-pill collaborative">
-                        {buyerAgent.personality || 'Collaborative'}
+              {activeAgentsList.map((agent, idx) => {
+                const isFirst = idx === 0;
+                const rolePillClass = (agent.personality || '').toLowerCase().includes('aggressive')
+                  ? 'aggressive'
+                  : (agent.personality || '').toLowerCase().includes('risk')
+                  ? 'risk-averse'
+                  : 'collaborative';
+                const offerVal = agent.current_offer || (isFirst ? 9000 : 10000);
+                const stanceVal = agent.stance || (isFirst ? 'Seeking agreement' : 'Holding firm');
+                const progressVal = agent.progress_percent || (isFirst ? 70 : 60);
+
+                return (
+                  <div key={agent.id || `agent-item-${idx}`} className="arena-agent-item-card">
+                    <div className="arena-agent-item-top">
+                      <div className="arena-agent-avatar-small">
+                        <AgentFaceAvatar
+                          agentId={agent.id}
+                          personality={agent.personality}
+                          role={agent.role}
+                          size={42}
+                        />
+                      </div>
+                      <div className="arena-agent-item-id">
+                        <div className="arena-agent-item-name-row">
+                          <span className="arena-agent-main-role">{agent.name || agent.role}</span>
+                          <span className={`arena-role-pill ${rolePillClass}`}>
+                            {agent.personality || (isFirst ? 'Collaborative' : 'Aggressive')}
+                          </span>
+                        </div>
+                        <span className="arena-agent-active-badge">Active</span>
+                      </div>
+                    </div>
+
+                    <p className="arena-agent-goal-text">
+                      Goal: {agent.goal || (isFirst ? 'Get best price with good terms' : 'Maximize profit with stable demand')}
+                    </p>
+
+                    <div className="arena-agent-offer-stance-row">
+                      <div className="arena-agent-stat-col">
+                        <span className="arena-stat-label">Current offer</span>
+                        <span className={`arena-stat-value ${isFirst ? 'buyer-val' : 'seller-val'}`}>
+                          ₹{Number(offerVal).toLocaleString()}{currentScenarioId === 'vendor-pricing' ? ' per unit' : ''}
+                        </span>
+                      </div>
+                      <div className="arena-agent-stat-col align-right">
+                        <span className="arena-stat-label">Stance</span>
+                        <span className={`arena-stat-stance ${isFirst ? 'buyer-stance' : 'seller-stance'}`}>
+                          {stanceVal}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="arena-agent-progress-wrap">
+                      <div
+                        className={`arena-agent-progress-bar ${isFirst ? 'buyer-progress' : 'seller-progress'}`}
+                        style={{ width: `${progressVal}%` }}
+                      />
+                      <span className="arena-progress-percent-label">
+                        {progressVal}%
                       </span>
                     </div>
-                    <span className="arena-agent-active-badge">Active</span>
                   </div>
-                </div>
-
-                <p className="arena-agent-goal-text">
-                  Goal: {buyerAgent.goal || 'Get best price with good terms'}
-                </p>
-
-                <div className="arena-agent-offer-stance-row">
-                  <div className="arena-agent-stat-col">
-                    <span className="arena-stat-label">Current offer</span>
-                    <span className="arena-stat-value buyer-val">
-                      ₹{Number(buyerAgent.current_offer || 9000).toLocaleString()} per unit
-                    </span>
-                  </div>
-                  <div className="arena-agent-stat-col align-right">
-                    <span className="arena-stat-label">Stance</span>
-                    <span className="arena-stat-stance buyer-stance">
-                      {buyerAgent.stance || 'Seeking agreement'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="arena-agent-progress-wrap">
-                  <div
-                    className="arena-agent-progress-bar buyer-progress"
-                    style={{ width: `${buyerAgent.progress_percent || 70}%` }}
-                  />
-                  <span className="arena-progress-percent-label">
-                    {buyerAgent.progress_percent || 70}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Agent 2: Seller */}
-              <div className="arena-agent-item-card">
-                <div className="arena-agent-item-top">
-                  <div className="arena-agent-avatar-small">
-                    <AgentFaceAvatar
-                      personality={sellerAgent.personality || 'Aggressive'}
-                      role="Seller"
-                      size={42}
-                    />
-                  </div>
-                  <div className="arena-agent-item-id">
-                    <div className="arena-agent-item-name-row">
-                      <span className="arena-agent-main-role">{sellerAgent.role}</span>
-                      <span className="arena-role-pill aggressive">
-                        {sellerAgent.personality || 'Aggressive'}
-                      </span>
-                    </div>
-                    <span className="arena-agent-active-badge">Active</span>
-                  </div>
-                </div>
-
-                <p className="arena-agent-goal-text">
-                  Goal: {sellerAgent.goal || 'Maximize profit with stable demand'}
-                </p>
-
-                <div className="arena-agent-offer-stance-row">
-                  <div className="arena-agent-stat-col">
-                    <span className="arena-stat-label">Current offer</span>
-                    <span className="arena-stat-value seller-val">
-                      ₹{Number(sellerAgent.current_offer || 10000).toLocaleString()} per unit
-                    </span>
-                  </div>
-                  <div className="arena-agent-stat-col align-right">
-                    <span className="arena-stat-label">Stance</span>
-                    <span className="arena-stat-stance seller-stance">
-                      {sellerAgent.stance || 'Holding firm'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="arena-agent-progress-wrap">
-                  <div
-                    className="arena-agent-progress-bar seller-progress"
-                    style={{ width: `${sellerAgent.progress_percent || 60}%` }}
-                  />
-                  <span className="arena-progress-percent-label">
-                    {sellerAgent.progress_percent || 60}%
-                  </span>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
 

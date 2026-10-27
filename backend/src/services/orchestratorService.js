@@ -21,7 +21,7 @@ const SCENARIO_PRESETS = {
     domain: 'Procurement & Sales',
     currency: '₹',
     max_rounds: 10,
-    agreement_threshold: 50, // Gap <= 50 considered agreement
+    agreement_threshold: 500, // Gap <= 500 considered agreement
     agents: [
       {
         id: 'buyer-procurement',
@@ -29,9 +29,9 @@ const SCENARIO_PRESETS = {
         name: 'Procurement Director',
         personality: 'Collaborative',
         goal: 'Secure enterprise software licenses under budget with 99.9% uptime SLA and Net-60 terms',
-        target_value: 8000,
-        reservation_value: 10500,
-        current_offer: 8000,
+        target_value: 95000,
+        reservation_value: 100000,
+        current_offer: 95000,
         stance: 'Seeking agreement',
         progress_percent: 50,
       },
@@ -41,9 +41,9 @@ const SCENARIO_PRESETS = {
         name: 'Sales Account Executive',
         personality: 'Aggressive',
         goal: 'Maximize annual contract value, protect commercial margin, and secure Net-30 terms',
-        target_value: 11000,
-        reservation_value: 8500,
-        current_offer: 11000,
+        target_value: 110000,
+        reservation_value: 90000,
+        current_offer: 110000,
         stance: 'Holding firm',
         progress_percent: 45,
       },
@@ -63,9 +63,9 @@ const SCENARIO_PRESETS = {
         name: 'Senior AI Engineer Candidate',
         personality: 'Collaborative',
         goal: 'Secure top-of-band base compensation, equity stock grants, and remote flexibility',
-        target_value: 120000,
-        reservation_value: 95000,
-        current_offer: 120000,
+        target_value: 175000,
+        reservation_value: 160000,
+        current_offer: 175000,
         stance: 'Seeking agreement',
         progress_percent: 50,
       },
@@ -75,9 +75,9 @@ const SCENARIO_PRESETS = {
         name: 'Hiring Director & Talent Lead',
         personality: 'Risk-Averse',
         goal: 'Hire key engineering talent within departmental salary limits and equity allocation bands',
-        target_value: 95000,
-        reservation_value: 115000,
-        current_offer: 95000,
+        target_value: 152000,
+        reservation_value: 168000,
+        current_offer: 152000,
         stance: 'Evaluating budget',
         progress_percent: 45,
       },
@@ -153,7 +153,19 @@ class OrchestratorAgent {
 
     const effectiveMaxRounds = maxRounds || preset.max_rounds || 10;
     const effectiveAgents = Array.isArray(customAgents) && customAgents.length > 0
-      ? customAgents
+      ? preset.agents.map((presetAgent, idx) => {
+          const match = customAgents.find(
+            (ca) =>
+              ca.id === presetAgent.id ||
+              ca.role?.toLowerCase() === presetAgent.role?.toLowerCase() ||
+              ca.name?.toLowerCase() === presetAgent.name?.toLowerCase()
+          ) || customAgents[idx];
+          return {
+            ...presetAgent,
+            ...(match || {}),
+            personality: match?.personality || presetAgent.personality,
+          };
+        })
       : preset.agents;
 
     const initialBuyerOffer = effectiveAgents[0]?.current_offer || effectiveAgents[0]?.target_value || 8000;
@@ -355,9 +367,20 @@ class OrchestratorAgent {
     // Calculate current gap between primary stakeholders (Agent 0 & Agent 1)
     const agent0Offer = Number(agents[0]?.current_offer || 0);
     const agent1Offer = Number(agents[1]?.current_offer || 0);
-    const currentGap = (agent0Offer > 0 && agent1Offer > 0)
-      ? Math.abs(agent0Offer - agent1Offer)
-      : sim.current_gap;
+    let currentGap = sim.current_gap;
+    if (agent0Offer > 0 && agent1Offer > 0) {
+      if (sim.scenario_id === 'job-offer') {
+        // Agent 0 is Candidate (demands salary), Agent 1 is Recruiter (offers budget)
+        // If recruiter offers more than or equal to candidate ask, gap is 0 (surplus/agreement)
+        currentGap = agent1Offer >= agent0Offer ? 0 : (agent0Offer - agent1Offer);
+      } else if (sim.scenario_id === 'vendor-pricing') {
+        // Agent 0 is Buyer (offers price), Agent 1 is Seller (demands price)
+        // If buyer offers more than or equal to seller ask, gap is 0 (agreement)
+        currentGap = agent0Offer >= agent1Offer ? 0 : (agent1Offer - agent0Offer);
+      } else {
+        currentGap = Math.abs(agent0Offer - agent1Offer);
+      }
+    }
 
     // Compute dynamic agreement likelihood %
     const threshold = preset.agreement_threshold || 50;
@@ -547,11 +570,19 @@ class OrchestratorAgent {
   /**
    * 7. End simulation manually
    */
-  async endSimulation(simulationId, reason = 'Manually terminated by user') {
+  async endSimulation(simulationId, reason = 'Left in between') {
     const sim = await db.getSimulation(simulationId);
     if (!sim) throw new Error('Simulation not found');
 
-    await db.updateSimulation(simulationId, { status: 'COMPLETED' });
+    const isNatural = sim.status === 'COMPLETED' || sim.status === 'AGREEMENT_REACHED' || sim.status === 'DEADLOCK' || Boolean(sim.agreement);
+    if (isNatural) {
+      // Simulation already reached agreement or deadlock; retain final natural status
+      return sim;
+    }
+
+    const status = (reason === 'User test termination' ? 'COMPLETED' : 'LEFT_IN_BETWEEN');
+
+    await db.updateSimulation(simulationId, { status });
     await db.addMessage({
       simulation_id: simulationId,
       round_number: sim.current_round,

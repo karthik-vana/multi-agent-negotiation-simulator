@@ -35,6 +35,19 @@ export async function startSimulation(scenarioId = 'vendor-pricing', customAgent
   }
 }
 
+export async function listSimulations() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/simulations`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch (err) {
+    console.warn('[Simulation API] Failed to list simulations:', err.message);
+  }
+  return [];
+}
+
 export async function getSimulationState(simulationId) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/simulations/${simulationId}`);
@@ -94,10 +107,12 @@ export async function resumeSimulation(simulationId) {
   return null;
 }
 
-export async function endSimulation(simulationId) {
+export async function endSimulation(simulationId, reason = 'Left in between') {
   try {
     const res = await fetch(`${BACKEND_URL}/api/simulations/${simulationId}/end`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
     });
     if (res.ok) {
       const json = await res.json();
