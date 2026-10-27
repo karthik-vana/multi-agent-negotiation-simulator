@@ -1,21 +1,46 @@
 import React from 'react';
 import './AgentFaceAvatar.css';
 
+const normalizeAgentId = (id = '') => {
+  if (!id) return '';
+  const s = String(id).toLowerCase().trim();
+  if (s.includes('candidate')) return 'job-candidate';
+  if (s.includes('hiring') || s.includes('recruit') || s.includes('hr')) return 'hiring-director';
+  if (s.includes('buyer') || s.includes('procurement')) return 'buyer-procurement';
+  if (s.includes('vendor') || s.includes('sales') || s.includes('seller')) return 'vendor-sales';
+  if (s.includes('vp-engineering') || s.includes('engineering') || s.includes('department-a')) return 'department-a';
+  if (s.includes('marketing') || s.includes('cmo') || s.includes('department-b') || s.includes('product') || s.includes('head-product') || s.includes('department-c')) return 'department-b';
+  return s;
+};
+
 /**
  * Animated SVG Face Avatar tailored for each AI Agent Role
  */
-const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5' }) => {
+const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5', size = 48, role, personality }) => {
+  const normId = normalizeAgentId(agentId || role);
+  const sizeStyle = size
+    ? {
+        '--face-size': `${size}px`,
+        width: `${size}px`,
+        height: `${size}px`,
+        minWidth: `${size}px`,
+        minHeight: `${size}px`,
+      }
+    : {};
+
   // Render agent face based on agent ID
-  switch (agentId) {
+  switch (normId) {
     /* =========================================================================
        1. Senior AI Engineer Candidate (job-candidate)
        Tech-savvy, stylish round glasses, expressive blinking eyes
        ========================================================================= */
     case 'job-candidate':
+    case 'candidate':
       return (
         <div
           className="agent-face-avatar-wrap"
           style={{
+            ...sizeStyle,
             '--face-accent-border': accentColor || '#0ea5e9',
             '--face-accent-bg': 'linear-gradient(135deg, #e0f2fe, #bae6fd)',
             '--face-accent-glow': 'rgba(14, 165, 233, 0.25)',
@@ -84,10 +109,13 @@ const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5' }) => {
        Polished, approachable leadership face, warm eyes, elegant hair
        ========================================================================= */
     case 'hiring-director':
+    case 'hr-recruiter':
+    case 'recruiter':
       return (
         <div
           className="agent-face-avatar-wrap"
           style={{
+            ...sizeStyle,
             '--face-accent-border': accentColor || '#10b981',
             '--face-accent-bg': 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
             '--face-accent-glow': 'rgba(16, 185, 129, 0.25)',
@@ -151,10 +179,12 @@ const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5' }) => {
        Executive corporate negotiator, focused wireframe glasses, firm posture
        ========================================================================= */
     case 'buyer-procurement':
+    case 'buyer':
       return (
         <div
           className="agent-face-avatar-wrap"
           style={{
+            ...sizeStyle,
             '--face-accent-border': accentColor || '#4f46e5',
             '--face-accent-bg': 'linear-gradient(135deg, #eef2ff, #e0e7ff)',
             '--face-accent-glow': 'rgba(79, 70, 229, 0.25)',
@@ -214,10 +244,12 @@ const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5' }) => {
        High-energy, wide radiant smile, animated expression
        ========================================================================= */
     case 'vendor-sales':
+    case 'seller':
       return (
         <div
           className="agent-face-avatar-wrap"
           style={{
+            ...sizeStyle,
             '--face-accent-border': accentColor || '#f97316',
             '--face-accent-bg': 'linear-gradient(135deg, #fff7ed, #ffedd5)',
             '--face-accent-glow': 'rgba(249, 115, 22, 0.25)',
@@ -272,10 +304,13 @@ const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5' }) => {
        Deep architect look, headset mic, sharp observant eyes
        ========================================================================= */
     case 'department-a':
+    case 'vp-engineering':
+    case 'engineering':
       return (
         <div
           className="agent-face-avatar-wrap"
           style={{
+            ...sizeStyle,
             '--face-accent-border': accentColor || '#6366f1',
             '--face-accent-bg': 'linear-gradient(135deg, #eef2ff, #c7d2fe)',
             '--face-accent-glow': 'rgba(99, 102, 241, 0.25)',
@@ -334,10 +369,14 @@ const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5' }) => {
        Modern product strategist, creative, bright smile
        ========================================================================= */
     case 'department-b':
+    case 'department-c':
+    case 'cmo-marketing':
+    case 'head-product-ai':
       return (
         <div
           className="agent-face-avatar-wrap"
           style={{
+            ...sizeStyle,
             '--face-accent-border': accentColor || '#14b8a6',
             '--face-accent-bg': 'linear-gradient(135deg, #f0fdfa, #ccfbf1)',
             '--face-accent-glow': 'rgba(20, 184, 166, 0.25)',
@@ -400,6 +439,7 @@ const AgentFaceAvatar = ({ agentId, accentColor = '#4f46e5' }) => {
         <div
           className="agent-face-avatar-wrap"
           style={{
+            ...sizeStyle,
             '--face-accent-border': accentColor || '#4f46e5',
             '--face-accent-bg': 'linear-gradient(135deg, #eef2ff, #c7d2fe)',
             '--face-accent-glow': 'rgba(79, 70, 229, 0.2)',

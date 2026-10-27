@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import logging
 from typing import List, Optional, Dict, Any
@@ -305,79 +305,233 @@ def generate_domain_fallback_response(req: NegotiationTurnRequest) -> Negotiatio
     if scenario_id == "vendor-pricing":
         is_buyer = agent_id == "buyer-procurement"
         if is_buyer:
-            offer_val = 95000 if round_num == 1 else min(100000, 95000 + (round_num - 1) * 1000)
+            if round_num == 1:
+                offer_val = 95000
+                msg = f"We propose an opening contract value of {currency}{offer_val:,.0f}, with Net-60 payment and four-week delivery."
+                action = "OFFER"
+                stance = "Seeking agreement"
+            elif round_num == 2:
+                offer_val = 96500
+                msg = f"We can increase our purchasing budget to {currency}{offer_val:,.0f} if 4-week delivery is committed."
+                action = "COUNTER_OFFER"
+                stance = "Moderate concession"
+            elif round_num == 3:
+                offer_val = 98000
+                msg = f"We can advance our offer to {currency}{offer_val:,.0f} with standard Net-60 terms."
+                action = "COUNTER_OFFER"
+                stance = "Close to agreement"
+            else:
+                offer_val = 99000
+                msg = f"As our best offer to close this contract, we propose settling at {currency}{offer_val:,.0f}."
+                action = "COUNTER_OFFER"
+                stance = "Proposing compromise"
+
             proposed_offer = {
                 "price": offer_val,
                 "payment_days": 60,
                 "delivery_weeks": 4,
             }
-            msg = f"We propose a contract value of {currency}{offer_val:,.0f}, with Net-60 payment and four-week delivery."
-            stance = "Seeking agreement"
-        else:
-            offer_val = max(90000, 110000 - (round_num - 1) * 3000)
-            proposed_offer = {
-                "price": offer_val,
-                "payment_days": 30,
-                "delivery_weeks": 6,
-            }
-            msg = f"We propose a contract value of {currency}{offer_val:,.0f}, subject to the contract terms."
-            stance = "Holding firm" if personality == "aggressive" else "Negotiating terms"
+            terms = {**proposed_offer, "round": round_num}
+            progress = min(95, 45 + round_num * 10)
 
-        terms = {**proposed_offer, "round": round_num}
-        progress = min(95, 45 + round_num * 10)
+        else:
+            # Seller / Vendor
+            if round_num == 1:
+                offer_val = 110000
+                msg = f"Our standard rate is {currency}{offer_val:,.0f} to maintain dedicated enterprise SLAs."
+                action = "COUNTER_OFFER"
+                stance = "Holding firm" if personality == "aggressive" else "Negotiating terms"
+                proposed_offer = {
+                    "price": offer_val,
+                    "payment_days": 30,
+                    "delivery_weeks": 6,
+                }
+            elif round_num == 2:
+                offer_val = 105000
+                msg = f"We can offer a volume discount down to {currency}{offer_val:,.0f} with dedicated technical support."
+                action = "COUNTER_OFFER"
+                stance = "Exploring concession"
+                proposed_offer = {
+                    "price": offer_val,
+                    "payment_days": 45,
+                    "delivery_weeks": 5,
+                }
+            elif round_num == 3:
+                offer_val = 101000
+                msg = f"We can concede further to {currency}{offer_val:,.0f} with 4-week delivery."
+                action = "COUNTER_OFFER"
+                stance = "Closing the gap"
+                proposed_offer = {
+                    "price": offer_val,
+                    "payment_days": 60,
+                    "delivery_weeks": 4,
+                }
+            else:
+                # Round 4+: Seller evaluates Buyer's proposed offer (99,000)
+                accepted_val = float(req.counterpart_agent.current_offer) if req.counterpart_agent.current_offer and req.counterpart_agent.current_offer >= 90000 else 99000
+                offer_val = accepted_val
+                msg = f"We are pleased to accept your proposed contract value of {currency}{offer_val:,.0f} with Net-60 terms."
+                action = "ACCEPT"
+                agreement = True
+                stance = "Agreement reached"
+                proposed_offer = {
+                    "price": offer_val,
+                    "payment_days": 60,
+                    "delivery_weeks": 4,
+                }
+
+            terms = {**proposed_offer, "round": round_num}
+            progress = 100 if agreement else min(95, 45 + round_num * 10)
 
     elif scenario_id == "job-offer":
         is_candidate = agent_id == "job-candidate"
 
         if is_candidate:
-            base_salary = max(160000, 175000 - (round_num - 1) * 3000)
+            if round_num == 1:
+                base_salary = 175000
+                msg = f"Based on senior AI engineering market benchmarks, I propose a base salary of {currency}{base_salary:,.0f} with remote flexibility."
+                action = "OFFER"
+                stance = "Seeking target compensation"
+            elif round_num == 2:
+                base_salary = 170000
+                msg = f"I can adjust my salary expectation to {currency}{base_salary:,.0f} if flexible remote work is confirmed."
+                action = "COUNTER_OFFER"
+                stance = "Moderate concession"
+            elif round_num == 3:
+                base_salary = 166000
+                msg = f"I am willing to move to {currency}{base_salary:,.0f} base salary given the stock option structure."
+                action = "COUNTER_OFFER"
+                stance = "Closing compensation gap"
+            else:
+                base_salary = 163000
+                msg = f"To reach a win-win agreement, I propose a compromise base salary of {currency}{base_salary:,.0f}."
+                action = "COUNTER_OFFER"
+                stance = "Proposing mutual compromise"
+
             proposed_offer = {
                 "base_salary": base_salary,
-                "sign_on_bonus": 20000,
-                "equity_pct": 0.25,
-                "office_days": 0,
+                "sign_on_bonus": 20000 if round_num <= 2 else 15000,
+                "equity_pct": 0.25 if round_num <= 2 else 0.20,
+                "office_days": 2,
                 "joining_days": 60,
             }
-            msg = f"I propose a base salary of {currency}{base_salary:,.0f}, with a sign-on bonus and flexible working terms."
-            stance = "Advocating for candidate value"
+            terms = {**proposed_offer, "round": round_num}
+            progress = min(95, 40 + round_num * 10)
+
         else:
-            base_salary = min(168000, 150000 + (round_num - 1) * 3000)
-            proposed_offer = {
-                "base_salary": base_salary,
-                "sign_on_bonus": 5000,
-                "equity_pct": 0.15,
-                "office_days": 3,
-                "joining_days": 30,
-            }
-            msg = f"We propose a base salary of {currency}{base_salary:,.0f}, with the remaining compensation terms specified."
-            stance = "Protecting hiring budget" if personality == "risk-averse" else "Negotiating compensation"
+            # Recruiter / Hiring Director
+            if round_num == 1:
+                base_salary = 152000
+                msg = f"Our approved salary band for this grade starts at {currency}{base_salary:,.0f} with standard health and retirement benefits."
+                action = "COUNTER_OFFER"
+                stance = "Within departmental budget"
+                proposed_offer = {
+                    "base_salary": base_salary,
+                    "sign_on_bonus": 5000,
+                    "equity_pct": 0.15,
+                    "office_days": 2,
+                    "joining_days": 30,
+                }
+            elif round_num == 2:
+                base_salary = 156000
+                msg = f"With departmental approval, we can increase the base salary to {currency}{base_salary:,.0f} plus a signing bonus."
+                action = "COUNTER_OFFER"
+                stance = "Exploring compromise"
+                proposed_offer = {
+                    "base_salary": base_salary,
+                    "sign_on_bonus": 10000,
+                    "equity_pct": 0.15,
+                    "office_days": 2,
+                    "joining_days": 45,
+                }
+            elif round_num == 3:
+                base_salary = 160000
+                msg = f"We can stretch our budget band to {currency}{base_salary:,.0f} with annual equity refreshers."
+                action = "COUNTER_OFFER"
+                stance = "Approaching agreement"
+                proposed_offer = {
+                    "base_salary": base_salary,
+                    "sign_on_bonus": 12000,
+                    "equity_pct": 0.18,
+                    "office_days": 2,
+                    "joining_days": 60,
+                }
+            else:
+                # Round 4+: Recruiter evaluates Candidate's proposed offer (163,000)
+                accepted_val = float(req.counterpart_agent.current_offer) if req.counterpart_agent.current_offer and req.counterpart_agent.current_offer <= 168000 else 163000
+                base_salary = accepted_val
+                msg = f"We are pleased to accept your proposed base salary of {currency}{base_salary:,.0f} with the agreed benefits package. Welcome to the team!"
+                action = "ACCEPT"
+                agreement = True
+                stance = "Agreement reached"
+                proposed_offer = {
+                    "base_salary": base_salary,
+                    "sign_on_bonus": 15000,
+                    "equity_pct": 0.20,
+                    "office_days": 2,
+                    "joining_days": 60,
+                }
+
+            terms = {**proposed_offer, "round": round_num}
+            progress = 100 if agreement else min(95, 40 + round_num * 10)
 
         offer_val = float(proposed_offer["base_salary"])
-        terms = {**proposed_offer, "round": round_num}
-        progress = min(95, 40 + round_num * 10)
 
     else:
+        # project-budget (multilateral 3-agent, total budget 1,000,000)
         if agent_id == "vp-engineering":
-            proposed_offer = {
-                "engineering": 450000,
-                "marketing": 300000,
-                "product_ai": 250000,
-            }
-            stance = "Prioritizing engineering"
+            if round_num == 1:
+                proposed_offer = {"engineering": 450000, "marketing": 300000, "product_ai": 250000}
+                msg = f"Engineering requires {currency}450,000 to modernize platform infrastructure and ensure 99.99% uptime compliance."
+                action = "OFFER"
+                stance = "Holding firm on infrastructure"
+            elif round_num == 2:
+                proposed_offer = {"engineering": 420000, "marketing": 320000, "product_ai": 260000}
+                msg = f"Engineering can optimize non-critical compute costs and reduce our request to {currency}420,000."
+                action = "COUNTER_OFFER"
+                stance = "Conceding on non-critical scope"
+            else:
+                proposed_offer = {"engineering": 400000, "marketing": 320000, "product_ai": 280000}
+                msg = f"Engineering accepts the compromise allocation of {currency}400,000 to enable full cross-team alignment."
+                action = "ACCEPT"
+                stance = "Accepting compromise allocation"
         elif agent_id == "cmo-marketing":
-            proposed_offer = {
-                "engineering": 350000,
-                "marketing": 350000,
-                "product_ai": 300000,
-            }
-            stance = "Advocating marketing investment"
+            if round_num == 1:
+                proposed_offer = {"engineering": 350000, "marketing": 350000, "product_ai": 300000}
+                msg = f"Marketing requires {currency}350,000 for high-impact Q3 acquisition channels and enterprise lead generation."
+                action = "OFFER"
+                stance = "Demanding growth capital"
+            elif round_num == 2:
+                proposed_offer = {"engineering": 410000, "marketing": 330000, "product_ai": 260000}
+                msg = f"Marketing can shift some event spend to digital and adjust our allocation to {currency}330,000."
+                action = "COUNTER_OFFER"
+                stance = "Moderate concession on marketing"
+            else:
+                proposed_offer = {"engineering": 400000, "marketing": 320000, "product_ai": 280000}
+                msg = f"Marketing accepts the {currency}320,000 allocation with focused digital growth spend."
+                action = "ACCEPT"
+                stance = "Accepting compromise allocation"
         else:
-            proposed_offer = {
-                "engineering": 350000,
-                "marketing": 350000,
-                "product_ai": 300000,
-            }
-            stance = "Seeking balanced allocation"
+            # Product AI Lead
+            if round_num == 1:
+                proposed_offer = {"engineering": 380000, "marketing": 320000, "product_ai": 300000}
+                msg = f"Product AI requires {currency}300,000 for LLM fine-tuning compute, evaluation benchmarks, and tool development."
+                action = "OFFER"
+                stance = "Advocating GenAI innovation"
+            elif round_num == 2:
+                proposed_offer = {"engineering": 400000, "marketing": 320000, "product_ai": 280000}
+                msg = f"Product AI proposes a balanced tripartite compromise: {currency}400,000 for Engineering, {currency}320,000 for Marketing, and {currency}280,000 for Product AI."
+                action = "COUNTER_OFFER"
+                stance = "Proposing balanced compromise"
+            else:
+                proposed_offer = {"engineering": 400000, "marketing": 320000, "product_ai": 280000}
+                msg = f"Product AI confirms and accepts the final {currency}1,000,000 balanced budget allocation across all departments."
+                action = "ACCEPT"
+                agreement = True
+                stance = "Agreement reached"
+
+        terms = {**proposed_offer, "round": round_num}
+        progress = 100 if agreement else min(95, 45 + round_num * 18)
 
         offer_val = float(proposed_offer[{
             "vp-engineering": "engineering",

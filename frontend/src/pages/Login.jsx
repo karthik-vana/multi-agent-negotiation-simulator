@@ -155,9 +155,7 @@ const Login = () => {
       <div className="auth-card">
         {/* Brand Header */}
         <div className="auth-brand">
-          <div className="auth-brand-logo">
-            <Bot size={22} />
-          </div>
+          <img src="/logo.png" alt="Negotiator AI" className="auth-brand-logo-img" />
           <span className="auth-brand-title">Negotiator AI</span>
         </div>
 

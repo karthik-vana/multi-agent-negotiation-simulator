@@ -9,6 +9,7 @@ const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
   const { t } = useSettings();
 
   const isHome = location.pathname === '/';
+  const isArena = location.pathname === '/arena';
 
   const getPageMeta = () => {
     switch (location.pathname) {
@@ -72,8 +73,8 @@ const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
           {isMobileNavOpen ? <X size={26} strokeWidth={2.2} /> : <Menu size={26} strokeWidth={2.2} />}
         </button>
 
-        {/* Back Button (visible when not on dashboard) */}
-        {!isHome && (
+        {/* Back Button (hidden on dashboard and arena) */}
+        {!isHome && !isArena && (
           <button
             type="button"
             className="header-icon-action-btn header-back-btn"

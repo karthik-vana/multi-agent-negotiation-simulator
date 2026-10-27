@@ -166,6 +166,55 @@ async function restartSimulation(req, res) {
   }
 }
 
+/**
+ * Export Simulation Data (JSON or CSV)
+ * GET /api/simulations/:id/export?format=json|csv
+ */
+async function exportSimulation(req, res) {
+  try {
+    const { id } = req.params;
+    const format = (req.query.format || 'json').toLowerCase();
+    const sim = await db.getSimulation(id);
+
+    if (!sim) {
+      return res.status(404).json({ success: false, error: 'Simulation not found' });
+    }
+
+    if (format === 'csv') {
+      const messages = sim.messages || [];
+      const headers = ['Round', 'Sender Name', 'Sender Role', 'Personality', 'Action', 'Offer Value', 'Message', 'Created At'];
+      const escapeCsv = (val) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const rows = messages.map(m => [
+        m.round_number || '',
+        escapeCsv(m.sender_name),
+        escapeCsv(m.sender_role),
+        escapeCsv(m.personality || ''),
+        escapeCsv(m.action || ''),
+        m.offer_value !== null && m.offer_value !== undefined ? m.offer_value : '',
+        escapeCsv(m.message || ''),
+        escapeCsv(m.created_at || ''),
+      ].join(','));
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="simulation_${id}_report.csv"`);
+      return res.send(csvContent);
+    }
+
+    // Default JSON export
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="simulation_${id}_report.json"`);
+    return res.send(JSON.stringify(sim, null, 2));
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
 module.exports = {
   startSimulation,
   getSimulationState,
@@ -176,4 +225,5 @@ module.exports = {
   resumeSimulation,
   endSimulation,
   restartSimulation,
+  exportSimulation,
 };
