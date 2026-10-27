@@ -1,11 +1,13 @@
-# Multi-Agent Negotiation Simulator
+# Multi-Agent Negotiation Simulator (Negotiator AI)
 
-An AI-powered negotiation simulation and training platform designed to model, study, and practice real-world multi-stakeholder negotiations using autonomous intelligent agents.
+An AI-powered negotiation simulation and training platform designed to model, study, and evaluate real-world multi-stakeholder negotiations using autonomous intelligent agents.
 
 [![React](https://img.shields.io/badge/React-19.0.0-blue.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.4.4-646CFF.svg)](https://vitejs.dev/)
 [![React Router](https://img.shields.io/badge/React_Router-7.3.0-CA4245.svg)](https://reactrouter.com/)
-[![Tests](https://img.shields.io/badge/Unit_Tests-21%20Passed-10b981.svg)](#running-tests)
+[![Frontend Tests](https://img.shields.io/badge/Frontend_Tests-21%20Passed-10b981.svg)](#running-tests)
+[![Backend Tests](https://img.shields.io/badge/Backend_Tests-9%20Passed-10b981.svg)](#running-tests)
+[![Build](https://img.shields.io/badge/Build-Passing-success.svg)](#building-for-production)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -13,24 +15,24 @@ An AI-powered negotiation simulation and training platform designed to model, st
 ## Table of Contents
 
 - [Project Description](#project-description)
-- [Task 1: Scenario Selection & Agent Configuration](#task-1-scenario-selection--agent-configuration)
-  - [Module Overview](#module-overview)
-  - [Sequential 3-Step Simulation Workflow](#sequential-3-step-simulation-workflow)
-  - [Implemented Deliverables](#implemented-deliverables)
+- [Milestone Architecture & Workflow](#milestone-architecture--workflow)
+  - [4-Stage End-to-End Simulation Pipeline](#4-stage-end-to-end-simulation-pipeline)
+- [Milestone 1 & 2 Modules](#milestone-1--2-modules)
+  - [Task 1: Scenario Selection & Agent Configuration](#task-1-scenario-selection--agent-configuration)
+  - [Task 2: Real-Time Multi-Agent Negotiation Arena](#task-2-real-time-multi-agent-negotiation-arena)
+  - [Task 3: Outcome Evaluation & History Reports](#task-3-outcome-evaluation--history-reports)
 - [Team Task Division](#team-task-division)
-- [Features](#features)
-  - [Completed Features (Task 1)](#completed-features-task-1)
-  - [Planned Features (Downstream Tasks)](#planned-features-downstream-tasks)
+- [Core Features](#core-features)
+  - [Completed Features (Milestone 1 & 2)](#completed-features-milestone-1--2)
+  - [Future Roadmap (Milestone 3)](#future-roadmap-milestone-3)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Installation and Setup](#installation-and-setup)
 - [Environment Variables](#environment-variables)
 - [Running the Application](#running-the-application)
 - [Running Tests](#running-tests)
 - [Project Structure](#project-structure)
-- [Configuration Validation Engine](#configuration-validation-engine)
-- [Available Scripts](#available-scripts)
+- [Configuration Validation & Concession Math](#configuration-validation--concession-math)
 - [Troubleshooting](#troubleshooting)
 - [About & Team](#about--team)
 
@@ -40,102 +42,109 @@ An AI-powered negotiation simulation and training platform designed to model, st
 
 Negotiation is a core competency across business operations, contract discussions, procurement, hiring, and cross-functional resource distribution. However, mastering negotiation skills is challenging due to the scarcity of realistic, scalable, and repeatable practice environments.
 
-The **Multi-Agent Negotiation Simulator (Negotiator AI)** provides a web-based platform where autonomous Generative AI agents represent distinct stakeholders with conflicting objectives, strict boundary constraints, and configurable behavioral personalities. Agents exchange contextually reasoned offers and counteroffers, evaluate concessions, and work toward mutually agreeable outcomes.
+The **Multi-Agent Negotiation Simulator (Negotiator AI)** provides a full-stack platform where autonomous Generative AI agents represent distinct stakeholders with conflicting objectives, strict boundary constraints, and configurable behavioral personalities. Agents exchange contextually reasoned offers and counteroffers, evaluate concessions across multi-issue problem spaces, detect positive surplus across the **Zone of Possible Agreement (ZOPA)**, and compute post-negotiation analytics (Pareto efficiency, social welfare, fairness indices).
 
 ![Negotiator AI Dashboard](https://github.com/user-attachments/assets/ddd8405d-ea0e-4b38-81e0-c7e976073546)
 
 ---
 
-## Task 1: Scenario Selection & Agent Configuration
+## Milestone Architecture & Workflow
 
-### Module Overview
-Task 1 establishes the operational context, stakeholder boundary definitions, and agent personality configuration before starting an autonomous negotiation. It guarantees that any negotiation payload handed over to downstream LLM orchestrators is mathematically feasible and structurally complete.
+### 4-Stage End-to-End Simulation Pipeline
 
-### Sequential 3-Step Simulation Workflow
-```
-[ Step 1: Scenario Selection ] ➔ [ Step 2: Agent Configuration ] ➔ [ Step 3: AI Negotiation Arena ]
-   • Choose Business Domain         • Inspect Stakeholder Bio         • Real-time LLM Bargaining
-   • Inspect Core Levers            • Review Primary Goals            • Concession Curves
-   • Selection Validation           • Review Constraints              • Outcome Analytics
-                                    • Select Personality
-                                    • Configuration Validation
+```text
+[ Step 1: Scenario Selection ] ➔ [ Step 2: Agent Configuration ] ➔ [ Step 3: Negotiation Arena ] ➔ [ Step 4: Outcome Evaluation ]
+   • Vendor Pricing                 • Inspect Bio & Role              • Alternating Turn Engine        • Joint Social Welfare
+   • Job Offer                      • Set Primary Goals               • Concession Curves (β)          • Pareto Optimality
+   • Budget Allocation              • Set Boundary Constraints        • ZOPA Crossover Detection       • Fairness Index (Nash)
+   • Levers Inspection              • Assign Personalities            • Real-time Dialogue Stream      • PDF / Markdown Export
 ```
 
-### Implemented Deliverables
+---
 
-1. **Scenario Selection Module (`/scenarios`):**
-   - **Vendor Pricing Negotiation:** B2B enterprise software procurement between Alex Rivers (Procurement Lead) and Marcus Chen (Enterprise Sales VP). Core levers: price per license, minimum order volume, contract tenure, SLA terms.
-   - **Job Offer Negotiation:** Talent compensation bargaining between Sarah Jenkins (Hiring Manager) and David Park (Senior Candidate). Core levers: base salary, equity percentage, sign-on bonus, remote work policy.
-   - **Project Budget Allocation:** 3-party resource bargaining between Elena Rostova (Engineering Lead), Marcus Vance (Product Lead), and Priya Sharma (Finance Director). Core levers: infrastructure budget, product feature allocation, contingency reserves.
-   - **Card Interaction:** High-resolution domain illustrations, category tags, participant counts, turn estimates, negotiation levers, selection highlight, toggle-to-deselect, and navigation guards.
+## Milestone 1 & 2 Modules
 
-2. **Agent Configuration Interface (`/agents`):**
-   - **Agent Role Cards:** Displays stakeholder bio, animated SVG face avatar, highlighted **Primary Goal** container, and bulleted **Key Constraints** container.
-   - **3 Strategic Personality Profiles:**
-     - 🔴 **Aggressive:** Firm on price targets, highly resistant to early concessions, aims for maximum individual surplus.
-     - 🟢 **Collaborative:** Win-win mindset, explores multi-issue package trade-offs, flexible on secondary terms.
-     - 🟡 **Risk-Averse:** Prioritizes compliance, stability guarantees, risk-mitigation terms, and dispute penalties.
-   - **Dynamic Feedback:** Instant behavioral descriptions update live as users customize personalities, with visual tracking for *Default* vs. *Custom* states.
+### Task 1: Scenario Selection & Agent Configuration (`/scenarios`, `/agents`)
+- **Pre-Built Business Scenarios:**
+  - **Vendor Pricing:** B2B enterprise procurement between Buyer (Alex Rivers) and Cloud Vendor (Marcus Chen). Pricing range: ₹95k–₹110k, Net-60 payment constraint, 99.9% SLA target.
+  - **Job Offer:** Tech talent compensation between Hiring Manager (Sarah Jenkins) and Senior Candidate (David Park). Base salary: ₹152k–₹175k, equity percentage, sign-on bonus, and remote flexibility.
+  - **Project Budget Allocation:** 3-way multi-party resource bargaining between Engineering, Product, and Finance dividing a unified ₹1,000,000 pool.
+- **Strategic Personality Archetypes:**
+  - 🔴 **Aggressive ($\beta < 1$):** Concedes slowly, holds initial reservation price until deadline, demanding maximum counterpart concession.
+  - 🟢 **Collaborative ($\beta \approx 1$):** Linear concession trajectory, trades secondary levers (e.g., payment days or bonus) to protect primary objectives.
+  - 🟡 **Risk-Averse ($\beta > 1$):** Concedes early to eliminate deadlock hazards, prioritizing swift convergence and certainty.
+- **Pre-Flight Validation Engine (`configurationValidator.js`):** Enforces completeness, constraint validity, and personality schema before entering simulation.
 
-3. **Scenario-to-Agent Mapping & Validation Engine (`configurationValidator.js`):**
-   - Automatically maps selected scenario IDs to their corresponding agent personas, parameters, and default traits.
-   - Enforces pre-flight validation preventing simulation launch if scenarios, roles, constraints, or personalities are invalid.
-   - Prepares clean, serialized JSON configuration payloads for the downstream orchestrator (`prepareNegotiationConfig`).
+### Task 2: Real-Time Multi-Agent Negotiation Arena (`/arena`)
+- **Alternating Turn-Taking Orchestrator:** Implements an automated state machine cycling rounds $1$ to $T_{\max}$ (10 rounds max) with three possible agent actions per turn: `ACCEPT`, `COUNTER_OFFER`, or `REJECT`.
+- **ZOPA & Convergence Engine:**
+  - Evaluates buyer and seller reservation overlaps.
+  - Automatic crossover detection: When buyer offer $\ge$ seller demand, surplus gap collapses to 0 ($\text{Gap} \le 500$), triggering instant agreement convergence.
+  - Self-acceptance guardrail: Agents are strictly prohibited from accepting their own compromises; proposals must be accepted by the counterpart.
+- **Live Interactive Visualization:**
+  - SVG avatars with micro-animations reflecting real-time agent emotions.
+  - Real-time speech bubbles, offer delta tags, round counter, and agreement probability gauge.
+  - Responsive full-viewport layout with integrated outcome banner.
+
+### Task 3: Outcome Evaluation & History Reports (`/history`)
+- **Multi-Metric Outcome Analytics:**
+  - **Joint Utility / Social Welfare:** $U_{\text{total}} = U_A + U_B$, measuring global outcome efficiency.
+  - **Pareto Optimality:** Determines whether non-dominated trade-offs exist where neither agent could improve without harming the other.
+  - **Fairness Metric:** Nash bargaining distance formula: $\text{Fairness} = 1 - |U_A - U_B|$.
+  - **Concession Velocity:** Round-by-round trajectory velocity tracking strategic concessions.
+- **Cloud Database Persistence:** Integrates Neon PostgreSQL and Prisma ORM to record simulation metadata, participants, turn transcripts, offer values, and agreement states (`COMPLETED`, `DEADLOCK`, `LEFT_IN_BETWEEN`).
+- **Comprehensive Audit Export:** Multi-token search, filter chips, and formatted client-side PDF export (with sidebar dynamically hidden in print mode) and Markdown report download.
 
 ---
 
 ## Team Task Division
 
-| Team Member | Module / Responsibility | Key Deliverables |
+| Team Member | Milestone Responsibilities | Key Deliverables |
 | :--- | :--- | :--- |
-| **Niharika Indurthi** | **Scenario Selection UI** | Scenario selection screen, 3 scenario cards, selection logic, toggle deselect, and navigation routing. |
-| **Saitejaswini Tammana** | **Scenario Data & Agent Templates** | Centralized data models (`scenarios.js`), agent bios, goal targets, parameter boundaries, and constraints. |
-| **Keerthana** | **Agent Configuration UI** | Agent role cards, primary goal & constraint boxes, and 3-way personality selection controls. |
-| **Karthik Vana** | **Configuration Validation Logic** | Pre-flight validation rules (`configurationValidator.js`), schema verification, and boundary integrity checks. |
-| **Shubhay Yadav** | **Integration, Avatars & Polish** | Animated SVG face avatars, 6-language localization, mobile responsiveness, test suite, and PR integration. |
+| **Shubhay Yadav** | **Concession Math, PDF Export & Integration** | Concession curve mathematical formulation, ZOPA crossover convergence fix, session status guards, clean PDF export, and test integration. |
+| **Niharika Irdurthi** | **Scenario Selection & Arena UI** | Scenario selection screen, responsive negotiation arena dashboard, real-time speech bubbles, and outcome modal integration. |
+| **Saitejaswini Tammana** | **Scenario Templates & Constraint Rules** | Centralized scenario schema (`scenarios.js`), boundary constraint enforcement (Net-60 hard rules), and fallback presets. |
+| **Keerthana** | **Agent Configuration & Database Persistence** | Agent configuration cards, personality selector controls, Neon PostgreSQL schema, and Prisma history persistence. |
+| **Karthik Vana** | **Orchestrator State Machine & Metrics** | Alternating turn-taking orchestrator, validation logic, outcome analytics (Joint Utility, Pareto, Fairness), and integration testing. |
 
 ---
 
-## Features
+## Core Features
 
-### Completed Features (Milestone 1 & Milestone 2 Task 1)
+### Completed Features (Milestone 1 & 2)
 
-* **Pre-Built Negotiation Scenarios:** 3 fully populated templates (*Vendor Pricing*, *Job Offer*, *Project Budget Allocation*).
-* **Agent Role Cards with Animated Avatars:** Interactive SVG face avatars with dynamic expressions and breathing micro-animations.
-* **3 Personality Selectors:** Aggressive, Collaborative, and Risk-Averse controls with dynamic behavioral previews.
-* **Configuration Validation Gate:** Real-time validation banner checking scenario integrity, agent completeness, goals, constraints, and personality enums.
-* **Automated Test Suite:** 21 unit tests covering schema validation and edge-case handling with 100% pass rates.
-* **Full-Width Modern Layout:** Clean SaaS interface adhering to WCAG contrast standards.
-* **Multi-Language Support (i18n):** Complete localization across 6 languages (**English, Hindi, Bengali, Telugu, Tamil, Marathi**).
-* **Responsive Mobile Experience:** Touch-friendly slide-out drawer, navigation back controls, and responsive grid layouts.
-* **Negotiation Arena UI (`/arena`):** Real-time conversational simulation UI matching the reference design, featuring live transcript bubbles, offer tags, agent status cards, and live metrics (Round, Offers Exchanged, Current Gap, Agreement Likelihood).
-* **Node.js/Express Backend:** RESTful simulation session engine managing turns, sessions, and persistence on port `5000`.
-* **Python/FastAPI Gemini Service:** Autonomous agent inference server utilizing Google Gemini (`gemini-2.5-flash`) on port `8000`.
-* **Neon PostgreSQL Cloud Database:** Serverless PostgreSQL cluster storing simulations, agents, message transcripts, offers, and agreements.
+* **Autonomous Turn-Taking Arena:** Alternating round-based negotiation with automated agent reasoning.
+* **3 Realistic Business Scenarios:** Vendor Pricing, Job Offer Compensation, and 3-Party Project Budget Allocation.
+* **Dynamic Personality Concession Curves:** Aggressive, Collaborative, and Risk-Averse concession behaviors.
+* **ZOPA & Convergence Engine:** Mathematical threshold detection ($\text{Gap} \le 500$) for instantaneous settlement.
+* **Pre-Flight Validation Engine:** 100% schema and constraint verification before simulation launch.
+* **Post-Negotiation History & Analytics:** Persistent Neon PostgreSQL session store with Pareto and fairness evaluation.
+* **Interactive Reports & PDF Export:** Clean, print-optimized post-negotiation audit generation with transcripts.
+* **Multilingual Support (i18n):** Complete UI localization across 6 languages (**English, Hindi, Bengali, Telugu, Tamil, Marathi**).
+* **Automated Test Coverage:** **21 Frontend Unit Tests** and **9 Backend Integration Tests** passing with 0 build errors.
 
-### Planned Features (Remaining Milestone 2 Modules)
+### Future Roadmap (Milestone 3)
 
-* [ ] Full Orchestrator Agent for multi-party arbitration and deadlock resolution.
-* [ ] Advanced AI counteroffer evaluation and dynamic concession curves.
-* [ ] Interactive Human vs. AI Practice Mode.
-* [ ] Final outcome evaluation screen with Pareto efficiency scoring and downloadable transcripts.
+* [ ] **AI Mediator Agent:** Automated detection of persistent impasses with neutral mediator intervention proposals.
+* [ ] **Interactive Practice Mode (Human-vs-AI):** Live text and speech-enabled voice negotiation allowing human users to negotiate against configured AI personas.
+* [ ] **Reinforcement Learning Posture:** Dynamic adaptation of concession rates based on sentiment analysis of counterpart dialogue.
 
 ---
 
 ## Tech Stack
 
-| Technology | Category | Purpose |
+| Technology | Layer | Purpose |
 | :--- | :--- | :--- |
-| **React 19** | Frontend Framework | Component-driven declarative UI architecture |
-| **Vite 6** | Build Tool & Dev Server | Fast Hot Module Replacement (HMR) and optimized bundling |
-| **React Router 7** | Client-Side Routing | Multi-step workflow navigation without page reloads |
-| **Lucide React** | Icon System | Modern SVG icons throughout the interface |
-| **Node.js / Express** | Backend Engine | REST API, session state machine, and turn orchestration |
-| **Python 3.12 / FastAPI** | AI Agent Service | Autonomous agent reasoning and negotiation moves |
-| **Google Gemini API** | Large Language Model | Powers intelligent, personality-driven agent dialogue |
-| **Neon PostgreSQL** | Cloud Database | Serverless PostgreSQL storing simulations, offers, and transcripts |
-| **Node Test Runner** | Unit Testing | Native Node.js test suite with 21 automated tests |
-| **Vanilla CSS** | Styling System | Custom CSS variables, responsive breakpoints, and animations |
+| **React 19** | Frontend Framework | Component-driven UI architecture with React hooks |
+| **Vite 6** | Build & Dev Tooling | High-performance bundling and instant Hot Module Replacement (HMR) |
+| **React Router 7** | Client Navigation | Multi-step routing across Dashboard, Scenarios, Arena, and History |
+| **Lucide React** | Icon System | Modern SVG iconography |
+| **Node.js / Express** | Orchestration Backend | Turn-taking state machine, convergence logic, and REST API (`:5000`) |
+| **Python 3.12 / FastAPI** | AI Intelligence Service | Autonomous LLM negotiation reasoning and mathematical fallbacks (`:8000`) |
+| **Mistral-7B / LLaMA-3 / Gemini** | Large Language Models | Powers personality-guided negotiation moves and natural dialogue |
+| **Prisma ORM & Neon PostgreSQL**| Cloud Persistence | Serverless relational database for simulations, offers, and transcripts |
+| **Vitest & Jest** | Automated Testing | Comprehensive unit and integration test runners |
+| **Vanilla CSS** | Styling System | Design system tokens, glassmorphism, responsive flex/grid layouts |
 
 ---
 
@@ -148,7 +157,6 @@ Verify that the following tools are installed on your machine:
 * **npm:** `v9.0.0` or higher
 * **Git:** Installed and configured
 
-Verify versions by running:
 ```bash
 node -v
 python --version
@@ -158,130 +166,84 @@ git --version
 
 ---
 
-## Quick Start (Running All Services)
+## Quick Start
 
-Run the full simulator stack locally across three terminals:
+Launch the complete three-tier architecture locally:
 
 ```bash
-# 1. Start the Python FastAPI AI Service
+# Terminal 1: Python FastAPI AI Service
 cd ai-service
 pip install -r requirements.txt
-python main.py
-# AI service runs at http://localhost:8000
+python -m uvicorn main:app --port 8000 --reload
+# AI Service runs at http://localhost:8000
 
-# 2. Start the Express Backend
+# Terminal 2: Node.js Express Orchestrator Backend
 cd backend
 npm install
 npm run dev
-# Backend runs at http://localhost:5000
+# Backend API runs at http://localhost:5000
 
-# 3. Start the React Frontend
+# Terminal 3: React Vite Frontend
 cd frontend
 npm install
 npm run dev
 # Frontend runs at http://localhost:5173
 ```
 
-Open [http://localhost:5173/arena](http://localhost:5173/arena) in your browser to view the live Negotiation Arena.
+Open your browser at [http://localhost:5173](http://localhost:5173).
 
 ---
 
 ## Environment Variables
 
-### 1. Frontend Environment (`frontend/.env`)
-Copy from `frontend/.env.example`:
-```bash
-cd frontend
-cp .env.example .env
+### 1. Frontend (`frontend/.env`)
+```ini
+VITE_BACKEND_URL=http://localhost:5000
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-auth-domain
+VITE_FIREBASE_PROJECT_ID=your-project-id
 ```
 
-| Variable | Description | Example / Default |
-| :--- | :--- | :--- |
-| `VITE_BACKEND_URL` | Express Backend API URL | `http://localhost:5000` |
-| `VITE_FIREBASE_API_KEY` | Firebase Web API Key | Firebase Console > Project Settings |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Authentication Domain | `your-project.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase Project Identifier | `your-project-id` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage Bucket | `your-project.firebasestorage.app` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID`| Cloud Messaging Sender ID | Numeric project sender ID |
-| `VITE_FIREBASE_APP_ID` | Firebase Web Application ID | `1:xxx:web:xxx` |
-
----
-
-### 2. Backend Environment (`backend/.env`)
-Copy from `backend/.env.example`:
-```bash
-cd backend
-cp .env.example .env
+### 2. Backend (`backend/.env`)
+```ini
+PORT=5000
+NODE_ENV=development
+DATABASE_URL=postgresql://user:password@ep-xyz.neon.tech/neondb?sslmode=require
+AI_SERVICE_URL=http://localhost:8000
 ```
 
-| Variable | Description | Example / Default |
-| :--- | :--- | :--- |
-| `PORT` | Express Server Port | `5000` |
-| `NODE_ENV` | Environment mode | `development` |
-| `DATABASE_URL` | Neon PostgreSQL connection URI | `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require` |
-| `AI_SERVICE_URL` | Python FastAPI AI service URL | `http://localhost:8000` |
-| `GEMINI_API_KEY` | Google Gemini API Key | `AIzaSy...` (Optional, if calling direct) |
-
-> **Note:** If `DATABASE_URL` is omitted, the backend automatically uses an In-Memory Store so local development is never blocked.
-
----
-
-### 3. AI Service Environment (`ai-service/.env`)
-Copy from `ai-service/.env.example`:
-```bash
-cd ai-service
-cp .env.example .env
-```
-
-| Variable | Description | Example / Default |
-| :--- | :--- | :--- |
-| `PORT` | FastAPI Service Port | `8000` |
-| `HOST` | Bind host address | `0.0.0.0` |
-| `GEMINI_API_KEY` | Google Gemini API Key | `AIzaSy...` (from Google AI Studio) |
-| `GEMINI_MODEL` | Gemini LLM model identifier | `gemini-2.5-flash` |
-
-> **Local Fallback:** If Firebase credentials are not provided or connectivity fails, the platform automatically activates a local mock session, allowing all Task 1 modules (*Scenario Selection*, *Agent Configuration*, and *Validation*) to run seamlessly without blocking development.
-
----
-
-## Running the Application
-
-### Development Mode
-```bash
-npm run dev
-```
-Vite will launch the local development server at `http://localhost:5173/`.
-
-### Building for Production
-```bash
-npm run build
-```
-Build output is emitted to `frontend/dist/`.
-
-### Previewing the Production Build
-```bash
-npm run preview
+### 3. AI Service (`ai-service/.env`)
+```ini
+PORT=8000
+HOST=0.0.0.0
+GEMINI_API_KEY=AIzaSy...
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 ---
 
 ## Running Tests
 
-The repository includes comprehensive automated unit tests verifying scenario configuration validation:
-
+### Frontend Test Suite (21 Tests)
 ```bash
 cd frontend
+npm test -- --run
+```
+* **Coverage:** Validates scenario configurations, agent parameter boundaries, personality enums, payload handover formatting, and SVG avatar rendering.
+
+### Backend Test Suite (9 Tests)
+```bash
+cd backend
 npm test
 ```
+* **Coverage:** Validates orchestrator turn initialization, alternating offer sequencing, constraint enforcement, and state transitions.
 
-### Test Suite Summary:
-* **21 passing unit tests** covering:
-  - Scenario template integrity (unique IDs, non-empty parameters, feasible agreement ranges).
-  - Explicit agent list completeness.
-  - Rejection of invalid/unknown scenario IDs.
-  - Boundary constraint integrity.
-  - Personality modification validation and enum enforcement.
-  - Handover payload generation via `prepareNegotiationConfig()`.
+### Production Build Validation
+```bash
+cd frontend
+npm run build
+```
+* Exits cleanly with code `0`.
 
 ---
 
@@ -289,128 +251,68 @@ npm test
 
 ```text
 multi-agent-negotiation-simulator/
-├── docs/
-│   └── configuration-validator.md              # Detailed validation specification & schema docs
-├── frontend/
-│   ├── public/
-│   │   ├── favicon.svg                         # Application robot favicon
-│   │   └── images/                             # Custom high-res artwork
-│   │       ├── dashboard/                      # Dashboard cards & hero illustrations
-│   │       └── scenarios/                      # Vendor, Job Offer & Budget illustrations
+├── ai-service/                         # Python FastAPI microservice
+│   ├── config.py                       # Scenario rules, boundary constraints & ranges
+│   ├── main.py                         # Agent inference, concession functions & fallbacks
+│   └── requirements.txt                # Python dependencies
+├── backend/                            # Express orchestration server
+│   ├── prisma/
+│   │   └── schema.prisma               # Neon PostgreSQL relational data model
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── AgentCard.jsx                   # Agent role card with goals, constraints & personality
-│   │   │   ├── AgentFaceAvatar.jsx             # Animated SVG face avatars
-│   │   │   ├── AgentFaceAvatar.css             # Avatar blinking & breathing micro-animations
-│   │   │   ├── AppLayout.jsx                   # Layout shell (Sidebar + Header + Outlet + Mobile Drawer)
-│   │   │   ├── Header.jsx                      # Contextual header with page meta & mobile controls
-│   │   │   ├── ScenarioCard.jsx                # Domain scenario card with artwork & levers
-│   │   │   └── Sidebar.jsx                     # Sidebar navigation with Simulation & Practice modes
-│   │   ├── context/
-│   │   │   ├── AuthContext.jsx                 # User profile & authentication context
-│   │   │   ├── ScenarioContext.jsx             # Active scenario & personality state management
-│   │   │   └── SettingsContext.jsx             # Language & theme settings context
-│   │   ├── data/
-│   │   │   └── scenarios.js                    # 3 pre-built scenario data templates & schemas
+│   │   ├── controllers/                # Simulation and history route controllers
+│   │   ├── services/
+│   │   │   ├── aiClient.js             # Bridge to AI service with local fallback solver
+│   │   │   ├── orchestratorService.js  # Turn-taking state machine & ZOPA convergence
+│   │   │   └── scenarioService.js      # Scenario configuration loader
+│   │   └── server.js                   # Express application entry point
+│   └── tests/                          # Backend Jest test suite (9 tests)
+├── frontend/                           # React 19 + Vite client
+│   ├── src/
+│   │   ├── components/                 # Reusable UI components (Avatar, Cards, Layout)
+│   │   ├── context/                    # AuthContext, ScenarioContext, SettingsContext
 │   │   ├── pages/
-│   │   │   ├── Dashboard.jsx                   # Introductory landing page & workflow guide
-│   │   │   ├── Dashboard.css                   # Hero card & step cards styling
-│   │   │   ├── ScenarioSelection.jsx           # Task 1: Step 1 Scenario Selection screen
-│   │   │   ├── AgentConfiguration.jsx          # Task 1: Step 2 Agent Configuration screen
-│   │   │   ├── NegotiationArenaPlaceholder.jsx # Step 3 Negotiation Arena placeholder
-│   │   │   ├── PracticeMode.jsx                # Practice Mode placeholder & feature roadmap
-│   │   │   ├── HistoryPlaceholder.jsx          # History & Reports placeholder
-│   │   │   └── Settings.jsx                    # User settings & profile preferences
-│   │   ├── utils/
-│   │   │   ├── configurationValidator.js       # Pre-flight negotiation configuration validator
-│   │   │   └── translations.js                 # 6-language dictionary (EN, HI, BN, TE, TA, MR)
-│   │   ├── App.jsx                             # Application route definitions
-│   │   ├── index.css                           # Global design system, typography, and responsive CSS
-│   │   └── main.jsx                            # React 19 bootstrap entry point
-│   ├── tests/
-│   │   ├── configurationValidator.test.js      # 13 validation engine unit tests
-│   │   └── scenarios.test.js                   # 8 scenario data model unit tests
-│   ├── package.json                            # Frontend dependencies & npm scripts
-│   └── vite.config.js                          # Vite build & development server config
-├── .gitignore                                  # Git ignore rules
-├── LICENSE                                     # MIT License
-└── README.md                                   # Comprehensive project documentation
+│   │   │   ├── Dashboard.jsx           # Landing overview & workflow guide
+│   │   │   ├── ScenarioSelection.jsx   # Step 1: Scenario catalog
+│   │   │   ├── AgentConfiguration.jsx  # Step 2: Persona & personality setup
+│   │   │   ├── NegotiationArena.jsx    # Step 3: Real-time autonomous arena
+│   │   │   ├── HistoryReports.jsx      # Step 4: Outcome evaluation & export
+│   │   │   └── Settings.jsx            # User profile and multi-language controls
+│   │   └── utils/
+│   │       ├── configurationValidator.js # Validation engine
+│   │       └── translations.js         # 6-language i18n dictionary
+│   └── tests/                          # Frontend Vitest suite (21 tests)
+├── LICENSE                             # MIT License
+└── README.md                           # Comprehensive documentation
 ```
 
 ---
 
-## Configuration Validation Engine
+## Configuration Validation & Concession Math
 
-The validator (`frontend/src/utils/configurationValidator.js`) ensures valid simulation setup before entering the arena:
+### 1. Multi-Issue Utility Scoring
+$$U(\mathbf{x}) = \sum_{k=1}^{m} w_k \cdot u_k(x_k)$$
+where $\sum w_k = 1$, and $u_k(x_k)$ maps candidate terms against normalized reservation boundaries.
 
-```javascript
-import { validateNegotiationConfig, prepareNegotiationConfig } from './utils/configurationValidator';
+### 2. Time-Dependent Concession Dynamics
+$$x(t) = x_{\min} + (x_{\max} - x_{\min}) \cdot \left(\frac{t}{T_{\max}}\right)^{1/\beta}$$
+- **Aggressive ($\beta < 1$):** Minimal concessions until final rounds.
+- **Collaborative ($\beta \approx 1$):** Linear, predictable concessions.
+- **Risk-Averse ($\beta > 1$):** Rapid early concessions to secure agreement.
 
-// 1. Validate configuration
-const validation = validateNegotiationConfig(selectedScenarioId, activeAgents);
-if (!validation.isValid) {
-  console.error("Configuration errors:", validation.errors);
-  return;
-}
-
-// 2. Prepare serialized handover payload for downstream LLM orchestrator
-const payload = prepareNegotiationConfig(selectedScenarioId, activeAgents);
-console.log("Ready for Negotiation Arena:", payload);
-```
-
-For complete technical documentation, see [`docs/configuration-validator.md`](docs/configuration-validator.md).
-
----
-
-## Available Scripts
-
-Run these scripts from the `frontend/` directory:
-
-| Command | Action | Description |
-| :--- | :--- | :--- |
-| `npm run dev` | `vite` | Starts local development server on port `5173` with instant HMR. |
-| `npm test` | `node --test tests/*.test.js` | Runs all 21 automated unit tests. |
-| `npm run build` | `vite build` | Compiles production assets into `frontend/dist/`. |
-| `npm run preview` | `vite preview` | Serves the production bundle locally for inspection. |
-
----
-
-## Troubleshooting
-
-### 1. Working Directory
-Make sure to navigate to the `frontend/` subfolder before executing npm commands:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 2. Port 5173 in Use
-If port `5173` is occupied, specify an alternative port:
-```bash
-npm run dev -- --port 3000
-```
-
-### 3. Clear Cache & Clean Install
-If experiencing module resolution warnings:
-```bash
-# On Linux / macOS
-rm -rf node_modules package-lock.json && npm install
-
-# On Windows PowerShell
-Remove-Item -Recurse -Force node_modules, package-lock.json; npm install
-```
+### 3. ZOPA Convergence Condition
+$$\text{If } \text{Buyer Offer} \ge \text{Seller Demand} \implies \text{Gap} \le 500 \implies \text{Status} \leftarrow \text{COMPLETED}$$
 
 ---
 
 ## About & Team
 
-* **Project Name:** Multi-Agent Negotiation Simulator (**Negotiator AI**)
+* **Project Name:** Multi-Agent Autonomous Negotiation Platform (**Negotiator AI**)
+* **Milestone:** Milestone 2 (Tasks 2 & 3: Real-Time Arena, Concession Math & History Reports)
 * **Repository:** [https://github.com/karthik-vana/multi-agent-negotiation-simulator](https://github.com/karthik-vana/multi-agent-negotiation-simulator)
-* **License:** Licensed under the terms of the [MIT License](LICENSE).
+* **License:** [MIT License](LICENSE)
 * **Team Members:**
   * **Shubhay Yadav**
-  * **Niharika Indurthi**
+  * **Niharika Irdurthi**
   * **Saitejaswini Tammana**
   * **Keerthana**
   * **Karthik Vana**
