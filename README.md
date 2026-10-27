@@ -102,7 +102,7 @@ The **Multi-Agent Negotiation Simulator (Negotiator AI)** provides a full-stack 
 | Team Member | Milestone Responsibilities | Key Deliverables |
 | :--- | :--- | :--- |
 | **Shubhay Yadav** | **Concession Math, PDF Export & Integration** | Concession curve mathematical formulation, ZOPA crossover convergence fix, session status guards, clean PDF export, and test integration. |
-| **Niharika Irdurthi** | **Scenario Selection & Arena UI** | Scenario selection screen, responsive negotiation arena dashboard, real-time speech bubbles, and outcome modal integration. |
+| **Niharika Indurthi** | **Scenario Selection & Arena UI** | Scenario selection screen, responsive negotiation arena dashboard, real-time speech bubbles, and outcome modal integration. |
 | **Saitejaswini Tammana** | **Scenario Templates & Constraint Rules** | Centralized scenario schema (`scenarios.js`), boundary constraint enforcement (Net-60 hard rules), and fallback presets. |
 | **Keerthana** | **Agent Configuration & Database Persistence** | Agent configuration cards, personality selector controls, Neon PostgreSQL schema, and Prisma history persistence. |
 | **Karthik Vana** | **Orchestrator State Machine & Metrics** | Alternating turn-taking orchestrator, validation logic, outcome analytics (Joint Utility, Pareto, Fairness), and integration testing. |
@@ -312,7 +312,7 @@ $$\text{If } \text{Buyer Offer} \ge \text{Seller Demand} \implies \text{Gap} \le
 * **License:** [MIT License](LICENSE)
 * **Team Members:**
   * **Shubhay Yadav**
-  * **Niharika Irdurthi**
+  * **Niharika Indurthi**
   * **Saitejaswini Tammana**
   * **Keerthana**
   * **Karthik Vana**
