@@ -118,12 +118,16 @@ const db = {
         );
 
         for (const agent of agents) {
+          const scopedAgentId = `${id}_${agent.id || agent.role.toLowerCase()}`;
           await client.query(
             `INSERT INTO agents (id, simulation_id, name, role, personality, goal, target_value, reservation_value, current_offer, stance, progress_percent)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             ON CONFLICT (id) DO NOTHING`,
+             ON CONFLICT (id) DO UPDATE SET
+               current_offer = EXCLUDED.current_offer,
+               stance = EXCLUDED.stance,
+               progress_percent = EXCLUDED.progress_percent`,
             [
-              agent.id || `${id}_${agent.role.toLowerCase()}`,
+              scopedAgentId,
               id,
               agent.name,
               agent.role,
