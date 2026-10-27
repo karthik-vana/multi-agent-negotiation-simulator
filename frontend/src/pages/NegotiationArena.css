@@ -96,7 +96,8 @@
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 8px 16px;
-  cursor: pointer;
+  cursor: default;
+  user-select: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
@@ -104,11 +105,6 @@
 [data-theme="dark"] .arena-scenario-selector {
   background: #141e33;
   border-color: #243147;
-}
-
-.arena-scenario-selector:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .arena-scenario-tag {
