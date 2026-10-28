@@ -92,6 +92,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   }, []);
 
   const handleSelectModule = (path) => {
+    sessionStorage.removeItem('active_arena_sim_id');
+    sessionStorage.removeItem('viewing_report_sim_id');
     if (onClose) onClose();
     if (path === '/agents' && !selectedScenarioId) {
       navigate('/scenarios', {
@@ -223,7 +225,11 @@ const Sidebar = ({ isOpen, onClose }) => {
         <NavLink
           to="/"
           end
-          onClick={onClose}
+          onClick={() => {
+            sessionStorage.removeItem('active_arena_sim_id');
+            sessionStorage.removeItem('viewing_report_sim_id');
+            if (onClose) onClose();
+          }}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <LayoutDashboard size={22} className="nav-icon" />
@@ -233,7 +239,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         <NavLink
           to="/scenarios"
-          onClick={onClose}
+          onClick={() => {
+            sessionStorage.removeItem('active_arena_sim_id');
+            sessionStorage.removeItem('viewing_report_sim_id');
+            if (onClose) onClose();
+          }}
           className={`nav-link ${isSimulationActive ? 'active' : ''}`}
           title={t ? t('simulationModeDesc') : 'Watch AI agents negotiate autonomously.'}
         >
@@ -243,7 +253,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         <NavLink
           to="/practice"
-          onClick={onClose}
+          onClick={() => {
+            sessionStorage.removeItem('active_arena_sim_id');
+            sessionStorage.removeItem('viewing_report_sim_id');
+            if (onClose) onClose();
+          }}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           title={t ? t('practiceModeDesc') : 'Practice negotiation skills with an AI opponent.'}
         >
@@ -253,7 +267,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         <NavLink
           to="/history"
-          onClick={onClose}
+          onClick={() => {
+            sessionStorage.removeItem('active_arena_sim_id');
+            sessionStorage.removeItem('viewing_report_sim_id');
+            if (onClose) onClose();
+          }}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <FileText size={22} className="nav-icon" />
@@ -262,7 +280,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         <NavLink
           to="/settings"
-          onClick={onClose}
+          onClick={() => {
+            sessionStorage.removeItem('active_arena_sim_id');
+            sessionStorage.removeItem('viewing_report_sim_id');
+            if (onClose) onClose();
+          }}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
           <Settings size={22} className="nav-icon" />

@@ -437,7 +437,19 @@ export default function HistoryReports() {
                 <button
                   type="button"
                   className="btn-back-to-list"
-                  onClick={() => navigate('/arena')}
+                  onClick={() => {
+                    const simId = selectedSim?.id || searchParams.get('id');
+                    if (simId) {
+                      sessionStorage.setItem('viewing_report_sim_id', simId);
+                    }
+                    navigate('/arena', {
+                      state: {
+                        restoreSession: true,
+                        simId: simId,
+                        scenarioId: selectedSim?.scenario_id,
+                      }
+                    });
+                  }}
                   title="Return to the active Negotiation Arena"
                 >
                   <ArrowLeft size={16} />
