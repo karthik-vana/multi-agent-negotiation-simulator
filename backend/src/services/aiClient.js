@@ -20,7 +20,7 @@ async function getAgentNegotiationMove({
   // 1. Attempt to call Python/FastAPI Gemini AI Service
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000); // 7s timeout
+    const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout for thorough LLM generation
 
     const res = await fetch(`${AI_SERVICE_URL}/api/agent/respond`, {
       method: 'POST',
@@ -65,6 +65,32 @@ async function getAgentNegotiationMove({
 }
 
 /**
+ * Helper to pick random dialogue option
+ */
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * Mathematically grounded concession rate calculation
+ */
+function calculateConcessionRate(personality, roundNumber, maxRounds, counterpartPersonality = '') {
+  if (maxRounds <= 1) return 1.0;
+  const tNorm = Math.max(0, Math.min(1, (roundNumber - 1) / (maxRounds - 1)));
+  const p = (personality || 'Collaborative').toLowerCase();
+  const cp = (counterpartPersonality || 'Collaborative').toLowerCase();
+
+  if (p.includes('aggressive')) {
+    const dampener = cp.includes('aggressive') ? 0.7 : 1.0;
+    return dampener * (0.04 * tNorm + 0.35 * Math.pow(tNorm, 3));
+  } else if (p.includes('risk')) {
+    return Math.min(0.90, 0.25 + 0.65 * Math.pow(tNorm, 0.6));
+  } else {
+    return Math.min(0.75, 0.10 + 0.65 * tNorm);
+  }
+}
+
+/**
  * Intelligent domain reasoning engine for seamless offline demo and test stability
  */
 function generateDeterministicAgentMove({
@@ -72,7 +98,7 @@ function generateDeterministicAgentMove({
   agent,
   counterpart,
   roundNumber,
-  maxRounds,
+  maxRounds = 10,
   currentOffer,
   history,
 }) {
@@ -80,125 +106,125 @@ function generateDeterministicAgentMove({
   const scenarioTitle = (scenario?.title || scenario?.scenario_title || '').toLowerCase();
   const role = (agent?.role || '').toLowerCase();
   const personality = (agent?.personality || 'Collaborative').toLowerCase();
+  const cpPersonality = (counterpart?.personality || 'Collaborative').toLowerCase();
   const currency = scenario?.currency || '₹';
+
+  const concessionRate = calculateConcessionRate(personality, roundNumber, maxRounds, cpPersonality);
+  const counterpartOffer = counterpart?.current_offer ? Number(counterpart.current_offer) : null;
 
   let proposedOffer = 0;
   let message = '';
   let stance = 'Seeking agreement';
-  let action = 'COUNTER_OFFER';
+  let action = roundNumber > 1 ? 'COUNTER_OFFER' : 'OFFER';
   let agreementReached = false;
   let terms = {};
 
   // Scenario 1: Project Budget Allocation (3-agent multilateral)
   if (scenarioId.includes('budget') || scenarioTitle.includes('budget')) {
-    if (role.includes('engineering') || role.includes('infrastructure')) {
-      if (roundNumber === 1) {
-        proposedOffer = 450000;
-        message = 'Engineering requires ₹450,000 to modernize platform infrastructure and ensure 99.99% uptime compliance.';
-        stance = 'Holding firm on core infrastructure';
-        action = 'OFFER';
-      } else if (roundNumber === 2) {
-        proposedOffer = 420000;
-        message = 'We can optimize non-critical cloud compute costs and reduce our request to ₹420,000.';
-        stance = 'Conceding on non-critical scope';
-        action = 'COUNTER_OFFER';
-      } else {
-        proposedOffer = 400000;
-        message = 'Engineering accepts the compromise allocation of ₹400,000 to enable full cross-team alignment.';
-        stance = 'Agreement reached';
-        action = 'ACCEPT';
-        agreementReached = true;
-      }
-      terms = { engineeringFunding: proposedOffer };
-    } else if (role.includes('marketing') || role.includes('growth')) {
-      if (roundNumber === 1) {
-        proposedOffer = 350000;
-        message = 'Marketing requires ₹350,000 for high-impact Q3 acquisition channels and enterprise lead generation.';
-        stance = 'Demanding growth capital';
-        action = 'OFFER';
-      } else if (roundNumber === 2) {
-        proposedOffer = 310000;
-        message = 'We can shift some offline event spend to digital and adjust our allocation to ₹310,000.';
-        stance = 'Moderate concession on event marketing';
-        action = 'COUNTER_OFFER';
-      } else {
-        proposedOffer = 320000;
-        message = 'Marketing agrees to ₹320,000 with focused digital growth spend.';
-        stance = 'Agreement reached';
-        action = 'ACCEPT';
-        agreementReached = true;
-      }
-      terms = { marketingFunding: proposedOffer };
+    const engReq = Math.round(450000 - concessionRate * 50000);
+    const mktReq = Math.round(350000 - concessionRate * 30000);
+    const prodReq = 1000000 - (engReq + mktReq);
+
+    if (roundNumber >= 8 || (Math.abs(engReq - 400000) <= 5000 && roundNumber >= 6)) {
+      action = 'ACCEPT';
+      agreementReached = true;
+      stance = 'Agreement reached';
+      message = pickRandom([
+        `All teams align on the balanced ${currency}1,000,000 budget split: Engineering ${currency}${engReq.toLocaleString()}, Marketing ${currency}${mktReq.toLocaleString()}, Product AI ${currency}${prodReq.toLocaleString()}.`,
+        `Consensus finalized. We agree to the tripartite allocation: Engineering ${currency}${engReq.toLocaleString()}, Marketing ${currency}${mktReq.toLocaleString()}, Product AI ${currency}${prodReq.toLocaleString()}.`
+      ]);
     } else {
-      // Product AI Lead
-      if (roundNumber === 1) {
-        proposedOffer = 300000;
-        message = 'Product AI requires ₹300,000 for LLM fine-tuning compute, evaluation benchmarks, and tool development.';
-        stance = 'Advocating GenAI innovation';
-        action = 'OFFER';
-      } else if (roundNumber === 2) {
-        proposedOffer = 270000;
-        message = 'We can leverage open-source weights to reduce compute overhead down to ₹270,000.';
-        stance = 'Pragmatic concession';
-        action = 'COUNTER_OFFER';
-      } else {
-        proposedOffer = 280000;
-        message = 'Product AI accepts ₹280,000, finalizing the 1,000,000 total budget allocation.';
-        stance = 'Agreement reached';
-        action = 'ACCEPT';
-        agreementReached = true;
-      }
-      terms = { productAIFunding: proposedOffer };
+      stance = `${agent.personality} allocation review`;
+      message = pickRandom([
+        `Proposing balanced budget allocation: Engineering ${currency}${engReq.toLocaleString()}, Marketing ${currency}${mktReq.toLocaleString()}, Product AI ${currency}${prodReq.toLocaleString()}.`,
+        `To optimize cross-team ROI, our revised distribution is: Engineering ${currency}${engReq.toLocaleString()}, Marketing ${currency}${mktReq.toLocaleString()}, Product AI ${currency}${prodReq.toLocaleString()}.`
+      ]);
+    }
+
+    if (role.includes('engineering') || role.includes('infrastructure')) {
+      proposedOffer = engReq;
+      terms = { engineeringFunding: engReq, total: 1000000 };
+    } else if (role.includes('marketing') || role.includes('growth')) {
+      proposedOffer = mktReq;
+      terms = { marketingFunding: mktReq, total: 1000000 };
+    } else {
+      proposedOffer = prodReq;
+      terms = { productAIFunding: prodReq, total: 1000000 };
     }
   }
   // Scenario 2: Job Offer / Compensation Negotiation (Bilateral)
   else if (scenarioId.includes('job') || scenarioId.includes('salary') || scenarioTitle.includes('job')) {
     const isCandidate = role.includes('candidate') || role.includes('engineer');
     if (isCandidate) {
-      if (roundNumber === 1) {
-        proposedOffer = 175000;
-        message = 'Based on senior AI engineering market benchmarks, I propose a base salary of ₹175,000 with remote flexibility.';
+      const salTarget = 175000;
+      const salLimit = 160000;
+      proposedOffer = Math.round(salTarget - concessionRate * (salTarget - salLimit));
+
+      if (counterpartOffer && counterpartOffer >= salLimit) {
+        if (Math.abs(proposedOffer - counterpartOffer) <= 500 || roundNumber >= 8) {
+          action = 'ACCEPT';
+          agreementReached = true;
+          proposedOffer = counterpartOffer;
+        }
+      }
+
+      if (agreementReached) {
+        message = pickRandom([
+          `I am delighted to accept the offer of ${currency}${proposedOffer.toLocaleString()} base salary with the agreed remote flexibility.`,
+          `Thank you for working through these terms. I confirm acceptance of ${currency}${proposedOffer.toLocaleString()} base salary.`
+        ]);
+        stance = 'Agreement reached';
+      } else if (roundNumber === 1) {
+        message = pickRandom([
+          `Based on senior AI engineering market benchmarks, I propose a base salary of ${currency}${proposedOffer.toLocaleString()} with remote flexibility.`,
+          `My initial proposal is ${currency}${proposedOffer.toLocaleString()} base compensation reflecting senior machine learning engineering rates.`
+        ]);
         stance = 'Seeking target compensation';
-        action = 'OFFER';
-      } else if (roundNumber === 2) {
-        proposedOffer = 170000;
-        message = 'I can adjust my salary expectation to ₹170,000 if flexible remote work is confirmed.';
-        stance = 'Moderate concession';
-        action = 'COUNTER_OFFER';
-      } else if (roundNumber === 3) {
-        proposedOffer = 166000;
-        message = 'I am willing to move to ₹166,000 base salary given the stock option structure.';
-        stance = 'Closing compensation gap';
-        action = 'COUNTER_OFFER';
+      } else if (personality.includes('aggressive')) {
+        message = pickRandom([
+          `My technical background and machine learning impact warrant a competitive package. I propose ${currency}${proposedOffer.toLocaleString()} base.`,
+          `Given competing offers and domain expertise, ${currency}${proposedOffer.toLocaleString()} base is my required compensation baseline.`
+        ]);
+        stance = 'Holding for market value';
       } else {
-        proposedOffer = 163000;
-        message = 'To reach a win-win agreement, I propose a compromise base salary of ₹163,000.';
-        stance = 'Proposing mutual compromise';
-        action = 'COUNTER_OFFER';
+        message = pickRandom([
+          `I can adjust my salary expectation to ${currency}${proposedOffer.toLocaleString()} base given the equity structure.`,
+          `To help us bridge the gap, I propose a compromise base salary of ${currency}${proposedOffer.toLocaleString()}.`
+        ]);
+        stance = 'Constructive counteroffer';
       }
     } else {
       // Recruiter / Hiring Director
-      if (roundNumber === 1) {
-        proposedOffer = 152000;
-        message = 'Our approved salary band for this grade starts at ₹152,000 with standard health and retirement benefits.';
-        stance = 'Within departmental budget';
-        action = 'COUNTER_OFFER';
-      } else if (roundNumber === 2) {
-        proposedOffer = 156000;
-        message = 'With departmental approval, we can increase the base salary to ₹156,000 plus a signing bonus.';
-        stance = 'Exploring compromise';
-        action = 'COUNTER_OFFER';
-      } else if (roundNumber === 3) {
-        proposedOffer = 160000;
-        message = 'We can stretch our budget band to ₹160,000 with annual equity refreshers.';
-        stance = 'Approaching agreement';
-        action = 'COUNTER_OFFER';
-      } else {
-        proposedOffer = 163000;
-        message = 'We are pleased to accept your proposed base salary of ₹163,000 with the agreed benefits package. Welcome to the team!';
+      const salTarget = 152000;
+      const salLimit = 168000;
+      proposedOffer = Math.round(salTarget + concessionRate * (salLimit - salTarget));
+
+      if (counterpartOffer && counterpartOffer <= salLimit) {
+        if (Math.abs(counterpartOffer - proposedOffer) <= 500 || roundNumber >= 8) {
+          action = 'ACCEPT';
+          agreementReached = true;
+          proposedOffer = counterpartOffer;
+        }
+      }
+
+      if (agreementReached) {
+        message = pickRandom([
+          `We are pleased to accept your proposed base salary of ${currency}${proposedOffer.toLocaleString()} with full benefits. Welcome to the team!`,
+          `We confirm an agreed base compensation of ${currency}${proposedOffer.toLocaleString()}. Thrilled to have you join us!`
+        ]);
         stance = 'Agreement reached';
-        action = 'ACCEPT';
-        agreementReached = true;
+      } else if (personality.includes('aggressive')) {
+        message = pickRandom([
+          `Our salary band for this grade has strict budget caps. We can adjust to ${currency}${proposedOffer.toLocaleString()} base.`,
+          `We must maintain consistency across the engineering division. Our counter is ${currency}${proposedOffer.toLocaleString()} base.`
+        ]);
+        stance = 'Budget boundary enforcement';
+      } else {
+        message = pickRandom([
+          `We have secured approval to enhance our package to ${currency}${proposedOffer.toLocaleString()} base with annual refreshers.`,
+          `To demonstrate our strong interest, we increase our offer to ${currency}${proposedOffer.toLocaleString()} base salary.`
+        ]);
+        stance = 'Approaching agreement';
       }
     }
     terms = { baseSalary: proposedOffer, round: roundNumber };
@@ -206,61 +232,93 @@ function generateDeterministicAgentMove({
   // Scenario 3: Vendor Pricing Negotiation (Standard Default)
   else {
     const isBuyer = role.includes('buyer') ||
+                    role.includes('procurement') ||
                     role.includes('candidate') ||
                     role.includes('client');
 
     if (isBuyer) {
-      if (roundNumber === 1) {
-        proposedOffer = 95000;
-        message = 'We propose an opening contract value of ₹95,000 with Net-60 payment and four-week delivery.';
+      const priceTarget = 95000;
+      const priceLimit = 100000;
+      proposedOffer = Math.round(priceTarget + concessionRate * (priceLimit - priceTarget));
+
+      if (counterpartOffer && counterpartOffer <= priceLimit) {
+        if (Math.abs(counterpartOffer - proposedOffer) <= 500 || (roundNumber >= 8 && !personality.includes('aggressive'))) {
+          action = 'ACCEPT';
+          agreementReached = true;
+          proposedOffer = counterpartOffer;
+        }
+      }
+
+      if (agreementReached) {
+        message = pickRandom([
+          `We accept your proposed contract value of ${currency}${proposedOffer.toLocaleString()} with Net-60 payment terms.`,
+          `We have reviewed the revised figures and agree to finalize at ${currency}${proposedOffer.toLocaleString()} with Net-60 terms.`,
+          `Deal confirmed at ${currency}${proposedOffer.toLocaleString()}. We look forward to a successful implementation.`
+        ]);
+        stance = 'Agreement reached';
+      } else if (roundNumber === 1) {
+        message = pickRandom([
+          `We propose an opening contract value of ${currency}${proposedOffer.toLocaleString()} with Net-60 payment and four-week delivery.`,
+          `Our initial procurement proposal is ${currency}${proposedOffer.toLocaleString()} under standard Net-60 payment terms.`
+        ]);
         stance = 'Seeking agreement';
-        action = 'OFFER';
-      } else if (roundNumber === 2) {
-        proposedOffer = 96500;
-        message = 'We can increase our purchasing budget to ₹96,500 if 4-week delivery is committed.';
-        stance = 'Moderate concession';
-        action = 'COUNTER_OFFER';
-      } else if (roundNumber === 3) {
-        proposedOffer = 98000;
-        message = 'We can advance our offer to ₹98,000 with standard Net-45 terms.';
-        stance = 'Close to agreement';
-        action = 'COUNTER_OFFER';
+      } else if (personality.includes('aggressive')) {
+        message = pickRandom([
+          `Our enterprise procurement budget has firm constraints. We can offer ${currency}${proposedOffer.toLocaleString()} under standard Net-60 terms.`,
+          `Executive leadership has set strict expenditure ceilings. Our revised offer is ${currency}${proposedOffer.toLocaleString()} on Net-60 terms.`,
+          `Market alternatives remain within our targeted envelope. We counter at ${currency}${proposedOffer.toLocaleString()} with Net-60 terms.`
+        ]);
+        stance = 'Defending budget limits';
       } else {
-        proposedOffer = 99000;
-        message = 'As our best offer to close this contract, we propose settling at ₹99,000.';
-        stance = 'Proposing compromise';
-        action = 'COUNTER_OFFER';
+        message = pickRandom([
+          `We can advance our offer to ${currency}${proposedOffer.toLocaleString()} to help bridge the commercial difference.`,
+          `In the interest of mutual progress, we increase our proposal to ${currency}${proposedOffer.toLocaleString()} under Net-60 terms.`,
+          `We appreciate your position and propose adjusting our budget to ${currency}${proposedOffer.toLocaleString()}.`
+        ]);
+        stance = 'Exploring compromise';
       }
     } else {
       // Seller
-      if (roundNumber === 1) {
-        proposedOffer = 110000;
-        message = 'Our standard rate is ₹110,000 to maintain dedicated enterprise SLAs.';
-        stance = personality === 'collaborative' ? 'Negotiating terms' : 'Holding firm';
-        action = 'COUNTER_OFFER';
-      } else if (roundNumber === 2) {
-        proposedOffer = 105000;
-        message = 'We can offer a volume discount down to ₹105,000 with dedicated technical support.';
-        stance = 'Exploring concession';
-        action = 'COUNTER_OFFER';
-      } else if (roundNumber === 3) {
-        proposedOffer = 101000;
-        message = 'We can concede further to ₹101,000 with standard 30-day payment terms.';
-        stance = 'Closing the gap';
-        action = 'COUNTER_OFFER';
-      } else {
-        proposedOffer = 99000;
-        message = 'We are pleased to accept your proposed contract value of ₹99,000 with the agreed delivery terms.';
+      const priceTarget = 110000;
+      const priceLimit = 90000;
+      proposedOffer = Math.round(priceTarget - concessionRate * (priceTarget - priceLimit));
+
+      if (counterpartOffer && counterpartOffer >= priceLimit) {
+        if (Math.abs(proposedOffer - counterpartOffer) <= 500 || (roundNumber >= 8 && !personality.includes('aggressive'))) {
+          action = 'ACCEPT';
+          agreementReached = true;
+          proposedOffer = counterpartOffer;
+        }
+      }
+
+      if (agreementReached) {
+        message = pickRandom([
+          `We are pleased to accept your proposed contract value of ${currency}${proposedOffer.toLocaleString()} with agreed terms.`,
+          `We accept ${currency}${proposedOffer.toLocaleString()} with Net-60 payment terms and four-week delivery.`,
+          `Consensus reached at ${currency}${proposedOffer.toLocaleString()}. We look forward to serving your organization.`
+        ]);
         stance = 'Agreement reached';
-        action = 'ACCEPT';
-        agreementReached = true;
+      } else if (personality.includes('aggressive')) {
+        message = pickRandom([
+          `Our dedicated infrastructure and enterprise SLAs justify our rate. Our revised rate is ${currency}${proposedOffer.toLocaleString()}.`,
+          `Maintaining our 99.9% uptime compliance requires sustainable margins. We adjust to ${currency}${proposedOffer.toLocaleString()}.`,
+          `Our service level delivers measurable commercial value. Our current counter is ${currency}${proposedOffer.toLocaleString()}.`
+        ]);
+        stance = 'Protecting commercial margin';
+      } else {
+        message = pickRandom([
+          `To facilitate alignment, we can offer a volume concession down to ${currency}${proposedOffer.toLocaleString()}.`,
+          `We can meet you midway by reducing our quotation to ${currency}${proposedOffer.toLocaleString()}.`,
+          `In response to your counter, we are willing to concession down to ${currency}${proposedOffer.toLocaleString()}.`
+        ]);
+        stance = 'Exploring concession';
       }
     }
     terms = { unitPrice: proposedOffer, currency, round: roundNumber };
   }
 
   // Calculate progress percent towards deal
-  const progressPercent = Math.min(100, Math.max(30, 40 + (roundNumber * 15)));
+  const progressPercent = agreementReached ? 100 : Math.min(95, Math.max(30, Math.round(35 + (roundNumber / maxRounds) * 55)));
 
   return {
     agent_role: agent.role,

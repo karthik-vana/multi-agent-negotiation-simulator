@@ -1,4 +1,3 @@
-
 import json
 from typing import Any, Dict, List, Optional
 
@@ -36,16 +35,18 @@ def build_reasoning_prompt(
     if personality.lower() not in SUPPORTED_PERSONALITIES:
         personality = "Collaborative"
 
+    counterpart_personality = str(counterpart.get("personality") or "Collaborative")
+
     scenario_id = str(scenario.get("id") or "vendor-pricing")
     offer_fields = SCENARIO_OFFER_FIELDS.get(
         scenario_id, ["offer_value"]
     )
 
-    history = (conversation_history or [])[-6:]
+    history = (conversation_history or [])[-8:]
     history_text = json.dumps(history, ensure_ascii=False, default=str)
 
     return f"""
-You are an AI agent negotiating in a multi-agent simulation.
+You are an AI autonomous negotiation agent representing {agent.get('role', 'Negotiator')} in a multi-agent simulation.
 
 SCENARIO
 ID: {scenario_id}
@@ -65,7 +66,7 @@ Constraints: {json.dumps(agent.get("constraints") or [])}
 COUNTERPART
 Role: {counterpart.get("role", "Negotiator")}
 Name: {counterpart.get("name", "Counterpart")}
-Personality: {counterpart.get("personality", "Collaborative")}
+Personality: {counterpart_personality}
 Goal: {counterpart.get("goal", "")}
 Current offer: {counterpart.get("current_offer")}
 
@@ -75,19 +76,30 @@ Incoming offer: {current_offer}
 Required offer fields: {json.dumps(offer_fields)}
 Conversation history: {history_text}
 
-PERSONALITY GUIDANCE
-- Collaborative: seek a fair agreement and explain mutual benefits.
-- Aggressive: defend your goal, make limited concessions, and remain firm.
-- Risk-Averse: prioritize constraints, avoid unsupported commitments, and
-  accept only when the proposal is safe and within acceptable limits.
+STRATEGIC PERSONALITY DIRECTIVES:
+- Aggressive:
+  * You defend your target value fiercely and make minimal concessions (at most 0.5% - 1.5% per round).
+  * In rounds 1 through 7, NEVER choose "ACCEPT" unless the counterpart has fully conceded to your target or reservation threshold.
+  * CRITICAL FOR AGGRESSIVE VS AGGRESSIVE: Both you and your counterpart are Aggressive! Stand your ground firmly. Do NOT concede easily and DO NOT accept or converge in round 4. Force the negotiation into late rounds (rounds 8-10). If your counterpart refuses to concede, keep countering firmly or let it deadlock in round {max_rounds}.
+- Collaborative:
+  * You seek a balanced, mutually beneficial agreement. Concede steadily and reciprocally (15% - 25% of the remaining gap per round).
+  * Aim to converge and reach agreement around Round 5, 6, or 7 by exploring creative compromises on secondary terms.
+- Risk-Averse:
+  * You prioritize certainty and avoiding deadlock above all else.
+  * Make larger concessions early on to ensure convergence quickly (around Round 3 to 5).
 
-RULES
-- Consider the complete scenario, goals, constraints, and conversation history.
-- Do not claim agreement unless the proposed terms are acceptable.
-- Never knowingly violate a stated constraint or reservation limit.
-- For project-budget, propose numeric allocations for engineering,
-  marketing, and product_ai that do not exceed the total budget.
+RULES & CONSTRAINTS:
+- Consider the complete scenario, goals, constraints, personality, and conversation history.
+- Check current Round ({round_number} of {max_rounds}):
+  * In early rounds (1-3), maintain an active gap. DO NOT execute "ACCEPT" in round 1 or 2.
+  * If you are Aggressive, DO NOT accept in rounds 1 through 7 unless your target is met.
+  * If both agents are Aggressive, DO NOT converge in round 4! Stand firm and keep countering through later rounds.
+- Never knowingly violate a stated hard constraint (e.g. Buyer payment_days >= 60).
+- For vendor-pricing: proposed_offer must include "price" (numeric), "payment_days" (numeric, >= 60 for buyer), and "delivery_weeks" (numeric).
+- For job-offer: proposed_offer must include "base_salary" (numeric), "sign_on_bonus" (numeric), "equity_pct" (numeric), "office_days" (numeric), "joining_days" (numeric).
+- For project-budget: proposed_offer must include "engineering", "marketing", and "product_ai" allocations summing to exactly 1,000,000.
 - Return only valid JSON. Do not include Markdown fences.
+- DIVERSITY & NATURAL DIALOGUE: Generate unique, persuasive, context-specific negotiation dialogue. Avoid canned repetitive phrases. Adapt your rationale to the latest round numbers and counterpart actions.
 
 JSON FORMAT
 {{
@@ -102,13 +114,31 @@ JSON FORMAT
 """.strip()
 
 
+def extract_json_block(text: str) -> str:
+    """Robustly extract JSON string from model response, handling code fences and preamble."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+    first_brace = cleaned.find("{")
+    last_brace = cleaned.rfind("}")
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        cleaned = cleaned[first_brace:last_brace + 1]
+    return cleaned
+
+
 def parse_reasoning_response(
     response_text: str,
 ) -> Optional[Dict[str, Any]]:
     """Parse and validate the essential fields in a Gemini JSON response."""
 
     try:
-        result = json.loads(response_text)
+        clean_text = extract_json_block(response_text)
+        result = json.loads(clean_text)
     except (json.JSONDecodeError, TypeError):
         return None
 

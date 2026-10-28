@@ -79,22 +79,28 @@ const NegotiationArena = () => {
     async function initArena() {
       setLoading(true);
       try {
-        // If returning from report or active arena session exists, restore it instead of creating duplicate
-        const activeSimId = sessionStorage.getItem('active_arena_sim_id');
-        if (activeSimId) {
+        // ONLY restore session if returning from report via "Back to Negotiation Arena"
+        const isFromReport = location.state?.restoreSession === true || Boolean(sessionStorage.getItem('viewing_report_sim_id'));
+        const reportSimId = location.state?.simId || sessionStorage.getItem('viewing_report_sim_id');
+
+        if (isFromReport && reportSimId) {
+          sessionStorage.removeItem('viewing_report_sim_id');
           try {
-            const existingSim = await getSimulationState(activeSimId);
+            const existingSim = await getSimulationState(reportSimId);
             if (isMounted && existingSim && existingSim.id) {
               setSimulation(existingSim);
-              setIsPaused(existingSim.status !== 'RUNNING');
+              setIsPaused(true);
               setLoading(false);
               return;
             }
           } catch (restoreErr) {
-            console.warn('Could not restore previous active simulation:', restoreErr);
-            sessionStorage.removeItem('active_arena_sim_id');
+            console.warn('Could not restore previous report simulation:', restoreErr);
           }
         }
+
+        // Clean up session storage so any normal visit starts a fresh conversation
+        sessionStorage.removeItem('active_arena_sim_id');
+        sessionStorage.removeItem('viewing_report_sim_id');
 
         const customAgents = scenarioMeta?.agents?.map((a) => ({
           id: a.id,
@@ -123,6 +129,10 @@ const NegotiationArena = () => {
     return () => {
       isMounted = false;
       if (timerRef.current) clearInterval(timerRef.current);
+      if (!allowExitRef.current) {
+        sessionStorage.removeItem('active_arena_sim_id');
+        sessionStorage.removeItem('viewing_report_sim_id');
+      }
     };
   }, [currentScenarioId, selectedScenario, agentPersonalities, location.state]);
 
@@ -225,6 +235,7 @@ const NegotiationArena = () => {
   const handleViewReport = () => {
     allowExitRef.current = true;
     if (simulation?.id) {
+      sessionStorage.setItem('viewing_report_sim_id', simulation.id);
       navigate(`/history?id=${simulation.id}&from=arena`);
     } else {
       navigate('/history?from=arena');
@@ -742,12 +753,18 @@ const NegotiationArena = () => {
                       <div className="arena-agent-stat-col">
                         <span className="arena-stat-label">Current offer</span>
                         <span className={`arena-stat-value ${isFirst ? 'buyer-val' : 'seller-val'}`}>
-                          ₹{Number(offerVal).toLocaleString()}{currentScenarioId === 'vendor-pricing' ? ' per unit' : ''}
+                          ₹{Number(offerVal).toLocaleString()}
+                          {currentScenarioId === 'vendor-pricing' && (
+                            <span className="arena-stat-unit"> per unit</span>
+                          )}
                         </span>
                       </div>
                       <div className="arena-agent-stat-col align-right">
                         <span className="arena-stat-label">Stance</span>
-                        <span className={`arena-stat-stance ${isFirst ? 'buyer-stance' : 'seller-stance'}`}>
+                        <span
+                          className={`arena-stat-stance ${isFirst ? 'buyer-stance' : 'seller-stance'}`}
+                          title={stanceVal}
+                        >
                           {stanceVal}
                         </span>
                       </div>
