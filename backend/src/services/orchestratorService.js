@@ -147,7 +147,7 @@ class OrchestratorAgent {
   /**
    * 1. Initialize a brand new simulation session
    */
-  async initializeSimulation({ scenarioId = 'vendor-pricing', customAgents = null, maxRounds = null }) {
+  async initializeSimulation({ scenarioId = 'vendor-pricing', customAgents = null, maxRounds = null, userEmail = null, userId = null }) {
     const preset = this.getScenarioPreset(scenarioId);
     const simId = `sim_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
@@ -181,6 +181,8 @@ class OrchestratorAgent {
       max_rounds: effectiveMaxRounds,
       current_gap: initialGap,
       agreement_likelihood: 50,
+      user_email: userEmail || null,
+      user_id: userId || null,
     };
 
     // 1. Persist initial simulation and agents to database
@@ -329,6 +331,16 @@ class OrchestratorAgent {
       currentOffer: activeAgent.current_offer || activeAgent.target_value,
       history: historyContext,
     });
+
+    // Guard: check if simulation was paused, ended, or aborted while awaiting AI move
+    const freshSim = await db.getSimulation(simulationId);
+    if (!freshSim || freshSim.status !== 'RUNNING') {
+      return {
+        simulation: freshSim,
+        advanced: false,
+        message: 'Simulation is currently inactive. Turn was aborted.',
+      };
+    }
 
     // 4. Record Agent Dialogue in Database
     await db.addMessage({
@@ -582,6 +594,10 @@ class OrchestratorAgent {
 
     const status = (reason === 'User test termination' ? 'COMPLETED' : 'LEFT_IN_BETWEEN');
 
+    if (status === 'LEFT_IN_BETWEEN') {
+      await db.deleteAgreement(simulationId);
+    }
+
     await db.updateSimulation(simulationId, { status });
     await db.addMessage({
       simulation_id: simulationId,
@@ -606,6 +622,8 @@ class OrchestratorAgent {
     return await this.initializeSimulation({
       scenarioId: sim.scenario_id,
       maxRounds: sim.max_rounds,
+      userEmail: sim.user_email || null,
+      userId: sim.user_id || null,
     });
   }
 

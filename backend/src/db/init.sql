@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS simulations (
     max_rounds INT NOT NULL DEFAULT 10,
     current_gap NUMERIC(14, 2) DEFAULT 0,
     agreement_likelihood INT DEFAULT 50,
+    user_email VARCHAR(255),
+    user_id VARCHAR(128),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -75,3 +77,4 @@ CREATE TABLE IF NOT EXISTS agreements (
 CREATE INDEX IF NOT EXISTS idx_messages_simulation_round ON messages(simulation_id, round_number);
 CREATE INDEX IF NOT EXISTS idx_offers_simulation ON offers(simulation_id);
 CREATE INDEX IF NOT EXISTS idx_agents_simulation ON agents(simulation_id);
+

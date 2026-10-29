@@ -16,12 +16,16 @@ async function startSimulation(req, res) {
       scenarioId = 'vendor-pricing',
       customAgents = null,
       maxRounds = null,
+      userEmail = null,
+      userId = null,
     } = req.body || {};
 
     const fullState = await orchestratorService.initializeSimulation({
       scenarioId,
       customAgents,
       maxRounds,
+      userEmail: userEmail ? String(userEmail).trim() : null,
+      userId: userId ? String(userId).trim() : null,
     });
 
     return res.status(201).json({
@@ -57,7 +61,12 @@ async function getSimulationState(req, res) {
  */
 async function listSimulations(req, res) {
   try {
-    const list = await db.listSimulations(50);
+    const { userEmail, userId, limit = 50 } = req.query || {};
+    const list = await db.listSimulations({
+      userEmail: userEmail ? String(userEmail).trim() : null,
+      userId: userId ? String(userId).trim() : null,
+      limit: Number(limit) || 50,
+    });
     return res.json({ success: true, data: list });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

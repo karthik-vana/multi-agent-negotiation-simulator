@@ -249,6 +249,35 @@ async function runTests() {
     );
   });
 
+  await test('10. User-scoped isolation: simulations are correctly tagged with userEmail and filtered on listing', async () => {
+    const userA = 'user_alpha@example.com';
+    const userB = 'user_beta@example.com';
+
+    const simA = await orchestratorService.initializeSimulation({
+      scenarioId: 'vendor-pricing',
+      maxRounds: 4,
+      userEmail: userA,
+    });
+
+    const simB = await orchestratorService.initializeSimulation({
+      scenarioId: 'job-offer',
+      maxRounds: 4,
+      userEmail: userB,
+    });
+
+    assert.strictEqual(simA.user_email, userA);
+    assert.strictEqual(simB.user_email, userB);
+
+    const listA = await db.listSimulations({ userEmail: userA });
+    const listB = await db.listSimulations({ userEmail: userB });
+
+    assert.ok(listA.some(s => s.id === simA.id), 'listA should contain simA');
+    assert.ok(!listA.some(s => s.id === simB.id), 'listA should NOT contain simB');
+
+    assert.ok(listB.some(s => s.id === simB.id), 'listB should contain simB');
+    assert.ok(!listB.some(s => s.id === simA.id), 'listB should NOT contain simA');
+  });
+
   console.log(`\n========================================`);
   console.log(`Results: ${passedCount} Passed, ${failedCount} Failed`);
   console.log(`========================================\n`);

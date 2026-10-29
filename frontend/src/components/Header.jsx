@@ -2,22 +2,31 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ArrowLeft } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 
 const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useSettings();
+  const { currentUser } = useAuth();
 
   const isHome = location.pathname === '/';
   const isArena = location.pathname === '/arena';
 
   const getPageMeta = () => {
     switch (location.pathname) {
-      case '/':
+      case '/': {
+        const userDisplayName =
+          currentUser?.displayName ||
+          (currentUser?.email ? currentUser.email.split('@')[0] : null) ||
+          'Negotiator';
         return {
-          title: t ? t('dashboard') : 'Dashboard',
-          subtitle: t ? t('headerSubtitleDashboard') : 'Welcome to the Multi-Agent Negotiation Simulator platform'
+          title: `Welcome, ${userDisplayName} 👋`,
+          subtitle: t
+            ? t('headerSubtitleDashboard')
+            : 'Welcome to the Multi-Agent Negotiation Simulator platform',
         };
+      }
       case '/scenarios':
         return {
           title: t ? t('scenarios') : 'Scenarios',
@@ -42,6 +51,11 @@ const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
         return {
           title: t ? t('history') : 'History & Reports',
           subtitle: t ? t('headerSubtitleHistory') : 'Archived negotiation transcripts, concession curves, and outcome analytics'
+        };
+      case '/analytics':
+        return {
+          title: 'Negotiation Analytics',
+          subtitle: 'Audit telemetry, behavioral tactics, and scenario outcome distributions'
         };
       case '/profile':
       case '/settings':
@@ -96,5 +110,3 @@ const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
 };
 
 export default Header;
-
-

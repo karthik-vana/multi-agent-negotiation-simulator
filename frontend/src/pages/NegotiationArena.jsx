@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 import { getScenarioById, SCENARIOS } from '../data/scenarios';
 import AgentFaceAvatar from '../components/AgentFaceAvatar';
 import {
@@ -44,6 +45,7 @@ const NegotiationArena = () => {
   const location = useLocation();
   const { selectedScenarioId, selectedScenario, agentPersonalities } = useScenario();
   const { t } = useSettings();
+  const { currentUser } = useAuth();
 
   // Active scenario strictly locked to selection
   const currentScenarioId =
@@ -71,6 +73,11 @@ const NegotiationArena = () => {
 
   const transcriptEndRef = useRef(null);
   const timerRef = useRef(null);
+  const simulationRef = useRef(null);
+
+  useEffect(() => {
+    simulationRef.current = simulation;
+  }, [simulation]);
 
   // 1. Initialize Simulation on mount or scenario change (restoring active session if returning from report)
   useEffect(() => {
@@ -109,7 +116,13 @@ const NegotiationArena = () => {
           goal: a.primaryGoal || a.goal,
           personality: effectivePersonalities?.[a.id] || a.personality || a.defaultPersonality || 'Collaborative',
         }));
-        const simData = await startSimulation(currentScenarioId, customAgents);
+        const simData = await startSimulation(
+          currentScenarioId,
+          customAgents,
+          null,
+          currentUser?.email || null,
+          currentUser?.uid || null
+        );
         if (isMounted && simData) {
           setSimulation(simData);
           setIsPaused(false);
@@ -129,7 +142,12 @@ const NegotiationArena = () => {
     return () => {
       isMounted = false;
       if (timerRef.current) clearInterval(timerRef.current);
-      if (!allowExitRef.current) {
+      if (!allowExitRef.current && simulationRef.current) {
+        const cur = simulationRef.current;
+        const isFin = (cur.status === 'COMPLETED' || cur.status === 'AGREEMENT_REACHED' || cur.status === 'DEADLOCK') && Boolean(cur.agreement);
+        if (!isFin && cur.id && cur.status !== 'LEFT_IN_BETWEEN') {
+          endSimulation(cur.id, 'User left in between before completion').catch(() => {});
+        }
         sessionStorage.removeItem('active_arena_sim_id');
         sessionStorage.removeItem('viewing_report_sim_id');
       }
@@ -220,7 +238,7 @@ const NegotiationArena = () => {
     allowExitRef.current = true;
     setIsPaused(true);
     if (timerRef.current) clearInterval(timerRef.current);
-    const isAlreadyFinished = isCompleted || isDeadlock || simulation?.status === 'COMPLETED' || simulation?.status === 'AGREEMENT_REACHED' || simulation?.status === 'DEADLOCK' || Boolean(simulation?.agreement);
+    const isAlreadyFinished = (isCompleted || isDeadlock || simulation?.status === 'COMPLETED' || simulation?.status === 'AGREEMENT_REACHED' || simulation?.status === 'DEADLOCK') && Boolean(simulation?.agreement);
     if (simulation?.id && !isAlreadyFinished) {
       try {
         await endSimulation(simulation.id, 'User left in between before completion');
@@ -254,7 +272,13 @@ const NegotiationArena = () => {
         goal: a.primaryGoal || a.goal,
         personality: effectivePersonalities?.[a.id] || a.personality || a.defaultPersonality || 'Collaborative',
       }));
-      const restarted = await startSimulation(currentScenarioId, customAgents);
+      const restarted = await startSimulation(
+        currentScenarioId,
+        customAgents,
+        null,
+        currentUser?.email || null,
+        currentUser?.uid || null
+      );
       if (restarted) {
         setSimulation(restarted);
         if (restarted.id) {
@@ -263,7 +287,13 @@ const NegotiationArena = () => {
       }
     } catch (err) {
       console.warn('Restart failed, restarting fresh:', err);
-      const fresh = await startSimulation(currentScenarioId);
+      const fresh = await startSimulation(
+        currentScenarioId,
+        null,
+        null,
+        currentUser?.email || null,
+        currentUser?.uid || null
+      );
       if (fresh) {
         setSimulation(fresh);
         if (fresh.id) {

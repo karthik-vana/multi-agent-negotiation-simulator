@@ -16,12 +16,12 @@ export async function checkBackendHealth() {
   }
 }
 
-export async function startSimulation(scenarioId = 'vendor-pricing', customAgents = null, maxRounds = null) {
+export async function startSimulation(scenarioId = 'vendor-pricing', customAgents = null, maxRounds = null, userEmail = null, userId = null) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/simulations/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenarioId, customAgents, maxRounds }),
+      body: JSON.stringify({ scenarioId, customAgents, maxRounds, userEmail, userId }),
     });
 
     if (res.ok) {
@@ -31,13 +31,21 @@ export async function startSimulation(scenarioId = 'vendor-pricing', customAgent
     throw new Error(`Server returned ${res.status}`);
   } catch (err) {
     console.warn('[Simulation API] Backend unavailable, initializing local offline arena session:', err.message);
-    return createLocalSimulation(scenarioId, maxRounds || 10);
+    const local = createLocalSimulation(scenarioId, maxRounds || 10);
+    local.user_email = userEmail;
+    local.user_id = userId;
+    return local;
   }
 }
 
-export async function listSimulations() {
+export async function listSimulations(userEmail = null, userId = null) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/simulations`);
+    const params = new URLSearchParams();
+    if (userEmail) params.append('userEmail', userEmail);
+    if (userId) params.append('userId', userId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    const res = await fetch(`${BACKEND_URL}/api/simulations${query}`);
     if (res.ok) {
       const json = await res.json();
       return json.data || [];

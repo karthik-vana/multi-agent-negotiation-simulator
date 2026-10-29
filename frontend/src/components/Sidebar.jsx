@@ -5,6 +5,7 @@ import {
   Bot,
   GraduationCap,
   FileText,
+  BarChart3,
   Settings,
   Search,
   LogOut,
@@ -58,7 +59,14 @@ const Sidebar = ({ isOpen, onClose }) => {
       path: '/history',
       section: t ? t('mainMenu') : 'Main Menu',
       icon: FileText,
-      keywords: ['analytics', 'outcome', 'metrics', 'concession', 'curves', 'archive']
+      keywords: ['archive', 'transcripts', 'history', 'reports', 'concession', 'curves']
+    },
+    {
+      name: 'Negotiation Analytics',
+      path: '/analytics',
+      section: t ? t('mainMenu') : 'Main Menu',
+      icon: BarChart3,
+      keywords: ['analytics', 'telemetry', 'charts', 'graphs', 'statistics', 'performance', 'metrics', 'trends', 'rates']
     },
     {
       name: t ? t('profileAndSettings') : 'Profile & Settings',
@@ -276,6 +284,19 @@ const Sidebar = ({ isOpen, onClose }) => {
         >
           <FileText size={22} className="nav-icon" />
           <span>{t ? t('history') : 'History & Reports'}</span>
+        </NavLink>
+
+        <NavLink
+          to="/analytics"
+          onClick={() => {
+            sessionStorage.removeItem('active_arena_sim_id');
+            sessionStorage.removeItem('viewing_report_sim_id');
+            if (onClose) onClose();
+          }}
+          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+        >
+          <BarChart3 size={22} className="nav-icon" />
+          <span>Negotiation Analytics</span>
         </NavLink>
 
         <NavLink

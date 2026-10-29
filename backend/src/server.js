@@ -60,3 +60,4 @@ async function startServer() {
 startServer().catch(err => {
   console.error('Fatal error during backend startup:', err);
 });
+ 
