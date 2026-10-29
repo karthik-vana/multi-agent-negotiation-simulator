@@ -97,6 +97,7 @@ const Dashboard = () => {
             '--step-bg': '#eff6ff',
             '--step-glow': 'rgba(37, 99, 235, 0.28)',
           }}
+          onClick={() => handleNavigate('/scenarios')}
         >
           <div className="step-card-image-wrap">
             <span className="step-number-badge">1</span>
@@ -134,6 +135,7 @@ const Dashboard = () => {
             '--step-bg': '#f5f3ff',
             '--step-glow': 'rgba(124, 58, 237, 0.28)',
           }}
+          onClick={() => handleNavigate('/agents')}
         >
           <div className="step-card-image-wrap">
             <span
@@ -176,6 +178,7 @@ const Dashboard = () => {
             '--step-bg': '#ecfdf5',
             '--step-glow': 'rgba(16, 185, 129, 0.28)',
           }}
+          onClick={() => handleNavigate('/arena')}
         >
           <div className="step-card-image-wrap">
             <span

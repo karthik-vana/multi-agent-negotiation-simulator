@@ -1,0 +1,1118 @@
+/* ==========================================================================
+   Negotiation Analytics Page Styles
+   Strictly aligned with Platform Minimalist White & Blue Design System
+   ========================================================================== */
+
+.analytics-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: analyticsPageFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes analyticsPageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   Page Header
+   ========================================================================== */
+
+.analytics-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px 28px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
+}
+
+.analytics-header-title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analytics-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: var(--primary-light, #eef2ff);
+  color: var(--primary, #4f46e5);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  width: fit-content;
+}
+
+.analytics-page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.analytics-page-subtitle {
+  font-size: 0.92rem;
+  color: var(--text-muted, #64748b);
+  margin: 0;
+  max-width: 750px;
+  line-height: 1.5;
+}
+
+.analytics-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 12px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.analytics-refresh-btn:hover:not(:disabled) {
+  background: var(--bg-surface-hover, #f8fafc);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.analytics-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.analytics-refresh-btn .spin {
+  animation: spinAnim 1s linear infinite;
+}
+
+@keyframes spinAnim {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   Loading & Empty States
+   ========================================================================== */
+
+.analytics-loading-box,
+.analytics-empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 70px 24px;
+  border-radius: 20px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px dashed var(--border-color, #e2e8f0);
+  text-align: center;
+  gap: 14px;
+}
+
+.analytics-loading-box p {
+  font-size: 0.95rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+}
+
+.analytics-empty-box svg {
+  color: var(--text-light, #94a3b8);
+}
+
+.analytics-empty-box h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  margin: 0;
+}
+
+.analytics-empty-box p {
+  font-size: 0.9rem;
+  color: var(--text-muted, #64748b);
+  max-width: 500px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btn-arena-start {
+  margin-top: 10px;
+  padding: 10px 22px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-arena-start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+}
+
+/* ==========================================================================
+   Row 1: Top 5 KPI Metrics Grid
+   ========================================================================== */
+
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.analytics-kpi-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: var(--shadow-card, 0 4px 16px -2px rgba(15, 23, 42, 0.05));
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  min-height: 140px;
+}
+
+.analytics-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.08);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.kpi-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.kpi-icon-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.kpi-trend-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+.kpi-trend-pill.positive {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.kpi-trend-pill.neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+.kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted, #64748b);
+}
+
+.kpi-val-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.kpi-sparkline {
+  width: 80px;
+  height: 24px;
+  overflow: visible;
+}
+
+.kpi-subtitle-note {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  margin: 2px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   Row 2: Secondary Indicators Horizontal Bar
+   ========================================================================== */
+
+.analytics-secondary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 16px 24px;
+  border-radius: 16px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
+}
+
+.secondary-strip-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.secondary-strip-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.secondary-strip-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.secondary-strip-label {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+}
+
+.secondary-strip-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+/* ==========================================================================
+   Charts Grid: 3-column rows
+   ========================================================================== */
+
+.analytics-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.analytics-chart-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: var(--shadow-card, 0 4px 16px -2px rgba(15, 23, 42, 0.05));
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-height: 275px;
+}
+
+.analytics-chart-card:hover {
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.08);
+}
+
+.chart-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.chart-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.chart-card-sublabel {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+  background: var(--bg-surface-subtle, #f8fafc);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+/* Dynamic Year Dropdown */
+.chart-year-dropdown-wrap {
+  position: relative;
+}
+
+.chart-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--bg-surface-subtle, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chart-filter-pill:hover,
+.chart-filter-pill.active-dropdown {
+  background: var(--bg-surface-hover, #f1f5f9);
+  border-color: #cbd5e1;
+}
+
+.dropdown-chevron {
+  transition: transform 0.2s ease;
+}
+
+.dropdown-chevron.open {
+  transform: rotate(180deg);
+}
+
+.chart-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 50;
+  min-width: 120px;
+  animation: dropdownAnim 0.15s ease-out;
+}
+
+@keyframes dropdownAnim {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chart-dropdown-item {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main, #0f172a);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.chart-dropdown-item:hover {
+  background: var(--bg-surface-hover, #f1f5f9);
+}
+
+.chart-dropdown-item.selected {
+  background: var(--primary-light, #eef2ff);
+  color: var(--primary, #4f46e5);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Donut Charts
+   ========================================================================== */
+
+.donut-chart-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 100%;
+}
+
+.donut-graphic-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-center-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donut-center-num {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  line-height: 1.1;
+}
+
+.donut-center-lbl {
+  font-size: 0.7rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+}
+
+.chart-legend-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  color: var(--text-muted, #64748b);
+  flex: 1;
+}
+
+.legend-count {
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+}
+
+/* ==========================================================================
+   Monthly Bar Chart (Fixed spacing to avoid overlap)
+   ========================================================================== */
+
+.bar-chart-container {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  height: 180px;
+  margin-top: auto;
+}
+
+.bar-chart-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--text-light, #94a3b8);
+  padding-bottom: 24px;
+  width: 22px;
+  text-align: right;
+  position: relative;
+}
+
+.y-axis-unit {
+  position: absolute;
+  top: -16px;
+  left: 0;
+  font-size: 0.65rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+}
+
+.bar-chart-plot {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar-grid-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.grid-line {
+  height: 1px;
+  background-color: var(--border-subtle, #f1f5f9);
+  width: 100%;
+}
+
+.grid-line.baseline {
+  background-color: var(--border-color, #e2e8f0);
+}
+
+.bars-flex {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 6px;
+  height: 100%;
+}
+
+.bar-column-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  flex: 1;
+  cursor: pointer;
+}
+
+/* The bar track area sits STRICTLY above the X-axis label so the bar cannot overlap text */
+.bar-track-area {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.bar-track {
+  width: 100%;
+  max-width: 16px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bar-fill {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
+}
+
+.bar-fill.bar-peak {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.bar-column-wrap:hover .bar-fill {
+  background: #1d4ed8;
+  filter: brightness(1.1);
+}
+
+.bar-tooltip {
+  position: absolute;
+  top: -24px;
+  background: var(--text-main, #0f172a);
+  color: #ffffff;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.bar-x-label {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Outcome Score Trend Chart (Clean Plot + Dynamic Real Score Curve)
+   ========================================================================== */
+
+.trend-card-layout {
+  display: flex;
+  flex-direction: column;
+  height: 180px;
+  width: 100%;
+}
+
+.trend-plot-area {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.trend-svg {
+  width: 100%;
+  height: 125px;
+  overflow: visible;
+}
+
+.trend-callout-badge {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--text-main, #0f172a);
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  z-index: 5;
+}
+
+.callout-date {
+  font-weight: 500;
+  opacity: 0.75;
+  font-size: 0.62rem;
+}
+
+.callout-score {
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.trend-x-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--text-muted, #64748b);
+  padding: 6px 4px 0 4px;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.trend-x-axis .active-month-label {
+  color: var(--primary, #4f46e5);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Negotiation Duration (Clean Bars with Direct Realistic Values)
+   ========================================================================== */
+
+.duration-chart-container {
+  display: flex;
+  height: 180px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.duration-plot-area {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  flex: 1;
+  padding-bottom: 40px;
+  position: relative;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.duration-col-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 28%;
+  position: relative;
+}
+
+.duration-top-val {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  margin-bottom: 6px;
+}
+
+.duration-bar-track {
+  width: 42px;
+  height: 95px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--bg-surface-subtle, #f8fafc);
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.duration-bar-fill {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  transition: height 0.4s ease;
+}
+
+.duration-col-title {
+  position: absolute;
+  bottom: -22px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+  white-space: nowrap;
+}
+
+.duration-col-sub {
+  position: absolute;
+  bottom: -38px;
+  font-size: 0.66rem;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Agent Performance
+   ========================================================================== */
+
+.agent-perf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  height: 100%;
+}
+
+.agent-perf-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.agent-perf-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.agent-perf-name {
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+}
+
+.agent-perf-pct {
+  font-weight: 700;
+  color: var(--primary, #4f46e5);
+}
+
+.agent-perf-track {
+  height: 8px;
+  background: var(--bg-surface-subtle, #f1f5f9);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.agent-perf-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+
+/* ==========================================================================
+   Outcome Score Distribution Histogram (Clean Direct Counts)
+   ========================================================================== */
+
+.histogram-container {
+  display: flex;
+  height: 155px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.histogram-plot-area {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.histogram-bars-wrap {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  flex: 1;
+  padding: 0 8px;
+}
+
+.histogram-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 16%;
+  height: 100%;
+  position: relative;
+}
+
+.histogram-count-val {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  margin-bottom: 5px;
+}
+
+.histogram-track-area {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.histogram-track {
+  width: 100%;
+  max-width: 32px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.histogram-fill {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  transition: height 0.4s ease;
+}
+
+.histogram-x-label {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+}
+
+.histogram-caption {
+  font-size: 0.7rem;
+  color: var(--text-light, #94a3b8);
+  text-align: center;
+  margin: 8px 0 0 0;
+}
+
+/* ==========================================================================
+   Negotiation Tactics Used (Clean Percentage Only)
+   ========================================================================== */
+
+.tactics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  justify-content: center;
+}
+
+.tactic-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 45px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+}
+
+.tactic-name {
+  color: var(--text-main, #0f172a);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tactic-bar-wrap {
+  height: 7px;
+  background: var(--bg-surface-subtle, #f1f5f9);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.tactic-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+}
+
+.tactic-count {
+  text-align: right;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  font-size: 0.75rem;
+}
+
+/* ==========================================================================
+   Sentiment Analysis Wave (Clean Full Width Wave)
+   ========================================================================== */
+
+.sentiment-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sentiment-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+}
+
+.sentiment-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.sentiment-wave-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 165px;
+  width: 100%;
+}
+
+.sentiment-plot-wrapper {
+  display: flex;
+  height: 115px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.sentiment-svg-wrap {
+  flex: 1;
+  width: 100%;
+  position: relative;
+}
+
+.sentiment-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sentiment-x-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--text-muted, #64748b);
+  padding: 6px 6px 0 6px;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.sentiment-caption {
+  font-size: 0.68rem;
+  color: var(--text-light, #94a3b8);
+  text-align: center;
+  margin: 4px 0 0 0;
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+
+@media (max-width: 1400px) {
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analytics-secondary-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .analytics-charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .analytics-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .analytics-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-secondary-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}

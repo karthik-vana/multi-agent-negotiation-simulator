@@ -69,6 +69,15 @@ const runMigrations = async () => {
     const sqlPath = path.join(__dirname, 'init.sql');
     const sql = fs.readFileSync(sqlPath, 'utf8');
     await pool.query(sql);
+
+    // Ensure user isolation columns & attribute legacy test sessions to original creator
+    await pool.query(`
+      ALTER TABLE simulations ADD COLUMN IF NOT EXISTS user_email VARCHAR(255);
+      ALTER TABLE simulations ADD COLUMN IF NOT EXISTS user_id VARCHAR(128);
+      CREATE INDEX IF NOT EXISTS idx_simulations_user_email ON simulations(user_email);
+      UPDATE simulations SET user_email = 'shubhayyadav84@gmail.com' WHERE user_email IS NULL;
+    `);
+
     console.log('✅ [Neon DB] Schema tables verified & migrated successfully.');
   } catch (err) {
     console.error('❌ [Neon DB] Migration error:', err.message);
@@ -96,6 +105,8 @@ const db = {
       max_rounds = 10,
       current_gap = 0,
       agreement_likelihood = 50,
+      user_email = null,
+      user_id = null,
     } = simData;
 
     if (isNeonConnected && pool) {
@@ -103,8 +114,8 @@ const db = {
       try {
         await client.query('BEGIN');
         await client.query(
-          `INSERT INTO simulations (id, scenario_id, scenario_title, status, current_round, max_rounds, current_gap, agreement_likelihood)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `INSERT INTO simulations (id, scenario_id, scenario_title, status, current_round, max_rounds, current_gap, agreement_likelihood, user_email, user_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            ON CONFLICT (id) DO UPDATE SET
              scenario_id = EXCLUDED.scenario_id,
              scenario_title = EXCLUDED.scenario_title,
@@ -113,8 +124,10 @@ const db = {
              max_rounds = EXCLUDED.max_rounds,
              current_gap = EXCLUDED.current_gap,
              agreement_likelihood = EXCLUDED.agreement_likelihood,
+             user_email = COALESCE(EXCLUDED.user_email, simulations.user_email),
+             user_id = COALESCE(EXCLUDED.user_id, simulations.user_id),
              updated_at = CURRENT_TIMESTAMP`,
-          [id, scenario_id, scenario_title, status, current_round, max_rounds, current_gap, agreement_likelihood]
+          [id, scenario_id, scenario_title, status, current_round, max_rounds, current_gap, agreement_likelihood, user_email, user_id]
         );
 
         for (const agent of agents) {
@@ -159,6 +172,8 @@ const db = {
       max_rounds,
       current_gap,
       agreement_likelihood,
+      user_email,
+      user_id,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -212,37 +227,81 @@ const db = {
   /**
    * List all simulations
    */
-  async listSimulations(limit = 50) {
+  async listSimulations(options = 50) {
+    let limit = 50;
+    let userEmail = null;
+    let userId = null;
+
+    if (typeof options === 'number') {
+      limit = options;
+    } else if (options && typeof options === 'object') {
+      limit = options.limit || 50;
+      userEmail = options.userEmail || null;
+      userId = options.userId || null;
+    }
+
     if (isNeonConnected && pool) {
       try {
-        const res = await pool.query(`
-          SELECT s.*, 
-            COALESCE(
-              json_agg(
-                DISTINCT jsonb_build_object(
-                  'id', a.id,
-                  'name', a.name,
-                  'role', a.role,
-                  'personality', a.personality,
-                  'goal', a.goal,
-                  'target_value', a.target_value,
-                  'reservation_value', a.reservation_value,
-                  'current_offer', a.current_offer,
-                  'stance', a.stance,
-                  'progress_percent', a.progress_percent
-                )
-              ) FILTER (WHERE a.id IS NOT NULL), '[]'
-            ) AS agents,
-            COALESCE(
-              (SELECT row_to_json(ag) FROM agreements ag WHERE ag.simulation_id = s.id LIMIT 1),
-              NULL
-            ) AS agreement
-          FROM simulations s
-          LEFT JOIN agents a ON a.simulation_id = s.id
-          GROUP BY s.id
-          ORDER BY s.created_at DESC
-          LIMIT $1
-        `, [limit]);
+        const query = userEmail
+          ? `
+            SELECT s.*, 
+              COALESCE(
+                json_agg(
+                  DISTINCT jsonb_build_object(
+                    'id', a.id,
+                    'name', a.name,
+                    'role', a.role,
+                    'personality', a.personality,
+                    'goal', a.goal,
+                    'target_value', a.target_value,
+                    'reservation_value', a.reservation_value,
+                    'current_offer', a.current_offer,
+                    'stance', a.stance,
+                    'progress_percent', a.progress_percent
+                  )
+                ) FILTER (WHERE a.id IS NOT NULL), '[]'
+              ) AS agents,
+              COALESCE(
+                (SELECT row_to_json(ag) FROM agreements ag WHERE ag.simulation_id = s.id LIMIT 1),
+                NULL
+              ) AS agreement
+            FROM simulations s
+            LEFT JOIN agents a ON a.simulation_id = s.id
+            WHERE LOWER(s.user_email) = LOWER($1) OR ($2::text IS NOT NULL AND s.user_id = $2)
+            GROUP BY s.id
+            ORDER BY s.created_at DESC
+            LIMIT $3
+          `
+          : `
+            SELECT s.*, 
+              COALESCE(
+                json_agg(
+                  DISTINCT jsonb_build_object(
+                    'id', a.id,
+                    'name', a.name,
+                    'role', a.role,
+                    'personality', a.personality,
+                    'goal', a.goal,
+                    'target_value', a.target_value,
+                    'reservation_value', a.reservation_value,
+                    'current_offer', a.current_offer,
+                    'stance', a.stance,
+                    'progress_percent', a.progress_percent
+                  )
+                ) FILTER (WHERE a.id IS NOT NULL), '[]'
+              ) AS agents,
+              COALESCE(
+                (SELECT row_to_json(ag) FROM agreements ag WHERE ag.simulation_id = s.id LIMIT 1),
+                NULL
+              ) AS agreement
+            FROM simulations s
+            LEFT JOIN agents a ON a.simulation_id = s.id
+            GROUP BY s.id
+            ORDER BY s.created_at DESC
+            LIMIT $1
+          `;
+        const params = userEmail ? [userEmail, userId || null, limit] : [limit];
+        const res = await pool.query(query, params);
         return res.rows;
       } catch (err) {
         console.warn('[Neon DB] Error in listSimulations, using cache:', err.message);
@@ -250,6 +309,12 @@ const db = {
     }
 
     return Array.from(inMemoryStore.simulations.values())
+      .filter(sim => {
+        if (!userEmail) return true;
+        const matchEmail = sim.user_email && sim.user_email.toLowerCase() === userEmail.toLowerCase();
+        const matchId = userId && sim.user_id === userId;
+        return matchEmail || matchId;
+      })
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, limit)
       .map(sim => ({
@@ -454,6 +519,17 @@ const db = {
 
     inMemoryStore.agreements.set(simulation_id, record);
     return record;
+  },
+
+  async deleteAgreement(simulationId) {
+    if (isNeonConnected && pool) {
+      try {
+        await pool.query('DELETE FROM agreements WHERE simulation_id = $1', [simulationId]);
+      } catch (err) {
+        console.warn('[Neon DB] deleteAgreement error:', err.message);
+      }
+    }
+    inMemoryStore.agreements.delete(simulationId);
   },
 };
 

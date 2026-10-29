@@ -30,6 +30,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 import { listSimulations, getSimulationState } from '../services/simulationApi';
 import './HistoryReports.css';
 
@@ -92,26 +93,39 @@ function formatCurrency(val, currency = '₹') {
 function isLeftInBetween(sim) {
   if (!sim) return false;
 
-  // 1. If agreement was reached or completed with agreement data, it is NOT left in between
-  const hasAgreedData = Boolean(
-    sim.agreement && (sim.agreement.final_value !== undefined && sim.agreement.final_value !== null || sim.agreement.agreed_value !== undefined && sim.agreement.agreed_value !== null)
-  );
-  const isAgreement = sim.status === 'AGREEMENT_REACHED' || sim.status === 'COMPLETED' || hasAgreedData;
-  if (isAgreement) {
-    return false;
-  }
-
-  // 2. Deadlocks are NOT left in between
-  if (sim.status === 'DEADLOCK') {
-    return false;
-  }
-
-  // 3. Explicitly left in between or paused
+  // 1. Explicitly left in between or paused
   if (sim.status === 'LEFT_IN_BETWEEN' || sim.status === 'PAUSED') {
     return true;
   }
 
-  // 4. Any other non-completed session ended early
+  // 2. Transcript contains explicit leave in between message
+  if (Array.isArray(sim.messages)) {
+    const hasLeftMsg = sim.messages.some(
+      (m) =>
+        typeof m.message === 'string' &&
+        (m.message.includes('User left in between') ||
+          m.message.includes('Left in between') ||
+          m.message.includes('ended early by user'))
+    );
+    if (hasLeftMsg) return true;
+  }
+
+  // 3. Deadlocks are NOT left in between
+  if (sim.status === 'DEADLOCK') {
+    return false;
+  }
+
+  // 4. Completed agreement
+  const hasAgreedData = Boolean(
+    sim.agreement &&
+      ((sim.agreement.final_value !== undefined && sim.agreement.final_value !== null) ||
+        (sim.agreement.agreed_value !== undefined && sim.agreement.agreed_value !== null))
+  );
+  const isAgreement = (sim.status === 'AGREEMENT_REACHED' || sim.status === 'COMPLETED') && hasAgreedData;
+  if (isAgreement) {
+    return false;
+  }
+
   return true;
 }
 
@@ -120,6 +134,7 @@ export default function HistoryReports() {
   const { simulationId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useSettings();
+  const { currentUser } = useAuth();
 
   const [simulations, setSimulations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,15 +153,35 @@ export default function HistoryReports() {
 
   const reportPrintRef = useRef(null);
 
-  // Load Simulations List: strictly Vendor, Job, and Project scenarios only
+  // Load Simulations List: strictly Vendor, Job, and Project scenarios for the active account
   const fetchSimulations = async () => {
     setLoading(true);
     setError(null);
     try {
-      const liveList = await listSimulations();
+      const userEmail = currentUser?.email || null;
+      const userId = currentUser?.uid || null;
+      const liveList = await listSimulations(userEmail, userId);
       if (liveList && liveList.length > 0) {
+        // Defensive user scoping: ensures user only sees their own simulations
+        const userSims = liveList.filter(s => {
+          if (!currentUser?.email && !currentUser?.uid) {
+            return true;
+          }
+          if (currentUser?.email && s.user_email) {
+            return s.user_email.toLowerCase() === currentUser.email.toLowerCase();
+          }
+          if (currentUser?.uid && s.user_id) {
+            return s.user_id === currentUser.uid;
+          }
+          if (!s.user_email && !s.user_id) {
+            // Unattributed legacy records belong only to primary author
+            return currentUser?.email?.toLowerCase() === 'shubhayyadav84@gmail.com';
+          }
+          return false;
+        });
+
         // Filter strictly to the 3 official scenarios: vendor-pricing, job-offer, project-budget
-        const officialSims = liveList.filter(s => {
+        const officialSims = userSims.filter(s => {
           const sid = (s.scenario_id || '').toLowerCase();
           const title = (s.scenario_title || '').toLowerCase();
 
@@ -189,7 +224,7 @@ export default function HistoryReports() {
 
   useEffect(() => {
     fetchSimulations();
-  }, []);
+  }, [currentUser?.email, currentUser?.uid]);
 
   // Sync simulationId from URL params or search params
   const targetId = simulationId || searchParams.get('id');
@@ -1031,19 +1066,39 @@ export default function HistoryReports() {
             ) : filteredSimulations.length === 0 ? (
               <div className="history-empty-box">
                 <FileText size={36} />
-                <h3>No Matching Negotiations Found</h3>
-                <p>Try modifying your search term or clearing the active filters.</p>
-                <button
-                  type="button"
-                  className="btn-clear-filters"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setFilterMode('ALL');
-                    setFilterOutcome('ALL');
-                  }}
-                >
-                  Reset Filters
-                </button>
+                {simulations.length === 0 ? (
+                  <>
+                    <h3>No Negotiations Recorded Yet</h3>
+                    <p>
+                      {currentUser?.email
+                        ? `No negotiation sessions recorded for ${currentUser.email}. Launch a simulation in the Arena to start building your record.`
+                        : 'Launch a simulation in the Arena to start building your negotiation record.'}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-clear-filters"
+                      onClick={() => navigate('/arena')}
+                    >
+                      Start Negotiation in Arena
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h3>No Matching Negotiations Found</h3>
+                    <p>Try modifying your search term or clearing the active filters.</p>
+                    <button
+                      type="button"
+                      className="btn-clear-filters"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setFilterMode('ALL');
+                        setFilterOutcome('ALL');
+                      }}
+                    >
+                      Reset Filters
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               filteredSimulations.map((sim) => {
