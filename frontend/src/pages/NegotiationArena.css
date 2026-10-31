@@ -2112,15 +2112,25 @@
 }
 
 /* Thin clean progress line */
+.arena-agent-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.arena-agent-progress-track,
 .arena-agent-progress-wrap {
-  height: 4px;
+  flex: 1;
+  height: 6px;
   background: #e2e8f0;
   border-radius: 9999px;
-  margin-top: 10px;
   overflow: hidden;
   position: relative;
 }
 
+[data-theme="dark"] .arena-agent-progress-track,
 [data-theme="dark"] .arena-agent-progress-wrap {
   background: #334155;
 }
@@ -2137,6 +2147,20 @@
 
 .arena-agent-progress-bar.seller-progress {
   background: #9333ea;
+}
+
+.arena-progress-percent-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  min-width: 32px;
+  text-align: right;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .arena-progress-percent-label {
+  color: #94a3b8;
 }
 
 /* Turn Indicator & Interactive Controls in Practice Mode */

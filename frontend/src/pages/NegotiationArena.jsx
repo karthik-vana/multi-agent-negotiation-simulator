@@ -1043,11 +1043,13 @@ const NegotiationArena = () => {
                       </div>
                     </div>
 
-                    <div className="arena-agent-progress-wrap">
-                      <div
-                        className={`arena-agent-progress-bar ${isFirst ? 'buyer-progress' : 'seller-progress'}`}
-                        style={{ width: `${progressVal}%` }}
-                      />
+                    <div className="arena-agent-progress-row">
+                      <div className="arena-agent-progress-track">
+                        <div
+                          className={`arena-agent-progress-bar ${isFirst ? 'buyer-progress' : 'seller-progress'}`}
+                          style={{ width: `${progressVal}%` }}
+                        />
+                      </div>
                       {!isPracticeMode && (
                         <span className="arena-progress-percent-label">
                           {progressVal}%
