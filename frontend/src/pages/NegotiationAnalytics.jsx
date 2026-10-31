@@ -1098,7 +1098,7 @@ export default function NegotiationAnalytics() {
                       />
 
                       <circle cx="70" cy="55" r="3.5" fill="#10b981" />
-                      <circle cx="160" cy="38" r="3.5" fill="#10b981" />
+                      <circle cx="160" cy="14" r="3.5" fill="#10b981" />
                       <circle cx="250" cy="25" r="3.5" fill="#10b981" />
 
                       <circle cx="70" cy="85" r="3.5" fill="#2563eb" />
@@ -1112,12 +1112,12 @@ export default function NegotiationAnalytics() {
 
                 <div className="sentiment-x-axis">
                   <span>Turn 1</span>
-                  <span>Turn 5</span>
-                  <span>Turn 10</span>
-                  <span>Turn 15</span>
-                  <span>Turn 20</span>
+                  <span>Turn 2</span>
+                  <span>Turn 4</span>
+                  <span>Turn 6</span>
+                  <span>Turn 8</span>
                 </div>
-                <p className="sentiment-caption">Conversation Turns</p>
+                <p className="sentiment-caption">Conversation Turns (Avg. {stats.avgRounds} Rounds / Session)</p>
               </div>
             </div>
           </div>

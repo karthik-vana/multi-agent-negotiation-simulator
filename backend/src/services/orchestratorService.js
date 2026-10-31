@@ -160,10 +160,12 @@ class OrchestratorAgent {
               ca.role?.toLowerCase() === presetAgent.role?.toLowerCase() ||
               ca.name?.toLowerCase() === presetAgent.name?.toLowerCase()
           ) || customAgents[idx];
+          const isHuman = match?.is_human === true || match?.personality === 'Human' || presetAgent.personality === 'Human';
           return {
             ...presetAgent,
             ...(match || {}),
             personality: match?.personality || presetAgent.personality,
+            is_human: isHuman,
           };
         })
       : preset.agents;
@@ -200,47 +202,50 @@ class OrchestratorAgent {
       action: 'STATUS',
     });
 
-    // 3. Dispatch the opening move for Agent 1
+    // 3. Dispatch the opening move for Agent 1 (ONLY if opening agent is NOT human)
     const openingAgent = effectiveAgents[0];
     const counterpartAgent = effectiveAgents[1] || effectiveAgents[0];
+    const isOpeningHuman = openingAgent.personality === 'Human' || openingAgent.is_human === true;
 
-    const openingMove = await getAgentNegotiationMove({
-      scenario: preset,
-      agent: openingAgent,
-      counterpart: counterpartAgent,
-      roundNumber: 1,
-      maxRounds: effectiveMaxRounds,
-      currentOffer: initialBuyerOffer,
-      history: [],
-    });
+    if (!isOpeningHuman) {
+      const openingMove = await getAgentNegotiationMove({
+        scenario: preset,
+        agent: openingAgent,
+        counterpart: counterpartAgent,
+        roundNumber: 1,
+        maxRounds: effectiveMaxRounds,
+        currentOffer: initialBuyerOffer,
+        history: [],
+      });
 
-    // 4. Record opening message and offer
-    await db.addMessage({
-      simulation_id: simId,
-      round_number: 1,
-      sender_type: 'AGENT',
-      sender_name: openingAgent.name,
-      sender_role: openingAgent.role,
-      personality: openingAgent.personality,
-      message: openingMove.message,
-      offer_value: openingMove.offer_value,
-      action: openingMove.action || 'OFFER',
-    });
-
-    if (openingMove.offer_value) {
-      await db.addOffer({
+      // 4. Record opening message and offer
+      await db.addMessage({
         simulation_id: simId,
         round_number: 1,
-        agent_role: openingAgent.role,
+        sender_type: 'AGENT',
+        sender_name: openingAgent.name,
+        sender_role: openingAgent.role,
+        personality: openingAgent.personality,
+        message: openingMove.message,
         offer_value: openingMove.offer_value,
-        terms: openingMove.terms,
+        action: openingMove.action || 'OFFER',
       });
 
-      await db.updateAgent(simId, openingAgent.role, {
-        current_offer: openingMove.offer_value,
-        stance: openingMove.stance || 'Seeking agreement',
-        progress_percent: openingMove.progress_percent || 55,
-      });
+      if (openingMove.offer_value) {
+        await db.addOffer({
+          simulation_id: simId,
+          round_number: 1,
+          agent_role: openingAgent.role,
+          offer_value: openingMove.offer_value,
+          terms: openingMove.terms,
+        });
+
+        await db.updateAgent(simId, openingAgent.role, {
+          current_offer: openingMove.offer_value,
+          stance: openingMove.stance || 'Seeking agreement',
+          progress_percent: openingMove.progress_percent || 55,
+        });
+      }
     }
 
     return await db.getSimulation(simId);
@@ -287,7 +292,7 @@ class OrchestratorAgent {
   /**
    * 3. Advance the negotiation by one single turn
    */
-  async advanceStep(simulationId) {
+  async advanceStep(simulationId, customMove = null) {
     const sim = await db.getSimulation(simulationId);
     if (!sim) {
       throw new Error(`Simulation with ID "${simulationId}" not found.`);
@@ -302,35 +307,69 @@ class OrchestratorAgent {
       };
     }
 
-    // 1. Determine active speaker and counterpart
+    // 1. Determine active speaker, counterpart, and scenario preset
     const { activeAgent, counterpartAgent, isRoundEnd } = this.determineNextTurn(sim);
-
-    // 2. Build formatted conversation history context for AI reasoning
-    const historyContext = (sim.messages || []).slice(-10).map(m => ({
-      sender_role: m.sender_role,
-      sender_name: m.sender_name,
-      sender_type: m.sender_type,
-      message: m.message,
-      offer_value: m.offer_value,
-      round: m.round_number,
-      action: m.action,
-    }));
-
-    // 3. Request decision & reasoned move from AI service (with domain fallback)
     const preset = this.getScenarioPreset(sim.scenario_id);
-    const move = await getAgentNegotiationMove({
-      scenario: {
-        id: sim.scenario_id,
-        title: sim.scenario_title,
-        domain: preset.domain,
-      },
-      agent: activeAgent,
-      counterpart: counterpartAgent,
-      roundNumber: sim.current_round,
-      maxRounds: sim.max_rounds,
-      currentOffer: activeAgent.current_offer || activeAgent.target_value,
-      history: historyContext,
-    });
+    const isHumanTurn = activeAgent.personality === 'Human' || activeAgent.is_human === true;
+
+    // Guard: if it's a human turn and no move was provided by human, do NOT generate an automated AI response!
+    if (isHumanTurn && !customMove) {
+      return {
+        simulation: sim,
+        advanced: false,
+        waitingForHuman: true,
+        turnTakenBy: activeAgent.role,
+        message: `Awaiting move from human negotiator (${activeAgent.name || activeAgent.role}).`,
+      };
+    }
+
+    let move;
+    if (isHumanTurn && customMove) {
+      let offerVal = customMove.offer_value;
+      if (offerVal === undefined || offerVal === null) {
+        const numMatch = (customMove.message || '').replace(/,/g, '').match(/(?:₹|\$)?\s*(\d{4,9})/);
+        if (numMatch) {
+          offerVal = Number(numMatch[1]);
+        } else {
+          offerVal = activeAgent.current_offer || activeAgent.target_value;
+        }
+      }
+
+      move = {
+        message: customMove.message,
+        offer_value: offerVal,
+        action: customMove.action || 'COUNTER_OFFER',
+        stance: customMove.stance || 'Human proposal',
+        progress_percent: Math.min((activeAgent.progress_percent || 40) + 10, 95),
+        terms: customMove.terms || {},
+      };
+    } else {
+      // 2. Build formatted conversation history context for AI reasoning
+      const historyContext = (sim.messages || []).slice(-10).map(m => ({
+        sender_role: m.sender_role,
+        sender_name: m.sender_name,
+        sender_type: m.sender_type,
+        message: m.message,
+        offer_value: m.offer_value,
+        round: m.round_number,
+        action: m.action,
+      }));
+
+      // 3. Request decision & reasoned move from AI service (with domain fallback)
+      move = await getAgentNegotiationMove({
+        scenario: {
+          id: sim.scenario_id,
+          title: sim.scenario_title,
+          domain: preset.domain,
+        },
+        agent: activeAgent,
+        counterpart: counterpartAgent,
+        roundNumber: sim.current_round,
+        maxRounds: sim.max_rounds,
+        currentOffer: activeAgent.current_offer || activeAgent.target_value,
+        history: historyContext,
+      });
+    }
 
     // Guard: check if simulation was paused, ended, or aborted while awaiting AI move
     const freshSim = await db.getSimulation(simulationId);

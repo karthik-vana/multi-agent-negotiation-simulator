@@ -36,7 +36,7 @@ app.add_middleware(
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 # Initialize Gemini Client if key is available
 gemini_client = None
@@ -48,7 +48,21 @@ if GEMINI_API_KEY:
     except Exception as e:
         logger.warning(f"⚠️ Failed to initialize Gemini client: {e}")
 else:
-    logger.info("ℹ️ GEMINI_API_KEY not set in .env. Service will use high-fidelity domain reasoning fallback.")
+    logger.info("ℹ️ GEMINI_API_KEY not set in .env.")
+
+# Initialize OpenAI Backup Client if key is available
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+openai_client = None
+if OPENAI_API_KEY:
+    try:
+        from openai import AsyncOpenAI
+        openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+        logger.info(f"✅ OpenAI backup client initialized successfully with model: {OPENAI_MODEL}")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to initialize OpenAI backup client: {e}")
+else:
+    logger.info("ℹ️ OPENAI_API_KEY not set in .env.")
 
 
 # ============================================================================
@@ -110,6 +124,8 @@ def health_check():
         "service": "Multi-Agent Negotiation AI Service (FastAPI)",
         "gemini_api_configured": bool(GEMINI_API_KEY and gemini_client),
         "gemini_model": GEMINI_MODEL,
+        "openai_api_configured": bool(OPENAI_API_KEY and openai_client),
+        "openai_model": OPENAI_MODEL,
     }
 
 
@@ -122,16 +138,26 @@ async def generate_agent_response(request: NegotiationTurnRequest):
         f"Processing turn for {request.agent.role} ({request.agent.personality}) in round {request.round_number}/{request.max_rounds}"
     )
 
-    # 1. Attempt Gemini Generation if configured
+    # 1. Primary: Attempt Gemini Generation
     if gemini_client and GEMINI_API_KEY:
         try:
             ai_response = await call_gemini_model(request)
             if ai_response:
                 return ai_response
         except Exception as e:
-            logger.error(f"Gemini API call failed, using dynamic domain fallback: {e}")
+            logger.warning(f"⚠️ Gemini API call failed: {e}. Trying OpenAI backup...")
 
-    # 2. Resilient Mathematical Domain Fallback Engine
+    # 2. Secondary: Attempt OpenAI Backup Generation
+    if openai_client and OPENAI_API_KEY:
+        try:
+            ai_response = await call_openai_model(request)
+            if ai_response:
+                logger.info(f"✅ Successfully generated response using OpenAI backup for {request.agent.role}")
+                return ai_response
+        except Exception as e:
+            logger.warning(f"⚠️ OpenAI backup call failed: {e}. Falling back to domain engine.")
+
+    # 3. Tertiary: Resilient Mathematical Domain Fallback Engine
     return generate_domain_fallback_response(request)
 
 
@@ -226,6 +252,100 @@ async def call_gemini_model(req: NegotiationTurnRequest) -> Optional[Negotiation
         terms=terms,
     )
 
+
+
+def _package_reasoning_turn_response(req: NegotiationTurnRequest, parsed: dict) -> NegotiationTurnResponse:
+    action = parsed.get("action", "OFFER")
+    proposed_offer = parsed.get("proposed_offer") or {}
+
+    # Guardrail: Prevent premature agreement if agent is Aggressive and round is early (rounds 1-5)
+    agent_personality = (req.agent.personality or "Collaborative").lower()
+    if action == "ACCEPT" and req.round_number <= 5 and "aggressive" in agent_personality:
+        logger.info(f"Guardrail adjusted premature ACCEPT by Aggressive agent in round {req.round_number} to COUNTER_OFFER")
+        action = "COUNTER_OFFER"
+        parsed["agreement_reached"] = False
+
+    # Extract numeric offer
+    offer_val = parsed.get("offer_value")
+    if offer_val is None:
+        for key in ("price", "base_salary", "engineering"):
+            if key in proposed_offer:
+                offer_val = proposed_offer[key]
+                break
+
+    if offer_val is None:
+        offer_val = (
+            req.agent.current_offer
+            if req.agent.current_offer is not None
+            else req.agent.target_value
+        )
+
+    agreement = (
+        action == "ACCEPT"
+        and parsed.get("agreement_reached") is True
+    )
+
+    progress = min(100, max(20, int(30 + req.round_number * 10)))
+    if agreement:
+        progress = 100
+
+    terms = {
+        "round": req.round_number,
+        "proposed_offer": proposed_offer,
+    }
+    if offer_val is not None:
+        terms["unitPrice"] = offer_val
+
+    return NegotiationTurnResponse(
+        agent_role=req.agent.role,
+        agent_name=req.agent.name or req.agent.role,
+        message=parsed["message"],
+        action=action,
+        offer_value=float(offer_val) if offer_val is not None else None,
+        currency="₹",
+        stance=parsed.get("stance", "Seeking agreement"),
+        progress_percent=progress,
+        reasoning=parsed.get("decision_explanation", ""),
+        agreement_reached=agreement,
+        terms=terms,
+    )
+
+
+async def call_openai_model(req: NegotiationTurnRequest) -> Optional[NegotiationTurnResponse]:
+    """Generate context-aware negotiation move using OpenAI as fallback for Gemini."""
+    if not openai_client:
+        return None
+
+    prompt = build_reasoning_prompt(
+        scenario=req.scenario.model_dump(),
+        agent=req.agent.model_dump(),
+        counterpart=req.counterpart_agent.model_dump(),
+        round_number=req.round_number,
+        max_rounds=req.max_rounds,
+        current_offer=req.current_offer,
+        conversation_history=req.conversation_history or [],
+    )
+
+    response = await openai_client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=[
+            {"role": "system", "content": "You are an autonomous negotiation agent participating in a simulated negotiation. You must respond ONLY with a valid JSON object matching the requested schema."},
+            {"role": "user", "content": prompt}
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.7,
+    )
+
+    if not response.choices or not response.choices[0].message.content:
+        return None
+
+    text = response.choices[0].message.content
+    parsed = parse_reasoning_response(text)
+    if not parsed:
+        logger.warning(f"OpenAI returned text that could not be parsed: {text[:200]}")
+        return None
+
+    return _package_reasoning_turn_response(req, parsed)
 
 # ============================================================================
 # High-Fidelity Domain Concession Fallback Engine

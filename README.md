@@ -210,15 +210,27 @@ PORT=5000
 NODE_ENV=development
 DATABASE_URL=postgresql://user:password@ep-xyz.neon.tech/neondb?sslmode=require
 AI_SERVICE_URL=http://localhost:8000
+GEMINI_API_KEY=AIzaSy...
+OPENAI_API_KEY=sk-proj-...
 ```
 
 ### 3. AI Service (`ai-service/.env`)
 ```ini
 PORT=8000
 HOST=0.0.0.0
+# Primary AI Provider
 GEMINI_API_KEY=AIzaSy...
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.8-flash
+
+# Secondary AI Backup Provider (fallback if Gemini fails)
+OPENAI_API_KEY=sk-proj-...
+OPENAI_MODEL=gpt-4o-mini
 ```
+
+> **Multi-Tier AI Fallback Architecture**:
+> 1. **Tier 1 (Primary)**: Google Gemini (`gemini-3.8-flash`) context-aware autonomous reasoning.
+> 2. **Tier 2 (Secondary)**: OpenAI (`gpt-4o-mini`) backup if Gemini encounters rate-limits or downtime.
+> 3. **Tier 3 (Tertiary)**: Mathematical Domain Fallback Engine guaranteeing 100% uptime with no simulation failures.
 
 ---
 
