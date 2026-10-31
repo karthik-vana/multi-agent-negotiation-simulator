@@ -2138,3 +2138,60 @@
 .arena-agent-progress-bar.seller-progress {
   background: #9333ea;
 }
+
+/* Turn Indicator & Interactive Controls in Practice Mode */
+.arena-turn-indicator {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.arena-turn-indicator.user-turn {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+[data-theme="dark"] .arena-turn-indicator.user-turn {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.arena-turn-indicator.ai-turn {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  animation: pulse-ai 2s infinite ease-in-out;
+}
+
+[data-theme="dark"] .arena-turn-indicator.ai-turn {
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+@keyframes pulse-ai {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.arena-practice-textarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #f8fafc;
+}
+
+[data-theme="dark"] .arena-practice-textarea:disabled {
+  background-color: #0d1527;
+}
+
+.arena-practice-send-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}

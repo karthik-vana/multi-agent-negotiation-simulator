@@ -69,11 +69,16 @@ export async function getSimulationState(simulationId) {
   return null;
 }
 
-export async function stepSimulation(simulationId) {
+export async function stepSimulation(simulationId, customMove = null) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/simulations/${simulationId}/step`, {
+    const options = {
       method: 'POST',
-    });
+      headers: { 'Content-Type': 'application/json' },
+    };
+    if (customMove) {
+      options.body = JSON.stringify(customMove);
+    }
+    const res = await fetch(`${BACKEND_URL}/api/simulations/${simulationId}/step`, options);
 
     if (res.ok) {
       const json = await res.json();
@@ -298,6 +303,41 @@ function createLocalSimulation(scenarioId = 'vendor-pricing', customAgents = nul
   const now = new Date();
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const isFirstHuman = firstAgent.personality === 'Human' || firstAgent.is_human === true;
+  const initialMessages = [
+    {
+      id: `msg_init_${Date.now()}_0`,
+      round_number: 1,
+      sender_type: 'ORCHESTRATOR',
+      sender_name: 'Orchestrator Agent',
+      sender_role: 'Orchestrator',
+      message: `Simulation initialized for "${config.title}". Round 1 commenced between ${effectiveAgents.map(a => a.name || a.role).join(' vs ')}. Awaiting opening move.`,
+      action: 'STATUS',
+      timestamp_label: timeStr,
+    },
+  ];
+
+  const initialOffers = [];
+
+  if (!isFirstHuman) {
+    initialMessages.push({
+      id: `msg_init_${Date.now()}_1`,
+      round_number: 1,
+      sender_type: 'AGENT',
+      sender_name: firstAgent.name,
+      sender_role: firstAgent.role,
+      personality: firstAgent.personality,
+      message: config.openingMessage,
+      offer_value: config.openingOffer,
+      timestamp_label: timeStr,
+    });
+    initialOffers.push({
+      round_number: 1,
+      agent_role: firstAgent.role,
+      offer_value: config.openingOffer,
+    });
+  }
+
   return {
     id: `local_sim_${Date.now()}`,
     scenario_id: scenarioId,
@@ -308,35 +348,7 @@ function createLocalSimulation(scenarioId = 'vendor-pricing', customAgents = nul
     current_gap: initialGap,
     agreement_likelihood: 50,
     agents: effectiveAgents,
-    messages: [
-      {
-        id: `msg_init_${Date.now()}_0`,
-        round_number: 1,
-        sender_type: 'ORCHESTRATOR',
-        sender_name: 'Orchestrator Agent',
-        sender_role: 'Orchestrator',
-        message: `Simulation initialized for "${config.title}". Round 1 commenced between ${effectiveAgents.map(a => a.name || a.role).join(' vs ')}. Awaiting opening move.`,
-        action: 'STATUS',
-        timestamp_label: timeStr,
-      },
-      {
-        id: `msg_init_${Date.now()}_1`,
-        round_number: 1,
-        sender_type: 'AGENT',
-        sender_name: firstAgent.name,
-        sender_role: firstAgent.role,
-        personality: firstAgent.personality,
-        message: config.openingMessage,
-        offer_value: config.openingOffer,
-        timestamp_label: timeStr,
-      },
-    ],
-    offers: [
-      {
-        round_number: 1,
-        agent_role: firstAgent.role,
-        offer_value: config.openingOffer,
-      },
-    ],
+    messages: initialMessages,
+    offers: initialOffers,
   };
 }

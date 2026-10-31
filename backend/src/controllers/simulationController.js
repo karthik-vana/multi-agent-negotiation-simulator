@@ -80,7 +80,9 @@ async function listSimulations(req, res) {
 async function advanceSimulationStep(req, res) {
   try {
     const { id } = req.params;
-    const result = await orchestratorService.advanceStep(id);
+    const { humanMove, message, offer_value, action, terms, stance } = req.body || {};
+    const customMove = humanMove || (message ? { message, offer_value, action, terms, stance } : null);
+    const result = await orchestratorService.advanceStep(id, customMove);
 
     return res.json({
       success: true,

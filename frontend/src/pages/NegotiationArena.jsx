@@ -88,10 +88,79 @@ const NegotiationArena = () => {
   const [aiCoachEnabled, setAiCoachEnabled] = useState(true);
   const [metricsExpanded, setMetricsExpanded] = useState(false);
   const [practiceMessage, setPracticeMessage] = useState('');
-  const handleSendPracticeMessage = () => {
-    if (!practiceMessage.trim()) return;
-    console.log('[Practice] Message sent:', practiceMessage);
+
+  // Turn state helpers for Practice Mode
+  const getActiveTurnAgent = (sim) => {
+    if (!sim || !sim.agents || sim.agents.length === 0) return null;
+    const currentRoundMessages = (sim.messages || []).filter(
+      (m) => m.round_number === sim.current_round && m.sender_type === 'AGENT'
+    );
+    const activeIndex = currentRoundMessages.length % sim.agents.length;
+    return sim.agents[activeIndex];
+  };
+
+  const activeTurnAgent = getActiveTurnAgent(simulation);
+  const isHumanTurn = Boolean(
+    isPracticeMode &&
+    simulation?.status === 'RUNNING' &&
+    (activeTurnAgent?.personality === 'Human' ||
+      activeTurnAgent?.is_human === true ||
+      activeTurnAgent?.id === location.state?.userRoleAgentId)
+  );
+
+  const isAiOpponentTurn = Boolean(
+    isPracticeMode &&
+    simulation?.status === 'RUNNING' &&
+    !isPaused &&
+    activeTurnAgent &&
+    !isHumanTurn
+  );
+
+  const handleSendPracticeMessage = async () => {
+    if (!practiceMessage.trim() || turnRunning || !simulation?.id || simulation.status !== 'RUNNING') {
+      return;
+    }
+
+    const text = practiceMessage.trim();
+    let parsedOffer = null;
+    const kMatch = text.match(/(?:₹|\$)?\s*(\d+(?:\.\d+)?)\s*(?:k|lac|lakh)/i);
+    if (kMatch) {
+      const val = parseFloat(kMatch[1]);
+      parsedOffer = kMatch[0].toLowerCase().includes('lac') || kMatch[0].toLowerCase().includes('lakh')
+        ? Math.round(val * 100000)
+        : Math.round(val * 1000);
+    } else {
+      const clean = text.replace(/,/g, '');
+      const numMatch = clean.match(/(?:₹|\$)?\s*(\d{4,9})/);
+      if (numMatch) {
+        parsedOffer = parseInt(numMatch[1], 10);
+      }
+    }
+
+    if (!parsedOffer) {
+      parsedOffer = activeTurnAgent?.current_offer || activeTurnAgent?.target_value || 170000;
+    }
+
     setPracticeMessage('');
+    setTurnRunning(true);
+
+    try {
+      const updated = await stepSimulation(simulation.id, {
+        message: text,
+        offer_value: parsedOffer,
+        action: 'COUNTER_OFFER',
+      });
+      if (updated) {
+        setSimulation(updated);
+        if (updated.status !== 'RUNNING') {
+          setIsPaused(true);
+        }
+      }
+    } catch (err) {
+      console.error('Error submitting practice message:', err);
+    } finally {
+      setTurnRunning(false);
+    }
   };
 
   const transcriptEndRef = useRef(null);
@@ -132,13 +201,23 @@ const NegotiationArena = () => {
         sessionStorage.removeItem('active_arena_sim_id');
         sessionStorage.removeItem('viewing_report_sim_id');
 
-        const customAgents = scenarioMeta?.agents?.map((a) => ({
-          id: a.id,
-          role: a.role,
-          name: a.name,
-          goal: a.primaryGoal || a.goal,
-          personality: effectivePersonalities?.[a.id] || a.personality || a.defaultPersonality || 'Collaborative',
-        }));
+        const agentsList = scenarioMeta?.agents || scenarioMeta?.roles || [];
+        const customAgents = agentsList.map((a) => {
+          const personality =
+            effectivePersonalities?.[a.id] ||
+            (isPracticeMode && a.id === location.state?.userRoleAgentId ? 'Human' : null) ||
+            a.personality ||
+            a.defaultPersonality ||
+            'Collaborative';
+          return {
+            id: a.id,
+            role: a.role || a.name,
+            name: a.name,
+            goal: a.primaryGoal || a.goal,
+            personality,
+            is_human: personality === 'Human' || a.id === location.state?.userRoleAgentId,
+          };
+        });
         const simData = await startSimulation(
           currentScenarioId,
           customAgents,
@@ -177,9 +256,15 @@ const NegotiationArena = () => {
     };
   }, [currentScenarioId, selectedScenario, agentPersonalities, location.state]);
 
-  // 2. Real-time turn progression timer (runs every 3.5 seconds when active)
+  // 2. Real-time turn progression timer (runs every 3.5 seconds in Simulation Mode ONLY)
   useEffect(() => {
     if (!simulation || isPaused || simulation.status !== 'RUNNING') {
+      if (timerRef.current) clearInterval(timerRef.current);
+      return;
+    }
+
+    // In Practice Mode, DO NOT run automatic timer! Progression is strictly driven by the human user.
+    if (isPracticeMode) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -207,7 +292,33 @@ const NegotiationArena = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [simulation?.id, simulation?.status, isPaused, turnRunning]);
+  }, [simulation?.id, simulation?.status, isPaused, turnRunning, isPracticeMode]);
+
+  // 2.1 AI Opponent auto-counter in Practice Mode (triggers after user takes turn)
+  useEffect(() => {
+    if (!isPracticeMode || !isAiOpponentTurn || turnRunning || !simulation?.id) {
+      return;
+    }
+
+    const aiTimeout = setTimeout(async () => {
+      setTurnRunning(true);
+      try {
+        const updated = await stepSimulation(simulation.id);
+        if (updated) {
+          setSimulation(updated);
+          if (updated.status !== 'RUNNING') {
+            setIsPaused(true);
+          }
+        }
+      } catch (err) {
+        console.warn('AI opponent step error in practice mode:', err);
+      } finally {
+        setTurnRunning(false);
+      }
+    }, 1400);
+
+    return () => clearTimeout(aiTimeout);
+  }, [isPracticeMode, isAiOpponentTurn, turnRunning, simulation?.id, simulation?.messages?.length]);
 
   // 3. Auto-scroll transcript to bottom on new messages
   useEffect(() => {
@@ -288,13 +399,23 @@ const NegotiationArena = () => {
     setLoading(true);
     setIsPaused(false);
     try {
-      const customAgents = scenarioMeta?.agents?.map((a) => ({
-        id: a.id,
-        role: a.role,
-        name: a.name,
-        goal: a.primaryGoal || a.goal,
-        personality: effectivePersonalities?.[a.id] || a.personality || a.defaultPersonality || 'Collaborative',
-      }));
+      const agentsList = scenarioMeta?.agents || scenarioMeta?.roles || [];
+      const customAgents = agentsList.map((a) => {
+        const personality =
+          effectivePersonalities?.[a.id] ||
+          (isPracticeMode && a.id === location.state?.userRoleAgentId ? 'Human' : null) ||
+          a.personality ||
+          a.defaultPersonality ||
+          'Collaborative';
+        return {
+          id: a.id,
+          role: a.role || a.name,
+          name: a.name,
+          goal: a.primaryGoal || a.goal,
+          personality,
+          is_human: personality === 'Human' || a.id === location.state?.userRoleAgentId,
+        };
+      });
       const restarted = await startSimulation(
         currentScenarioId,
         customAgents,
@@ -758,11 +879,17 @@ const NegotiationArena = () => {
 
           {/* Practice Mode Input Panel (matches reference design) */}
           {isPracticeMode && (
-            <div className="arena-practice-input-panel">
+            <div className={`arena-practice-input-panel ${turnRunning ? 'is-thinking' : ''}`}>
               <div className="arena-practice-input-header">
                 <div className="arena-practice-input-title">
                   <User size={16} className="arena-user-icon" />
                   <span>Your Message (Practice Mode)</span>
+                  {isHumanTurn && !turnRunning && (
+                    <span className="arena-turn-indicator user-turn">Your Turn</span>
+                  )}
+                  {(!isHumanTurn || turnRunning) && (
+                    <span className="arena-turn-indicator ai-turn">AI Counterpart Thinking...</span>
+                  )}
                 </div>
                 <button className="arena-practice-coach-link" type="button">
                   <Lightbulb size={14} className="arena-coach-bulb" />
@@ -772,9 +899,20 @@ const NegotiationArena = () => {
               </div>
               <textarea
                 className="arena-practice-textarea"
-                placeholder="Type your message to the agent..."
+                placeholder={
+                  isHumanTurn
+                    ? "Type your counter-offer or message (e.g., 'I can adjust my expectations to ₹170,000')..."
+                    : "AI counterpart is reviewing the dialogue and formulating a response..."
+                }
                 value={practiceMessage}
+                disabled={!isHumanTurn || turnRunning}
                 onChange={(e) => setPracticeMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendPracticeMessage();
+                  }
+                }}
                 maxLength={1000}
                 rows={3}
               />
@@ -794,9 +932,14 @@ const NegotiationArena = () => {
                 </div>
                 <div className="arena-practice-input-spacer" />
                 <span className="arena-practice-char-count">{practiceMessage.length}/1000</span>
-                <button className="arena-practice-send-btn" type="button" onClick={handleSendPracticeMessage}>
+                <button
+                  className="arena-practice-send-btn"
+                  type="button"
+                  disabled={!practiceMessage.trim() || !isHumanTurn || turnRunning}
+                  onClick={handleSendPracticeMessage}
+                >
                   <Send size={15} />
-                  <span>Send Message</span>
+                  <span>{turnRunning ? 'Thinking...' : 'Send Message'}</span>
                 </button>
               </div>
             </div>
