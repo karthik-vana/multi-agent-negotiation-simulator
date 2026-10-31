@@ -263,7 +263,7 @@ class OrchestratorAgent {
 
     // Filter messages for the current round sent by AGENTS
     const currentRoundMessages = (sim.messages || []).filter(
-      m => m.round_number === sim.current_round && m.sender_type === 'AGENT'
+      m => m.round_number === sim.current_round && (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN')
     );
 
     const turnsCount = currentRoundMessages.length;
@@ -385,7 +385,7 @@ class OrchestratorAgent {
     await db.addMessage({
       simulation_id: simulationId,
       round_number: sim.current_round,
-      sender_type: 'AGENT',
+      sender_type: isHumanTurn ? 'HUMAN' : 'AGENT',
       sender_name: activeAgent.name,
       sender_role: activeAgent.role,
       personality: activeAgent.personality,
