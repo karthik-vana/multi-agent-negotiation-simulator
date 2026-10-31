@@ -1730,3 +1730,411 @@
   color: var(--text-main, #0f172a);
   text-decoration: underline;
 }
+
+
+/* ==========================================================================
+   AI Coach Card & Practice Mode Interactive Features (Reference Match)
+   ========================================================================== */
+
+/* 1. AI Coach Card (Top of Right Sidebar) */
+.arena-coach-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  margin-bottom: 2px;
+}
+
+[data-theme="dark"] .arena-coach-card {
+  background: #141e33;
+  border-color: #243147;
+}
+
+.arena-coach-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.arena-coach-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.arena-coach-icon-wrap {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #c7d2fe;
+}
+
+[data-theme="dark"] .arena-coach-icon-wrap {
+  background: #1e1b4b;
+  border-color: #3730a3;
+  color: #818cf8;
+}
+
+.arena-coach-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+
+.arena-coach-desc {
+  font-size: 0.77rem;
+  color: var(--text-muted, #64748b);
+  margin: 0;
+  line-height: 1.38;
+}
+
+.arena-coach-toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+/* Custom Pill Toggle Switch */
+.arena-coach-toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  background: #cbd5e1;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+  outline: none;
+}
+
+.arena-coach-toggle.on {
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+.arena-toggle-knob {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.arena-coach-toggle.on .arena-toggle-knob {
+  transform: translateX(20px);
+}
+
+.arena-coach-sparkle {
+  color: #818cf8;
+}
+
+/* 2. Practice Mode Message Input Panel (Bottom of Transcript) */
+.arena-practice-input-panel {
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  padding: 16px 20px 18px;
+  background: #ffffff;
+  border-radius: 0 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+[data-theme="dark"] .arena-practice-input-panel {
+  background: #111a2e;
+  border-top-color: #243147;
+}
+
+.arena-practice-input-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.arena-practice-input-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.arena-user-icon {
+  color: #2563eb;
+}
+
+.arena-practice-coach-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6366f1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.arena-practice-coach-link:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.arena-coach-bulb {
+  color: #8b5cf6;
+}
+
+.arena-practice-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  color: var(--text-main, #0f172a);
+  background: var(--bg-surface, #ffffff);
+  resize: vertical;
+  min-height: 70px;
+  max-height: 180px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .arena-practice-textarea {
+  background: #141e33;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.arena-practice-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.arena-practice-input-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.arena-practice-mic-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.arena-practice-mic-btn:hover {
+  background: #1d4ed8;
+  transform: scale(1.04);
+}
+
+.arena-practice-voice-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arena-audio-waves {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+}
+
+.arena-audio-waves span {
+  width: 2.5px;
+  background: #93c5fd;
+  border-radius: 2px;
+}
+
+.arena-audio-waves span:nth-child(1) { height: 6px; }
+.arena-audio-waves span:nth-child(2) { height: 12px; }
+.arena-audio-waves span:nth-child(3) { height: 16px; background: #3b82f6; }
+.arena-audio-waves span:nth-child(4) { height: 10px; }
+.arena-audio-waves span:nth-child(5) { height: 7px; }
+
+.arena-practice-voice-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+}
+
+.arena-practice-input-spacer {
+  flex: 1;
+}
+
+.arena-practice-char-count {
+  font-size: 0.78rem;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 500;
+}
+
+.arena-practice-send-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.32);
+  transition: all 0.2s ease;
+}
+
+.arena-practice-send-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(79, 70, 229, 0.42);
+}
+
+/* 3. Collapsible Metrics & Header Tweaks */
+.arena-side-card-header.clickable {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.arena-side-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.arena-metrics-chevron {
+  color: var(--text-muted, #64748b);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.arena-metrics-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* 4. Agent Status Card Refinements (Matching Reference Layout) */
+.arena-agent-item-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.arena-agent-item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.arena-agent-main-role {
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+}
+
+.arena-agent-active-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #16a34a;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid #bbf7d0;
+  letter-spacing: 0.02em;
+}
+
+.arena-stat-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.arena-agent-stat-col.align-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.arena-stat-stance {
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+
+.arena-stat-stance.buyer-stance {
+  color: #2563eb;
+}
+
+.arena-stat-stance.seller-stance {
+  color: #9333ea;
+}
+
+.arena-stance-pct {
+  margin-left: 4px;
+  font-weight: 800;
+}
+
+/* Thin clean progress line */
+.arena-agent-progress-wrap {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  margin-top: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+[data-theme="dark"] .arena-agent-progress-wrap {
+  background: #334155;
+}
+
+.arena-agent-progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.arena-agent-progress-bar.buyer-progress {
+  background: #2563eb;
+}
+
+.arena-agent-progress-bar.seller-progress {
+  background: #9333ea;
+}

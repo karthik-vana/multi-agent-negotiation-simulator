@@ -30,8 +30,8 @@ export async function startSimulation(scenarioId = 'vendor-pricing', customAgent
     }
     throw new Error(`Server returned ${res.status}`);
   } catch (err) {
-    console.warn('[Simulation API] Backend unavailable, initializing local offline arena session:', err.message);
-    const local = createLocalSimulation(scenarioId, maxRounds || 10);
+    console.warn('[Simulation API] Backend unavailable or timed out, initializing clean scenario session at Round 1:', err.message);
+    const local = createLocalSimulation(scenarioId, customAgents, maxRounds || 10);
     local.user_email = userEmail;
     local.user_id = userId;
     return local;
@@ -148,106 +148,195 @@ export async function restartSimulation(simulationId) {
 }
 
 /**
- * Local offline fallback simulation generator matching reference screenshot exactly
+ * Local fallback simulation generator that starts cleanly at Round 1
+ * and dynamically adapts agents and messages to the chosen scenario.
  */
-function createLocalSimulation(scenarioId, maxRounds = 10) {
-  const scenarioTitles = {
-    'vendor-pricing': 'Vendor Pricing Negotiation',
-    'job-offer': 'Job Offer Negotiation',
-    'project-budget': 'Project Budget Allocation',
+function createLocalSimulation(scenarioId = 'vendor-pricing', customAgents = null, maxRounds = 10) {
+  const scenarioConfigs = {
+    'vendor-pricing': {
+      title: 'Vendor Pricing Negotiation',
+      defaultMaxRounds: 10,
+      currency: '₹',
+      agents: [
+        {
+          id: 'buyer-procurement',
+          role: 'Buyer',
+          name: 'Procurement Director',
+          personality: 'Collaborative',
+          goal: 'Secure server hardware licenses under budget with Net-60 terms and 99.9% uptime SLA',
+          current_offer: 95000,
+          target_value: 95000,
+          reservation_value: 100000,
+          stance: 'Seeking agreement',
+          progress_percent: 50,
+        },
+        {
+          id: 'vendor-sales',
+          role: 'Seller',
+          name: 'Sales Account Executive',
+          personality: 'Aggressive',
+          goal: 'Maximize annual contract value, protect commercial margin, and secure Net-30 terms',
+          current_offer: 110000,
+          target_value: 110000,
+          reservation_value: 90000,
+          stance: 'Holding firm',
+          progress_percent: 45,
+        },
+      ],
+      openingOffer: 95000,
+      openingMessage: 'We can offer ₹95,000 total contract value for the initial hardware order with Net-60 payment terms.',
+    },
+    'job-offer': {
+      title: 'Job Offer Negotiation',
+      defaultMaxRounds: 8,
+      currency: '₹',
+      agents: [
+        {
+          id: 'job-candidate',
+          role: 'Candidate',
+          name: 'Senior AI Engineer Candidate',
+          personality: 'Collaborative',
+          goal: 'Secure top-of-band base compensation, equity stock grants, and 3 days remote flexibility',
+          current_offer: 175000,
+          target_value: 175000,
+          reservation_value: 160000,
+          stance: 'Seeking agreement',
+          progress_percent: 50,
+        },
+        {
+          id: 'hiring-director',
+          role: 'Recruiter',
+          name: 'Hiring Director & Talent Lead',
+          personality: 'Risk-Averse',
+          goal: 'Hire key engineering talent within departmental salary limits and equity allocation bands',
+          current_offer: 152000,
+          target_value: 152000,
+          reservation_value: 168000,
+          stance: 'Evaluating budget',
+          progress_percent: 45,
+        },
+      ],
+      openingOffer: 175000,
+      openingMessage: 'Based on my track record and technical leadership, I am requesting a base compensation of ₹1,75,000 with 3 remote days per week.',
+    },
+    'project-budget': {
+      title: 'Project Budget Allocation',
+      defaultMaxRounds: 12,
+      currency: '₹',
+      agents: [
+        {
+          id: 'vp-engineering',
+          role: 'Engineering Lead',
+          name: 'Lead Software Engineer',
+          personality: 'Risk-Averse',
+          goal: 'Secure core infrastructure capital (target ₹45,00,000) for platform reliability and tech debt reduction',
+          current_offer: 4500000,
+          target_value: 4500000,
+          reservation_value: 3500000,
+          stance: 'Justifying reliability',
+          progress_percent: 50,
+        },
+        {
+          id: 'head-product-ai',
+          role: 'Product Lead',
+          name: 'Product Manager',
+          personality: 'Collaborative',
+          goal: 'Secure feature development and GenAI product launch capital (target ₹35,00,000) to meet roadmap goals',
+          current_offer: 3500000,
+          target_value: 3500000,
+          reservation_value: 2500000,
+          stance: 'Highlighting innovation',
+          progress_percent: 50,
+        },
+        {
+          id: 'cmo-marketing',
+          role: 'Marketing Lead',
+          name: 'Marketing Director',
+          personality: 'Aggressive',
+          goal: 'Secure customer acquisition and paid growth capital (target ₹25,00,000)',
+          current_offer: 2500000,
+          target_value: 2500000,
+          reservation_value: 1500000,
+          stance: 'Demanding growth capital',
+          progress_percent: 45,
+        },
+      ],
+      openingOffer: 4500000,
+      openingMessage: 'Engineering requires ₹45,00,000 allocation for essential cloud infrastructure, database modernization, and platform uptime.',
+    },
   };
+
+  const config = scenarioConfigs[scenarioId] || scenarioConfigs['vendor-pricing'];
+
+  // Apply custom agent personalities and goals if provided
+  const effectiveAgents = config.agents.map((baseAgent, idx) => {
+    if (Array.isArray(customAgents) && customAgents.length > 0) {
+      const match = customAgents.find(
+        (ca) =>
+          ca.id === baseAgent.id ||
+          ca.role?.toLowerCase() === baseAgent.role?.toLowerCase() ||
+          ca.name?.toLowerCase() === baseAgent.name?.toLowerCase()
+      ) || customAgents[idx];
+
+      if (match) {
+        return {
+          ...baseAgent,
+          name: match.name || baseAgent.name,
+          role: match.role || baseAgent.role,
+          personality: match.personality || baseAgent.personality,
+          goal: match.goal || baseAgent.goal,
+        };
+      }
+    }
+    return baseAgent;
+  });
+
+  const firstAgent = effectiveAgents[0];
+  const secondAgent = effectiveAgents[1] || effectiveAgents[0];
+  const initialGap = Math.abs((firstAgent.current_offer || 0) - (secondAgent.current_offer || 0));
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return {
     id: `local_sim_${Date.now()}`,
     scenario_id: scenarioId,
-    scenario_title: scenarioTitles[scenarioId] || 'Vendor Pricing Negotiation',
+    scenario_title: config.title,
     status: 'RUNNING',
-    current_round: 3,
-    max_rounds: maxRounds,
-    current_gap: 1000,
-    agreement_likelihood: 68,
-    agents: [
-      {
-        id: 'buyer',
-        role: 'Buyer',
-        name: 'Procurement Director',
-        personality: 'Collaborative',
-        goal: 'Get best price with good terms',
-        current_offer: 9000,
-        stance: 'Seeking agreement',
-        progress_percent: 70,
-      },
-      {
-        id: 'seller',
-        role: 'Seller',
-        name: 'Sales Account Executive',
-        personality: 'Aggressive',
-        goal: 'Maximize profit with stable demand',
-        current_offer: 10000,
-        stance: 'Holding firm',
-        progress_percent: 60,
-      },
-    ],
+    current_round: 1,
+    max_rounds: maxRounds || config.defaultMaxRounds,
+    current_gap: initialGap,
+    agreement_likelihood: 50,
+    agents: effectiveAgents,
     messages: [
       {
-        id: 'msg_1',
+        id: `msg_init_${Date.now()}_0`,
         round_number: 1,
-        sender_type: 'AGENT',
-        sender_name: 'Procurement Director',
-        sender_role: 'Buyer',
-        personality: 'Collaborative',
-        message: 'We can offer ₹8,000 per unit for the initial order.',
-        offer_value: 8000,
-        timestamp_label: '10:21 AM',
-      },
-      {
-        id: 'msg_2',
-        round_number: 1,
-        sender_type: 'AGENT',
-        sender_name: 'Sales Account Executive',
-        sender_role: 'Seller',
-        personality: 'Aggressive',
-        message: 'That price is below our target. We can offer ₹11,000 per unit.',
-        offer_value: 11000,
-        timestamp_label: '10:22 AM',
-      },
-      {
-        id: 'msg_3',
-        round_number: 2,
-        sender_type: 'AGENT',
-        sender_name: 'Procurement Director',
-        sender_role: 'Buyer',
-        personality: 'Collaborative',
-        message: 'I can increase to ₹9,000 if bulk delivery is included.',
-        offer_value: 9000,
-        timestamp_label: '10:23 AM',
-      },
-      {
-        id: 'msg_4',
-        round_number: 2,
-        sender_type: 'AGENT',
-        sender_name: 'Sales Account Executive',
-        sender_role: 'Seller',
-        personality: 'Aggressive',
-        message: 'I can move to ₹10,000 with a larger order commitment.',
-        offer_value: 10000,
-        timestamp_label: '10:23 AM',
-      },
-      {
-        id: 'msg_5',
-        round_number: 3,
         sender_type: 'ORCHESTRATOR',
         sender_name: 'Orchestrator Agent',
         sender_role: 'Orchestrator',
-        message: "Seller's turn completed. Moving to next round...",
-        timestamp_label: '10:24 AM',
+        message: `Simulation initialized for "${config.title}". Round 1 commenced between ${effectiveAgents.map(a => a.name || a.role).join(' vs ')}. Awaiting opening move.`,
+        action: 'STATUS',
+        timestamp_label: timeStr,
+      },
+      {
+        id: `msg_init_${Date.now()}_1`,
+        round_number: 1,
+        sender_type: 'AGENT',
+        sender_name: firstAgent.name,
+        sender_role: firstAgent.role,
+        personality: firstAgent.personality,
+        message: config.openingMessage,
+        offer_value: config.openingOffer,
+        timestamp_label: timeStr,
       },
     ],
     offers: [
-      { round_number: 1, agent_role: 'Buyer', offer_value: 8000 },
-      { round_number: 1, agent_role: 'Seller', offer_value: 11000 },
-      { round_number: 2, agent_role: 'Buyer', offer_value: 9000 },
-      { round_number: 2, agent_role: 'Seller', offer_value: 10000 },
+      {
+        round_number: 1,
+        agent_role: firstAgent.role,
+        offer_value: config.openingOffer,
+      },
     ],
   };
 }

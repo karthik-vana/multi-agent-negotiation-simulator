@@ -9,6 +9,7 @@ import HistoryReports from './pages/HistoryReports';
 import NegotiationAnalytics from './pages/NegotiationAnalytics';
 import Settings from './pages/Settings';
 import PracticeMode from './pages/PracticeMode';
+import PracticeAgentConfig from './pages/PracticeAgentConfig';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
@@ -48,6 +49,10 @@ function App() {
                 <Route path="agents" element={<AgentConfiguration />} />
                 <Route path="arena" element={<NegotiationArena />} />
                 <Route path="practice" element={<PracticeMode />} />
+                <Route path="practice-agents" element={<PracticeAgentConfig />} />
+                <Route path="practice/agents" element={<PracticeAgentConfig />} />
+                <Route path="practice/config" element={<PracticeAgentConfig />} />
+                <Route path="practice-config" element={<PracticeAgentConfig />} />
                 <Route path="history" element={<HistoryReports />} />
                 <Route path="history/:simulationId" element={<HistoryReports />} />
                 <Route path="analytics" element={<NegotiationAnalytics />} />

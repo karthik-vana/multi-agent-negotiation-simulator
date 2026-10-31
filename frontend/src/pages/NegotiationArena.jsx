@@ -12,11 +12,17 @@ import {
   Users,
   BarChart3,
   ChevronDown,
+  ChevronRight,
   Bot,
   Info,
   CheckCircle2,
   AlertCircle,
   LayoutGrid,
+  Mic,
+  Send,
+  Lightbulb,
+  Sparkles,
+  User,
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -70,6 +76,20 @@ const NegotiationArena = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isFullscreen] = useState(true);
   const [turnRunning, setTurnRunning] = useState(false);
+
+  // Practice Mode detection (default to practice mode unless explicitly simulation mode)
+  const isSimulationExplicit = location.state?.mode === 'simulation' || location.state?.isSimulation === true;
+  const isPracticeMode = !isSimulationExplicit;
+
+  // New UI state
+  const [aiCoachEnabled, setAiCoachEnabled] = useState(true);
+  const [metricsExpanded, setMetricsExpanded] = useState(false);
+  const [practiceMessage, setPracticeMessage] = useState('');
+  const handleSendPracticeMessage = () => {
+    if (!practiceMessage.trim()) return;
+    console.log('[Practice] Message sent:', practiceMessage);
+    setPracticeMessage('');
+  };
 
   const transcriptEndRef = useRef(null);
   const timerRef = useRef(null);
@@ -723,17 +743,92 @@ const NegotiationArena = () => {
             <div ref={transcriptEndRef} />
           </div>
 
-          {/* Bottom Info Bar */}
-          <div className="arena-transcript-footer">
-            <Info size={15} className="arena-footer-info-icon" />
-            <span>
-              Simulation is running — AI agents are negotiating automatically. No manual input is required.
-            </span>
-          </div>
+          {/* Bottom Info Bar (only shown in pure automated simulation mode) */}
+          {!isPracticeMode && (
+            <div className="arena-transcript-footer">
+              <Info size={15} className="arena-footer-info-icon" />
+              <span>
+                Simulation is running — AI agents are negotiating automatically. No manual input is required.
+              </span>
+            </div>
+          )}
+
+          {/* Practice Mode Input Panel (matches reference design) */}
+          {isPracticeMode && (
+            <div className="arena-practice-input-panel">
+              <div className="arena-practice-input-header">
+                <div className="arena-practice-input-title">
+                  <User size={16} className="arena-user-icon" />
+                  <span>Your Message (Practice Mode)</span>
+                </div>
+                <button className="arena-practice-coach-link" type="button">
+                  <Lightbulb size={14} className="arena-coach-bulb" />
+                  <span>Get real-time coaching suggestions from AI Coach</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+              <textarea
+                className="arena-practice-textarea"
+                placeholder="Type your message to the agent..."
+                value={practiceMessage}
+                onChange={(e) => setPracticeMessage(e.target.value)}
+                maxLength={1000}
+                rows={3}
+              />
+              <div className="arena-practice-input-bottom">
+                <button className="arena-practice-mic-btn" type="button" title="Record voice message">
+                  <Mic size={18} />
+                </button>
+                <div className="arena-practice-voice-wrap">
+                  <div className="arena-audio-waves">
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <span className="arena-practice-voice-hint">Click to record voice message</span>
+                </div>
+                <div className="arena-practice-input-spacer" />
+                <span className="arena-practice-char-count">{practiceMessage.length}/1000</span>
+                <button className="arena-practice-send-btn" type="button" onClick={handleSendPracticeMessage}>
+                  <Send size={15} />
+                  <span>Send Message</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: Agent Status & Negotiation Metrics */}
         <div className="arena-sidebar-col">
+          {/* AI Coach Card */}
+          <div className="arena-coach-card">
+            <div className="arena-coach-header">
+              <div className="arena-coach-left">
+                <div className="arena-coach-icon-wrap">
+                  <Bot size={18} />
+                </div>
+                <div>
+                  <h3 className="arena-coach-title">AI Coach</h3>
+                  <p className="arena-coach-desc">Get real-time suggestions, strategy tips, and feedback based on the negotiation context.</p>
+                </div>
+              </div>
+              <div className="arena-coach-toggle-wrap">
+                <button
+                  type="button"
+                  className={`arena-coach-toggle ${aiCoachEnabled ? 'on' : 'off'}`}
+                  onClick={() => setAiCoachEnabled((p) => !p)}
+                  title={aiCoachEnabled ? 'Disable AI Coach' : 'Enable AI Coach'}
+                  aria-label="Toggle AI Coach"
+                >
+                  <span className="arena-toggle-knob" />
+                </button>
+                <Sparkles size={15} className="arena-coach-sparkle" />
+              </div>
+            </div>
+          </div>
+
           {/* Agent Status Card */}
           <div className="arena-side-card">
             <div className="arena-side-card-header">
@@ -781,7 +876,7 @@ const NegotiationArena = () => {
 
                     <div className="arena-agent-offer-stance-row">
                       <div className="arena-agent-stat-col">
-                        <span className="arena-stat-label">Current offer</span>
+                        <span className="arena-stat-label">CURRENT OFFER</span>
                         <span className={`arena-stat-value ${isFirst ? 'buyer-val' : 'seller-val'}`}>
                           ₹{Number(offerVal).toLocaleString()}
                           {currentScenarioId === 'vendor-pricing' && (
@@ -790,12 +885,12 @@ const NegotiationArena = () => {
                         </span>
                       </div>
                       <div className="arena-agent-stat-col align-right">
-                        <span className="arena-stat-label">Stance</span>
+                        <span className="arena-stat-label">STANCE</span>
                         <span
                           className={`arena-stat-stance ${isFirst ? 'buyer-stance' : 'seller-stance'}`}
                           title={stanceVal}
                         >
-                          {stanceVal}
+                          {stanceVal} <span className="arena-stance-pct">{progressVal}%</span>
                         </span>
                       </div>
                     </div>
@@ -805,9 +900,6 @@ const NegotiationArena = () => {
                         className={`arena-agent-progress-bar ${isFirst ? 'buyer-progress' : 'seller-progress'}`}
                         style={{ width: `${progressVal}%` }}
                       />
-                      <span className="arena-progress-percent-label">
-                        {progressVal}%
-                      </span>
                     </div>
                   </div>
                 );
@@ -817,12 +909,15 @@ const NegotiationArena = () => {
 
           {/* Negotiation Metrics Card */}
           <div className="arena-side-card">
-            <div className="arena-side-card-header">
-              <BarChart3 size={17} className="arena-card-header-icon" />
-              <h2 className="arena-card-title">Negotiation Metrics</h2>
+            <div className="arena-side-card-header clickable" onClick={() => setMetricsExpanded(p => !p)}>
+              <div className="arena-side-card-header-left">
+                <BarChart3 size={17} className="arena-card-header-icon" />
+                <h2 className="arena-card-title">Negotiation Metrics</h2>
+              </div>
+              <ChevronDown size={18} className={`arena-metrics-chevron ${metricsExpanded ? 'rotated' : ''}`} />
             </div>
 
-            <div className="arena-metrics-grid">
+            {metricsExpanded && <div className="arena-metrics-grid">
               {/* Metric 1: Current Round */}
               <div className="arena-metric-box">
                 <span className="arena-metric-label">Current Round</span>
@@ -876,7 +971,7 @@ const NegotiationArena = () => {
                   />
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,9 +15,22 @@ import { useSettings } from '../context/SettingsContext';
 import { getScenarioById } from '../data/scenarios';
 import { validateNegotiationConfig } from '../utils/configurationValidator';
 import AgentCard from '../components/AgentCard';
+import PracticeAgentConfig from './PracticeAgentConfig';
 
 const AgentConfiguration = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // If in practice mode, delegate directly to PracticeAgentConfig
+  const searchParams = new URLSearchParams(location.search);
+  const isPracticeMode =
+    searchParams.get('mode') === 'practice' ||
+    location.state?.mode === 'practice' ||
+    location.state?.isPractice === true;
+
+  if (isPracticeMode) {
+    return <PracticeAgentConfig />;
+  }
   const {
     selectedScenarioId,
     selectedScenario,
