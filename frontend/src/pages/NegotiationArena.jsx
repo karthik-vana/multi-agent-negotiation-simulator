@@ -77,9 +77,12 @@ const NegotiationArena = () => {
   const [isFullscreen] = useState(true);
   const [turnRunning, setTurnRunning] = useState(false);
 
-  // Practice Mode detection (default to practice mode unless explicitly simulation mode)
-  const isSimulationExplicit = location.state?.mode === 'simulation' || location.state?.isSimulation === true;
-  const isPracticeMode = !isSimulationExplicit;
+  // Practice Mode detection: strictly true ONLY when entering Practice Mode flow
+  const isPracticeMode = Boolean(
+    location.state?.isPractice === true ||
+    location.state?.mode === 'practice' ||
+    location.search.includes('practice')
+  );
 
   // New UI state
   const [aiCoachEnabled, setAiCoachEnabled] = useState(true);
@@ -802,7 +805,8 @@ const NegotiationArena = () => {
 
         {/* RIGHT COLUMN: Agent Status & Negotiation Metrics */}
         <div className="arena-sidebar-col">
-          {/* AI Coach Card */}
+          {/* AI Coach Card (Practice Mode Only) */}
+          {isPracticeMode && (
           <div className="arena-coach-card">
             <div className="arena-coach-header">
               <div className="arena-coach-left">
@@ -828,6 +832,7 @@ const NegotiationArena = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* Agent Status Card */}
           <div className="arena-side-card">
@@ -885,12 +890,12 @@ const NegotiationArena = () => {
                         </span>
                       </div>
                       <div className="arena-agent-stat-col align-right">
-                        <span className="arena-stat-label">STANCE</span>
+                        <span className="arena-stat-label">{isPracticeMode ? 'STANCE' : 'Stance'}</span>
                         <span
                           className={`arena-stat-stance ${isFirst ? 'buyer-stance' : 'seller-stance'}`}
                           title={stanceVal}
                         >
-                          {stanceVal} <span className="arena-stance-pct">{progressVal}%</span>
+                          {stanceVal}{isPracticeMode ? <span className="arena-stance-pct"> {progressVal}%</span> : ''}
                         </span>
                       </div>
                     </div>
@@ -900,6 +905,11 @@ const NegotiationArena = () => {
                         className={`arena-agent-progress-bar ${isFirst ? 'buyer-progress' : 'seller-progress'}`}
                         style={{ width: `${progressVal}%` }}
                       />
+                      {!isPracticeMode && (
+                        <span className="arena-progress-percent-label">
+                          {progressVal}%
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -909,15 +919,20 @@ const NegotiationArena = () => {
 
           {/* Negotiation Metrics Card */}
           <div className="arena-side-card">
-            <div className="arena-side-card-header clickable" onClick={() => setMetricsExpanded(p => !p)}>
+            <div
+              className={`arena-side-card-header ${isPracticeMode ? 'clickable' : ''}`}
+              onClick={() => isPracticeMode && setMetricsExpanded((p) => !p)}
+            >
               <div className="arena-side-card-header-left">
                 <BarChart3 size={17} className="arena-card-header-icon" />
                 <h2 className="arena-card-title">Negotiation Metrics</h2>
               </div>
-              <ChevronDown size={18} className={`arena-metrics-chevron ${metricsExpanded ? 'rotated' : ''}`} />
+              {isPracticeMode && (
+                <ChevronDown size={18} className={`arena-metrics-chevron ${metricsExpanded ? 'rotated' : ''}`} />
+              )}
             </div>
 
-            {metricsExpanded && <div className="arena-metrics-grid">
+            {(!isPracticeMode || metricsExpanded) && <div className="arena-metrics-grid">
               {/* Metric 1: Current Round */}
               <div className="arena-metric-box">
                 <span className="arena-metric-label">Current Round</span>
