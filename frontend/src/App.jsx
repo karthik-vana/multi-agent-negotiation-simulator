@@ -7,6 +7,7 @@ import AgentConfiguration from './pages/AgentConfiguration';
 import NegotiationArena from './pages/NegotiationArena';
 import HistoryReports from './pages/HistoryReports';
 import NegotiationAnalytics from './pages/NegotiationAnalytics';
+import StrategyLibrary from './pages/StrategyLibrary';
 import Settings from './pages/Settings';
 import PracticeMode from './pages/PracticeMode';
 import PracticeAgentConfig from './pages/PracticeAgentConfig';
@@ -56,6 +57,8 @@ function App() {
                 <Route path="history" element={<HistoryReports />} />
                 <Route path="history/:simulationId" element={<HistoryReports />} />
                 <Route path="analytics" element={<NegotiationAnalytics />} />
+                <Route path="strategy-library" element={<StrategyLibrary />} />
+                <Route path="strategy_library" element={<StrategyLibrary />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="profile" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

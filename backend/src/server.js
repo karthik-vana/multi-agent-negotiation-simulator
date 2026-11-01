@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { initDbConnection, db } = require('./db/db');
 const simulationRoutes = require('./routes/simulationRoutes');
+const strategyRoutes = require('./routes/strategyRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,6 +35,10 @@ app.get('/api/health', (req, res) => {
 
 // Simulation Routes
 app.use('/api/simulations', simulationRoutes);
+
+// Strategy Library & Gemini AI Doubt Assistant Routes
+app.use('/api/strategies', strategyRoutes);
+app.use('/api/strategy-library', strategyRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

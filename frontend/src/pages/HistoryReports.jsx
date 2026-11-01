@@ -181,7 +181,17 @@ export default function HistoryReports() {
         });
 
         // Filter strictly to the 3 official scenarios: vendor-pricing, job-offer, project-budget
+        // Strictly exclude practice mode sessions from Simulation History
         const officialSims = userSims.filter(s => {
+          const isPractice =
+            s.mode === 'practice' ||
+            s.is_practice === true ||
+            (s.id && s.id.includes('practice')) ||
+            (Array.isArray(s.agents) && s.agents.some((a) => a.personality === 'Human' || a.is_human === true));
+          if (isPractice) {
+            return false;
+          }
+
           const sid = (s.scenario_id || '').toLowerCase();
           const title = (s.scenario_title || '').toLowerCase();
 
@@ -525,6 +535,16 @@ export default function HistoryReports() {
               </button>
             </div>
           </div>
+
+          {/* Practice Mode Notice Banner */}
+          {getSimulationModeLabel(selectedSim).includes('Practice') && (
+            <div className="practice-mode-dev-notice-banner">
+              <Sparkles size={18} className="practice-dev-notice-icon" />
+              <div className="practice-dev-notice-text">
+                <strong>Practice Mode Notice:</strong> Detailed tactical coaching evaluations, human scorecard rubrics, and audio telemetry for Practice Mode are currently <strong>Under Development</strong> for Milestone 3. Below is the session audit log.
+              </div>
+            </div>
+          )}
 
           {/* Report Header Card */}
           <div className="report-header-card">

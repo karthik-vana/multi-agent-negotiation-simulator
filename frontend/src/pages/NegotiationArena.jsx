@@ -54,42 +54,143 @@ import './NegotiationArena.css';
 const getDynamicStanceCategory = (agent, sim, isFirst) => {
   if (!agent) return 'Firm';
 
-  // 1. Check explicit stance string if present
-  const raw = (agent.stance || '').toLowerCase();
-  if (raw.includes('firm') || raw.includes('holding') || raw.includes('anchor') || raw.includes('defend')) {
+  // 1. If negotiation has ended with an agreement
+  const isCompleted = sim?.status === 'COMPLETED' || sim?.status === 'AGREEMENT_REACHED';
+  if (isCompleted && Boolean(sim?.agreement)) {
+    return 'Agreed';
+  }
+  if (sim?.status === 'DEADLOCK') {
     return 'Firm';
   }
-  if (raw.includes('compromis') || raw.includes('flexib') || raw.includes('seeking') || raw.includes('conced') || raw.includes('adjust')) {
+
+  // 2. Count actual offers made by this specific agent in the transcript
+  const agentRoleLower = (agent.role || '').toLowerCase();
+  const agentNameLower = (agent.name || '').toLowerCase();
+  const agentOffers = (sim?.messages || []).filter(
+    (m) =>
+      (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') &&
+      m.offer_value &&
+      (
+        (m.sender_role && m.sender_role.toLowerCase() === agentRoleLower) ||
+        (m.sender_name && m.sender_name.toLowerCase() === agentNameLower)
+      )
+  );
+
+  // If the agent has made 0 offers yet, they have not conceded anything -> Firm
+  if (agentOffers.length === 0) {
+    return 'Firm';
+  }
+
+  // If the agent has made only 1 opening offer -> Firm
+  if (agentOffers.length === 1) {
+    return 'Firm';
+  }
+
+  // If 2+ offers, check concession from opening offer
+  const initialOffer = Number(agentOffers[0].offer_value);
+  const latestOffer = Number(agentOffers[agentOffers.length - 1].offer_value);
+  const concessionAmount = Math.abs(latestOffer - initialOffer);
+
+  // If agent made a meaningful concession (> 1% shift toward counterpart) -> Compromising
+  if (concessionAmount > initialOffer * 0.01) {
     return 'Compromising';
   }
-  if (raw.includes('cautious') || raw.includes('guard') || raw.includes('hesit') || raw.includes('careful')) {
+
+  // If near round limit -> Cautious
+  const round = sim?.current_round || 1;
+  const maxR = sim?.max_rounds || 10;
+  if (round >= maxR - 2) {
     return 'Cautious';
   }
 
-  // 2. Dynamic evaluation from behavioral personality & round velocity
-  const personality = (agent.personality || '').toLowerCase();
-  const round = sim?.current_round || 1;
-  const maxR = sim?.max_rounds || 10;
-  const progress = agent.progress_percent || (isFirst ? 70 : 60);
-
-  if (personality.includes('aggressive')) {
-    return round >= maxR - 1 ? 'Cautious' : 'Firm';
-  }
-  if (personality.includes('risk')) {
-    return round >= 3 ? 'Compromising' : 'Cautious';
-  }
-  // Collaborative / Human / Default
-  if (progress >= 75 || round >= 4) {
-    return 'Compromising';
-  }
   return 'Firm';
 };
 
 /**
- * Renders an action badge pill: 'OFFER' | 'COUNTER_OFFER' | 'ACCEPT' | 'REJECT'
+ * Formats agent titles cleanly with role/title in brackets across all 3 scenarios:
+ * e.g. "Buyer (Procurement Director)" in transcript, "Procurement Director (Buyer)" in Agent Status
  */
-const renderActionBadge = (actionStr) => {
-  const act = (actionStr || '').toUpperCase();
+const getFormattedAgentTitle = (agentOrMsg, target = 'transcript') => {
+  if (!agentOrMsg) return '';
+  const role = (agentOrMsg.role || agentOrMsg.sender_role || '').trim();
+  const name = (agentOrMsg.name || agentOrMsg.sender_name || '').trim();
+  const title = (agentOrMsg.title || '').trim();
+
+  const combined = `${role} ${name} ${title}`.toLowerCase();
+
+  let canonicalRole = role || 'Participant';
+  let canonicalName = name || title || role;
+
+  if (combined.includes('buyer') || combined.includes('procurement') || combined.includes('purchasing')) {
+    canonicalRole = 'Buyer';
+    canonicalName = 'Procurement Director';
+  } else if (combined.includes('seller') || combined.includes('vendor') || combined.includes('supplier') || combined.includes('sales')) {
+    canonicalRole = 'Seller';
+    canonicalName = 'Sales Account Executive';
+  } else if (combined.includes('recruiter') || combined.includes('hiring') || combined.includes('talent')) {
+    canonicalRole = 'Recruiter';
+    canonicalName = 'Hiring Director';
+  } else if (combined.includes('candidate') || combined.includes('applicant') || combined.includes('interviewee')) {
+    canonicalRole = 'Candidate';
+    canonicalName = 'Job Candidate';
+  } else if (combined.includes('engineering') || combined.includes('lead software') || combined.includes('department a') || combined.includes('infrastructure')) {
+    canonicalRole = 'Engineering Lead';
+    canonicalName = 'VP of Engineering';
+  } else if (combined.includes('product')) {
+    canonicalRole = 'Product AI Lead';
+    canonicalName = 'Head of Product AI';
+  } else if (combined.includes('marketing') || combined.includes('growth') || combined.includes('department b')) {
+    canonicalRole = 'Marketing Lead';
+    canonicalName = 'Chief Marketing Officer';
+  }
+
+  if (target === 'transcript') {
+    return `${canonicalRole} (${canonicalName})`;
+  }
+  // Agent Status cards: "Procurement Director (Buyer)"
+  return `${canonicalName} (${canonicalRole})`;
+};
+
+/**
+ * Normalizes legacy or raw orchestrator announcement text to canonical role/title formatting
+ */
+const formatOrchestratorMessage = (text) => {
+  if (!text) return '';
+  return text
+    .replace(/Purchasing Manager vs Sales Representative/gi, 'Buyer (Procurement Director) vs Seller (Sales Account Executive)')
+    .replace(/Awaiting opening move from Purchasing Manager/gi, 'Awaiting opening move from Buyer (Procurement Director)')
+    .replace(/Hiring Manager vs Job Candidate/gi, 'Recruiter (Hiring Director) vs Candidate (Job Candidate)')
+    .replace(/Hiring Recruiter vs Job Candidate/gi, 'Recruiter (Hiring Director) vs Candidate (Job Candidate)')
+    .replace(/Awaiting opening move from Hiring Manager/gi, 'Awaiting opening move from Recruiter (Hiring Director)')
+    .replace(/Awaiting opening move from Hiring Recruiter/gi, 'Awaiting opening move from Recruiter (Hiring Director)')
+    .replace(/Department A Representative vs Department B Representative/gi, 'Engineering Lead (VP of Engineering) vs Marketing Lead (Chief Marketing Officer)');
+};
+
+/**
+ * Renders an action badge pill: 'OFFER' | 'COUNTER_OFFER' | 'ACCEPT' | 'REJECT'
+ * Strictly guarantees ONLY the very first offer in the negotiation transcript is labeled OPENING OFFER
+ */
+const renderActionBadge = (actionStr, msg = null, allMessages = []) => {
+  let act = (actionStr || '').toUpperCase().trim();
+  if (act === 'OPENING_OFFER' || act === 'OPENING OFFER') act = 'OFFER';
+  if (act === 'COUNTER' || act === 'COUNTER OFFER') act = 'COUNTER_OFFER';
+
+  // Strict guard: The very first message with an offer is ALWAYS the OPENING OFFER.
+  // All subsequent messages with offers are ALWAYS COUNTER-OFFER.
+  if (msg && Array.isArray(allMessages) && allMessages.length > 0) {
+    const firstOfferMsg = allMessages.find(
+      (m) => (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') && m.offer_value !== undefined && m.offer_value !== null
+    );
+    if (firstOfferMsg) {
+      const isFirstOffer = (msg === firstOfferMsg) || (msg.id && firstOfferMsg.id && msg.id === firstOfferMsg.id);
+      if (isFirstOffer) {
+        act = 'OFFER';
+      } else if (act === 'OFFER') {
+        act = 'COUNTER_OFFER';
+      }
+    }
+  }
+
   if (act === 'ACCEPT') {
     return (
       <span className="arena-action-badge action-accept">
@@ -170,6 +271,7 @@ const NegotiationArena = () => {
   const [metricsExpanded, setMetricsExpanded] = useState(false);
   const [practiceMessage, setPracticeMessage] = useState('');
   const [practiceOfferValue, setPracticeOfferValue] = useState('');
+  const [showPracticeReportModal, setShowPracticeReportModal] = useState(false);
 
   // Turn state helpers for Practice Mode
   const getActiveTurnAgent = (sim) => {
@@ -212,6 +314,12 @@ const NegotiationArena = () => {
   /**
    * Dispatches human negotiation actions: COUNTER_OFFER, ACCEPT, or REJECT
    */
+  // Opening move detection: true when no agent or human has put forward an offer yet
+  const activeOffersCount = (simulation?.messages || []).filter(
+    (m) => (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') && m.offer_value
+  ).length;
+  const isOpeningMove = activeOffersCount === 0;
+
   const handleHumanAction = async (actionType = 'COUNTER_OFFER') => {
     if (turnRunning || !simulation?.id || simulation.status !== 'RUNNING') {
       return;
@@ -246,14 +354,40 @@ const NegotiationArena = () => {
       }
     }
 
+    const effectiveAction = isOpeningMove && actionType === 'COUNTER_OFFER' ? 'OFFER' : actionType;
+
     let finalMessage = text;
     if (!finalMessage) {
-      if (actionType === 'ACCEPT') {
+      if (effectiveAction === 'ACCEPT') {
         finalMessage = `I agree to your proposal of ₹${Number(numericOffer).toLocaleString()}. We have reached a mutually acceptable agreement.`;
-      } else if (actionType === 'REJECT') {
+      } else if (effectiveAction === 'REJECT') {
         finalMessage = `I cannot accept these terms as they do not meet my minimum reservation boundaries. I must conclude our negotiation.`;
+      } else if (isOpeningMove) {
+        const myRole = (humanAgent?.role || '').toLowerCase();
+        if (myRole.includes('recruiter') || myRole.includes('hiring') || myRole.includes('director')) {
+          finalMessage = `We are pleased to extend an initial opening offer of ₹${Number(numericOffer).toLocaleString()} base salary along with competitive equity and full benefits.`;
+        } else if (myRole.includes('buyer') || myRole.includes('purchasing') || myRole.includes('procurement')) {
+          finalMessage = `We are pleased to propose an opening purchase offer of ₹${Number(numericOffer).toLocaleString()} per unit for our project requirements.`;
+        } else if (myRole.includes('candidate')) {
+          finalMessage = `Thank you for considering my application. I propose an opening base salary of ₹${Number(numericOffer).toLocaleString()} with standard hybrid flexibility.`;
+        } else if (myRole.includes('engineering') || myRole.includes('infrastructure')) {
+          finalMessage = `I would like to propose an opening infrastructure budget allocation of ₹${Number(numericOffer).toLocaleString()}.`;
+        } else {
+          finalMessage = `I would like to table an opening proposal of ₹${Number(numericOffer).toLocaleString()} considering our project requirements.`;
+        }
       } else {
-        finalMessage = `I would like to propose a counter-offer of ₹${Number(numericOffer).toLocaleString()} considering our project requirements.`;
+        const myRole = (humanAgent?.role || '').toLowerCase();
+        if (myRole.includes('candidate')) {
+          finalMessage = `Based on my specialized engineering experience and market benchmarks, I propose a counter-offer of ₹${Number(numericOffer).toLocaleString()} base compensation.`;
+        } else if (myRole.includes('recruiter') || myRole.includes('hiring') || myRole.includes('talent')) {
+          finalMessage = `We have reviewed our departmental bands and can enhance our compensation package to ₹${Number(numericOffer).toLocaleString()} base.`;
+        } else if (myRole.includes('buyer') || myRole.includes('procurement') || myRole.includes('purchasing')) {
+          finalMessage = `Considering our procurement constraints, I propose a counter-offer of ₹${Number(numericOffer).toLocaleString()} per unit.`;
+        } else if (myRole.includes('seller') || myRole.includes('sales') || myRole.includes('vendor')) {
+          finalMessage = `To protect commercial delivery while meeting you halfway, our revised offer is ₹${Number(numericOffer).toLocaleString()}.`;
+        } else {
+          finalMessage = `I would like to propose a counter-offer of ₹${Number(numericOffer).toLocaleString()} considering our project requirements.`;
+        }
       }
     }
 
@@ -264,7 +398,7 @@ const NegotiationArena = () => {
       const updated = await stepSimulation(simulation.id, {
         message: finalMessage,
         offer_value: numericOffer,
-        action: actionType,
+        action: effectiveAction,
       });
       if (updated) {
         setSimulation(updated);
@@ -503,6 +637,10 @@ const NegotiationArena = () => {
 
   // Direct navigation to negotiation report (includes ?from=arena so report page has a "Back to Negotiation Arena" button)
   const handleViewReport = () => {
+    if (isPracticeMode) {
+      setShowPracticeReportModal(true);
+      return;
+    }
     allowExitRef.current = true;
     if (simulation?.id) {
       sessionStorage.setItem('viewing_report_sim_id', simulation.id);
@@ -587,13 +725,18 @@ const NegotiationArena = () => {
       simulationAgents[idx] ||
       {};
 
-    const agentId = metaAgent.id || simAgent.id || (idx === 0 ? 'job-candidate' : 'hiring-director');
+    const agentId =
+      metaAgent.id ||
+      simAgent.id ||
+      (currentScenarioId === 'job-offer'
+        ? (idx === 0 ? 'hiring-director' : 'job-candidate')
+        : currentScenarioId === 'project-budget'
+        ? (idx === 0 ? 'department-a' : idx === 1 ? 'department-b' : 'department-c')
+        : (idx === 0 ? 'buyer-procurement' : 'vendor-sales'));
+
     const configuredPersonality =
       effectivePersonalities?.[agentId] ||
       effectivePersonalities?.[metaAgent.id] ||
-      (idx === 0
-        ? (effectivePersonalities?.['job-candidate'] || effectivePersonalities?.['buyer-procurement'] || effectivePersonalities?.['department-a'])
-        : (effectivePersonalities?.['hiring-director'] || effectivePersonalities?.['vendor-sales'] || effectivePersonalities?.['department-b'])) ||
       simAgent.personality ||
       metaAgent.personality ||
       metaAgent.defaultPersonality ||
@@ -607,8 +750,14 @@ const NegotiationArena = () => {
       role: simAgent.role || metaAgent.role,
       goal: simAgent.goal || metaAgent.primaryGoal || metaAgent.goal,
       personality: configuredPersonality,
-      current_offer: simAgent.current_offer || (currentScenarioId === 'job-offer' ? (idx === 0 ? 175000 : 152000) : currentScenarioId === 'project-budget' ? (idx === 0 ? 450000 : (idx === 1 ? 350000 : 300000)) : (idx === 0 ? 95000 : 110000)),
-      stance: simAgent.stance || (idx === 0 ? 'Seeking agreement' : 'Evaluating terms'),
+      current_offer:
+        simAgent.current_offer ||
+        (currentScenarioId === 'job-offer'
+          ? (idx === 0 ? 152000 : 175000)
+          : currentScenarioId === 'project-budget'
+          ? (idx === 0 ? 450000 : idx === 1 ? 350000 : 300000)
+          : (idx === 0 ? 95000 : 110000)),
+      stance: simAgent.stance || (idx === 0 ? 'Holding firm' : 'Evaluating terms'),
       progress_percent: simAgent.progress_percent || 50,
     };
   });
@@ -628,6 +777,60 @@ const NegotiationArena = () => {
     simulation,
     opponentAgent === activeAgentsList[0]
   );
+
+  // Auto-record practice mode session updates to localStorage (isolated from Simulation History DB)
+  useEffect(() => {
+    if (!isPracticeMode || !simulation?.id) return;
+    try {
+      const raw = localStorage.getItem('practice_mode_sessions');
+      let sessions = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(sessions)) sessions = [];
+
+      const isAgreed =
+        (simulation.status === 'AGREEMENT_REACHED' || simulation.status === 'COMPLETED') &&
+        Boolean(simulation.agreement);
+      const isDead = simulation.status === 'DEADLOCK';
+      const score = isAgreed ? 85 : isDead ? 38 : 60;
+
+      const record = {
+        id: simulation.id,
+        scenario_id: simulation.scenario_id || currentScenarioId,
+        scenario_title: simulation.scenario_title || scenarioMeta.title,
+        status: simulation.status,
+        current_round: simulation.current_round || 1,
+        rounds: simulation.current_round || 1,
+        created_at: simulation.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        score,
+        userRole: humanAgent?.role || 'Procurement Buyer',
+        opponentRole: opponentAgent?.role || 'Enterprise Supplier',
+        opponentPersonality: opponentAgent?.personality || 'Collaborative',
+        is_human: true,
+        mode: 'practice',
+      };
+
+      const existingIdx = sessions.findIndex((s) => s.id === record.id);
+      if (existingIdx >= 0) {
+        sessions[existingIdx] = { ...sessions[existingIdx], ...record };
+      } else {
+        sessions.unshift(record);
+      }
+      localStorage.setItem('practice_mode_sessions', JSON.stringify(sessions));
+    } catch (e) {
+      console.warn('Could not save practice session to localStorage:', e);
+    }
+  }, [
+    isPracticeMode,
+    simulation?.id,
+    simulation?.status,
+    simulation?.current_round,
+    simulation?.agreement,
+    currentScenarioId,
+    scenarioMeta.title,
+    humanAgent?.role,
+    opponentAgent?.role,
+    opponentAgent?.personality,
+  ]);
 
   const currentRound = simulation?.current_round || 1;
   const maxRounds = simulation?.max_rounds || currentScenarioObj.maxRounds || 10;
@@ -872,92 +1075,87 @@ const NegotiationArena = () => {
                                       {msg.timestamp_label || '10:24 AM'}
                                     </span>
                                   </div>
-                                  <p className="arena-orchestrator-text">{msg.message}</p>
+                                  <p className="arena-orchestrator-text">{formatOrchestratorMessage(msg.message)}</p>
                                 </div>
                               </div>
                             </div>
                           );
                         }
 
-                        const isBuyerExplicit =
-                          msg.sender_role?.toLowerCase().includes('buyer') ||
-                          msg.sender_role?.toLowerCase().includes('candidate');
-                        const isSellerExplicit =
-                          msg.sender_role?.toLowerCase().includes('seller') ||
-                          msg.sender_role?.toLowerCase().includes('vendor') ||
-                          msg.sender_role?.toLowerCase().includes('recruiter') ||
-                          msg.sender_role?.toLowerCase().includes('hr');
+                        // Direct, accurate agent lookup for this message
+                        const senderAgent = activeAgentsList.find((a) => {
+                          if (msg.sender_id && (a.id === msg.sender_id || a.agent_id === msg.sender_id)) return true;
+                          const msgRole = (msg.sender_role || '').toLowerCase();
+                          const aRole = (a.role || '').toLowerCase();
+                          const aName = (a.name || '').toLowerCase();
+                          const msgName = (msg.sender_name || '').toLowerCase();
+                          if (msgRole && (aRole === msgRole || aName === msgRole)) return true;
+                          if (msgName && (aName === msgName || aRole === msgName)) return true;
+                          if (msgRole.includes('candidate') && (aRole.includes('candidate') || a.id.includes('candidate'))) return true;
+                          if (msgRole.includes('recruiter') && (aRole.includes('recruiter') || a.id.includes('recruiter') || a.id.includes('hiring'))) return true;
+                          if (msgRole.includes('buyer') && (aRole.includes('buyer') || a.id.includes('buyer') || aRole.includes('procurement'))) return true;
+                          if (msgRole.includes('seller') && (aRole.includes('seller') || a.id.includes('seller') || a.id.includes('vendor') || aRole.includes('sales'))) return true;
+                          if (msgRole.includes('engineering') && (aRole.includes('engineering') || a.id.includes('engineering') || a.id.includes('department-a'))) return true;
+                          if (msgRole.includes('marketing') && (aRole.includes('marketing') || a.id.includes('marketing') || a.id.includes('department-b'))) return true;
+                          if (msgRole.includes('product') && (aRole.includes('product') || a.id.includes('product'))) return true;
+                          return false;
+                        }) || (turnIdx % 2 === 0 ? activeAgentsList[0] : activeAgentsList[1]);
 
-                        let isBuyerMsg = false;
-                        if (isBuyerExplicit) {
-                          isBuyerMsg = true;
-                        } else if (isSellerExplicit) {
-                          isBuyerMsg = false;
-                        } else {
-                          isBuyerMsg = (turnIdx % 2 === 0);
-                        }
+                        // Determine if message is from human
+                        const isHumanMsg = Boolean(
+                          msg.sender_type === 'HUMAN' ||
+                          msg.personality === 'Human' ||
+                          msg.is_human === true ||
+                          (isPracticeMode && senderAgent && (
+                            senderAgent.id === location.state?.userRoleAgentId ||
+                            senderAgent.personality === 'Human' ||
+                            senderAgent.is_human === true
+                          ))
+                        );
+
+                        // Side placement: In Practice Mode, AI counterpart is on LEFT, Human is on RIGHT.
+                        // In Simulation Mode, Agent 0 (opening agent) is on LEFT, Agent 1 is on RIGHT.
+                        const isLeft = isPracticeMode
+                          ? !isHumanMsg
+                          : (senderAgent === activeAgentsList[0] || (turnIdx % 2 === 0));
+
                         turnIdx++;
 
-                        const activeAgentForMsg = isBuyerMsg ? activeAgentsList[0] : activeAgentsList[1];
-                        const displayPersonality = activeAgentForMsg?.personality || msg.personality || (isBuyerMsg ? 'Collaborative' : 'Collaborative');
+                        const displayPersonality = senderAgent?.personality || msg.personality || 'Collaborative';
                         const personalityClass = (displayPersonality || '').toLowerCase().includes('aggressive')
                           ? 'aggressive'
                           : (displayPersonality || '').toLowerCase().includes('risk')
                           ? 'risk-averse'
                           : 'collaborative';
 
-                        const isHumanMsg = Boolean(
-                          msg.sender_type === 'HUMAN' ||
-                          msg.personality === 'Human' ||
-                          msg.is_human === true ||
-                          (isPracticeMode && (
-                            (humanAgent && (
-                              msg.sender_role?.toLowerCase() === humanAgent.role?.toLowerCase() ||
-                              msg.sender_name === humanAgent.name ||
-                              msg.sender_id === humanAgent.id
-                            )) ||
-                            (location.state?.userSide === 'buyer' && isBuyerMsg) ||
-                            (location.state?.userSide === 'seller' && !isBuyerMsg) ||
-                            activeAgentForMsg?.is_human === true ||
-                            activeAgentForMsg?.id === location.state?.userRoleAgentId ||
-                            activeAgentForMsg?.personality === 'Human'
-                          ))
-                        );
-
                         return (
                           <div
                             key={msg.id}
-                            className={`arena-chat-row ${isBuyerMsg ? 'buyer-row' : 'seller-row'} ${isHumanMsg ? 'human-chat-row' : 'ai-chat-row'}`}
+                            className={`arena-chat-row ${isLeft ? 'buyer-row' : 'seller-row'} ${isHumanMsg ? 'human-chat-row' : 'ai-chat-row'}`}
                           >
-                            {/* Buyer Avatar on Left */}
-                            {isBuyerMsg && (
+                            {/* Left-side Avatar (Shows animated SVG face avatar for all scenarios) */}
+                            {isLeft && (
                               <div className="arena-avatar-container buyer-avatar">
-                                {isHumanMsg ? (
-                                  <div className="arena-human-avatar-circle" title="Human Participant">
-                                    <UserCheck size={22} className="human-icon" />
-                                  </div>
-                                ) : (
-                                  <AgentFaceAvatar
-                                    agentId={activeAgentsList[0]?.id}
-                                    personality={displayPersonality}
-                                    role={activeAgentsList[0]?.role || "Buyer"}
-                                    size={44}
-                                  />
-                                )}
+                                <AgentFaceAvatar
+                                  agentId={senderAgent?.id}
+                                  personality={displayPersonality}
+                                  role={senderAgent?.role || msg.sender_role || 'Negotiator'}
+                                  size={44}
+                                />
                               </div>
                             )}
 
                             {/* Message Bubble + Attached Offer */}
-                            <div className={`arena-bubble-wrapper ${isBuyerMsg ? 'buyer' : 'seller'} ${isHumanMsg ? 'human-turn-bubble' : 'ai-turn-bubble'}`}>
+                            <div className={`arena-bubble-wrapper ${isLeft ? 'buyer' : 'seller'} ${isHumanMsg ? 'human-turn-bubble' : 'ai-turn-bubble'}`}>
                               {/* Message Meta Info Header */}
                               <div className="arena-bubble-meta">
                                 {isHumanMsg ? (
                                   <>
                                     <span className="arena-human-badge">
-                                      <User size={12} /> You (Human)
+                                      <User size={12} /> You
                                     </span>
-                                    <span className="arena-agent-name">{msg.sender_role}</span>
-                                    {renderActionBadge(msg.action)}
+                                    <span className="arena-agent-name">{getFormattedAgentTitle(msg, 'transcript')}</span>
+                                    {renderActionBadge(msg.action, msg, simulation?.messages)}
                                     <span className="arena-meta-spacer" />
                                     <span className="arena-timestamp">
                                       {msg.timestamp_label || '10:24 AM'}
@@ -965,14 +1163,11 @@ const NegotiationArena = () => {
                                   </>
                                 ) : (
                                   <>
-                                    <span className="arena-ai-badge">
-                                      <Bot size={12} /> AI Opponent
-                                    </span>
-                                    <span className="arena-agent-name">{msg.sender_role}</span>
+                                    <span className="arena-agent-name">{getFormattedAgentTitle(msg, 'transcript')}</span>
                                     <span className={`arena-agent-personality ${personalityClass}`}>
                                       {displayPersonality}
                                     </span>
-                                    {renderActionBadge(msg.action)}
+                                    {renderActionBadge(msg.action, msg, simulation?.messages)}
                                     <span className="arena-meta-spacer" />
                                     <span className="arena-timestamp">
                                       {msg.timestamp_label || '10:24 AM'}
@@ -983,19 +1178,19 @@ const NegotiationArena = () => {
 
                               {/* Bubble Content Row (Text + Offer badge) */}
                               <div className="arena-bubble-content-row">
-                                {/* Attached Offer Badge for Seller (Placed on left of text) */}
-                                {!isBuyerMsg && msg.offer_value && (
+                                {/* Attached Offer Badge for Right/User messages (Placed on left of text) */}
+                                {!isLeft && msg.offer_value && (
                                   <div className="arena-attached-offer seller-offer">
                                     <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
                                   </div>
                                 )}
 
-                                <div className={`arena-speech-bubble ${isHumanMsg ? 'human-bubble' : ''} ${isBuyerMsg ? 'buyer-bubble' : 'seller-bubble'}`}>
+                                <div className={`arena-speech-bubble ${isHumanMsg ? 'human-bubble' : ''} ${isLeft ? 'buyer-bubble' : 'seller-bubble'}`}>
                                   <p className="arena-bubble-text">{msg.message}</p>
                                 </div>
 
-                                {/* Attached Offer Badge for Buyer (Placed on right of text) */}
-                                {isBuyerMsg && msg.offer_value && (
+                                {/* Attached Offer Badge for Left/AI messages (Placed on right of text) */}
+                                {isLeft && msg.offer_value && (
                                   <div className="arena-attached-offer buyer-offer">
                                     <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
                                   </div>
@@ -1003,21 +1198,15 @@ const NegotiationArena = () => {
                               </div>
                             </div>
 
-                            {/* Seller Avatar on Right */}
-                            {!isBuyerMsg && (
+                            {/* Right-side Avatar (Shows animated SVG face avatar for all scenarios) */}
+                            {!isLeft && (
                               <div className="arena-avatar-container seller-avatar">
-                                {isHumanMsg ? (
-                                  <div className="arena-human-avatar-circle" title="Human Participant">
-                                    <UserCheck size={22} className="human-icon" />
-                                  </div>
-                                ) : (
-                                  <AgentFaceAvatar
-                                    agentId={activeAgentsList[1]?.id}
-                                    personality={activeAgentsList[1]?.personality || msg.personality || 'Aggressive'}
-                                    role={activeAgentsList[1]?.role || "Seller"}
-                                    size={44}
-                                  />
-                                )}
+                                <AgentFaceAvatar
+                                  agentId={senderAgent?.id}
+                                  personality={displayPersonality}
+                                  role={senderAgent?.role || msg.sender_role || 'Negotiator'}
+                                  size={44}
+                                />
                               </div>
                             )}
                           </div>
@@ -1052,15 +1241,20 @@ const NegotiationArena = () => {
               <div className="arena-human-dock-header">
                 <div className="arena-dock-header-left">
                   <div className="arena-turn-indicator-wrap">
-                    {isHumanTurn && !turnRunning ? (
+                    {isTerminated ? (
+                      <span className="arena-dock-badge completed-badge">
+                        <CheckCircle2 size={13} />
+                        <span>Negotiation Concluded ({isCompleted ? 'Agreement Reached' : 'Deadlock'})</span>
+                      </span>
+                    ) : isHumanTurn && !turnRunning ? (
                       <span className="arena-dock-badge user-turn-badge">
                         <span className="pulse-dot-green" />
-                        <span>Your Turn to Bargain</span>
+                        <span>{isOpeningMove ? 'Your Turn to Make Opening Offer' : 'Your Turn to Bargain'}</span>
                       </span>
                     ) : (
                       <span className="arena-dock-badge ai-thinking-badge">
                         <Loader2 size={13} className="spin-icon" />
-                        <span>AI Counterpart Thinking...</span>
+                        <span>AI Counterpart Deliberating...</span>
                       </span>
                     )}
                   </div>
@@ -1093,7 +1287,7 @@ const NegotiationArena = () => {
                 <div className="arena-dock-field-wrap offer-field-wrap">
                   <label htmlFor="human-numeric-offer" className="arena-dock-label">
                     <Coins size={13} />
-                    <span>Your Counter-Offer (₹)</span>
+                    <span>{isOpeningMove ? 'Your Opening Offer (₹)' : 'Your Counter-Offer (₹)'}</span>
                   </label>
                   <div className="arena-currency-input-box">
                     <span className="currency-symbol">₹</span>
@@ -1126,9 +1320,13 @@ const NegotiationArena = () => {
                     id="human-message-input"
                     className="arena-dock-textarea"
                     placeholder={
-                      isHumanTurn
-                        ? "State your rationale or proposed terms (e.g., 'Given our delivery commitments, I propose ₹165,000 with Net-60 terms')..."
-                        : "AI counterpart is reviewing the dialogue and formulating a response..."
+                      isTerminated
+                        ? "Negotiation has concluded. Inspect the summary report above or restart to begin a new session."
+                        : isHumanTurn
+                          ? isOpeningMove
+                            ? "State your opening proposal and terms (e.g., 'We are pleased to extend an initial compensation offer of ₹152,000 with standard benefits')..."
+                            : "State your rationale or proposed terms (e.g., 'Given our delivery commitments, I propose ₹165,000 with Net-60 terms')..."
+                          : "AI counterpart is reviewing the dialogue and formulating a response..."
                     }
                     value={practiceMessage}
                     disabled={!isHumanTurn || turnRunning || isTerminated}
@@ -1178,24 +1376,24 @@ const NegotiationArena = () => {
                   <button
                     type="button"
                     className="btn-dock-action btn-dock-accept"
-                    disabled={!isHumanTurn || turnRunning || isTerminated}
+                    disabled={!isHumanTurn || turnRunning || isTerminated || isOpeningMove}
                     onClick={() => handleHumanAction('ACCEPT')}
-                    title="Accept counterpart's current proposal"
+                    title={isOpeningMove ? "Cannot accept before counterpart extends an offer" : "Accept counterpart's current proposal"}
                   >
                     <CheckCircle2 size={14} />
                     <span>Accept Deal</span>
                   </button>
 
-                  {/* Action 3: Send Counter-Offer */}
+                  {/* Action 3: Send Counter-Offer / Opening Offer */}
                   <button
                     type="button"
                     className="btn-dock-action btn-dock-counter"
                     disabled={!isHumanTurn || turnRunning || isTerminated}
                     onClick={() => handleHumanAction('COUNTER_OFFER')}
-                    title="Send counter-offer with proposed price and justification"
+                    title={isOpeningMove ? "Send initial opening offer with proposed terms" : "Send counter-offer with proposed price and justification"}
                   >
-                    <ArrowRightLeft size={14} />
-                    <span>{turnRunning ? 'Deliberating...' : 'Send Counter-Offer'}</span>
+                    {isOpeningMove ? <Tag size={14} /> : <ArrowRightLeft size={14} />}
+                    <span>{turnRunning ? 'Deliberating...' : (isOpeningMove ? 'Send Opening Offer' : 'Send Counter-Offer')}</span>
                   </button>
                 </div>
               </div>
@@ -1267,10 +1465,22 @@ const NegotiationArena = () => {
                       </div>
                       <div className="arena-agent-item-id">
                         <div className="arena-agent-item-name-row">
-                          <span className="arena-agent-main-role">{agent.name || agent.role}</span>
-                          <span className={`arena-role-pill ${rolePillClass}`}>
-                            {agent.personality || (isFirst ? 'Collaborative' : 'Aggressive')}
-                          </span>
+                          <span className="arena-agent-main-role">{getFormattedAgentTitle(agent, 'agent-status')}</span>
+                          {(() => {
+                            const isHumanParticipant = Boolean(
+                              agent.personality === 'Human' ||
+                              agent.is_human === true ||
+                              (isPracticeMode && (
+                                agent.id === location.state?.userRoleAgentId ||
+                                (humanAgent && (agent.id === humanAgent.id || agent.role === humanAgent.role))
+                              ))
+                            );
+                            return (
+                              <span className={`arena-role-pill ${isHumanParticipant ? 'human' : rolePillClass}`}>
+                                {isHumanParticipant ? 'You' : (agent.personality || (isFirst ? 'Collaborative' : 'Aggressive'))}
+                              </span>
+                            );
+                          })()}
                         </div>
                         <span className="arena-agent-active-badge">Active</span>
                       </div>
@@ -1394,6 +1604,60 @@ const NegotiationArena = () => {
           </div>
         </div>
       </div>
+
+      {/* Practice Mode Report Under Development Notice Modal */}
+      {showPracticeReportModal && (
+        <div className="arena-modal-backdrop" onClick={() => setShowPracticeReportModal(false)}>
+          <div className="arena-modal-card practice-report-dev-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="practice-dev-header">
+              <div className="practice-dev-icon-wrap">
+                <Sparkles size={28} className="practice-dev-icon" />
+              </div>
+              <span className="practice-dev-badge">Practice Mode Notice</span>
+              <h3 className="practice-dev-title">Practice Negotiation Report</h3>
+              <span className="practice-dev-status-pill">Under Development</span>
+            </div>
+
+            <p className="practice-dev-text">
+              The post-negotiation report for <strong>Practice Mode</strong> (including tactical scorecard, concession curve telemetry, and AI coaching assessment) is currently <strong>Under Development</strong> for Milestone 3.
+            </p>
+
+            <div className="practice-dev-note">
+              <span>💡 Comprehensive reports and archived transcripts are fully available for <strong>Simulation Mode</strong> under History & Reports.</span>
+            </div>
+
+            <div className="practice-dev-actions">
+              <button
+                type="button"
+                className="btn-practice-dev-scenarios"
+                onClick={() => {
+                  allowExitRef.current = true;
+                  navigate('/practice');
+                }}
+              >
+                Back to Practice Scenarios
+              </button>
+              <button
+                type="button"
+                className="btn-practice-dev-restart"
+                onClick={() => {
+                  setShowPracticeReportModal(false);
+                  handleRestart();
+                }}
+              >
+                Restart Session
+              </button>
+              <button
+                type="button"
+                className="btn-practice-dev-close"
+                onClick={() => setShowPracticeReportModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
