@@ -59,6 +59,63 @@
   width: fit-content;
 }
 
+.analytics-pill-tag.practice {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
+.analytics-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.analytics-mode-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  background: var(--bg-surface-hover, #f1f5f9);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  gap: 4px;
+}
+
+.analytics-mode-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.analytics-mode-tab-btn:hover:not(.active) {
+  color: var(--text-main, #0f172a);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.analytics-mode-tab-btn.active.simulation {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.analytics-mode-tab-btn.active.practice {
+  background: #ffffff;
+  color: #7c3aed;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+
 .analytics-page-title {
   font-size: 1.75rem;
   font-weight: 700;
@@ -933,8 +990,10 @@
   width: 100%;
   max-width: 32px;
   height: 100%;
+  max-height: 100%;
   display: flex;
   align-items: flex-end;
+  overflow: hidden;
 }
 
 .histogram-fill {
@@ -975,16 +1034,18 @@
 
 .tactic-row {
   display: grid;
-  grid-template-columns: 110px 1fr 45px;
+  grid-template-columns: 145px 1fr 40px;
   align-items: center;
-  gap: 10px;
-  font-size: 0.75rem;
+  gap: 12px;
+  font-size: 0.74rem;
 }
 
 .tactic-name {
   color: var(--text-main, #0f172a);
   font-weight: 500;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tactic-bar-wrap {
@@ -992,11 +1053,13 @@
   background: var(--bg-surface-subtle, #f1f5f9);
   border-radius: 9999px;
   overflow: hidden;
+  min-width: 50px;
 }
 
 .tactic-bar-fill {
   height: 100%;
   border-radius: 9999px;
+  transition: width 0.4s ease;
 }
 
 .tactic-count {

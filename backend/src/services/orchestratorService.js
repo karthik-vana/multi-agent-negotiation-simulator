@@ -58,18 +58,6 @@ const SCENARIO_PRESETS = {
     agreement_threshold: 500,
     agents: [
       {
-        id: 'job-candidate',
-        role: 'Candidate',
-        name: 'Senior AI Engineer Candidate',
-        personality: 'Collaborative',
-        goal: 'Secure top-of-band base compensation, equity stock grants, and remote flexibility',
-        target_value: 175000,
-        reservation_value: 160000,
-        current_offer: 175000,
-        stance: 'Seeking agreement',
-        progress_percent: 50,
-      },
-      {
         id: 'hiring-director',
         role: 'Recruiter',
         name: 'Hiring Director & Talent Lead',
@@ -78,8 +66,20 @@ const SCENARIO_PRESETS = {
         target_value: 152000,
         reservation_value: 168000,
         current_offer: 152000,
-        stance: 'Evaluating budget',
-        progress_percent: 45,
+        stance: 'Holding firm',
+        progress_percent: 50,
+      },
+      {
+        id: 'job-candidate',
+        role: 'Candidate',
+        name: 'Senior AI Engineer Candidate',
+        personality: 'Collaborative',
+        goal: 'Secure top-of-band base compensation, equity stock grants, and remote flexibility',
+        target_value: 175000,
+        reservation_value: 160000,
+        current_offer: 175000,
+        stance: 'Holding firm',
+        progress_percent: 50,
       },
     ],
   },
@@ -191,14 +191,42 @@ class OrchestratorAgent {
     await db.createSimulation(simulationRecord, effectiveAgents);
 
     // 2. Log Orchestrator Welcome Announcement
-    const participantRoles = effectiveAgents.map(a => a.role || a.name).join(' vs ');
+    const formatAgentTitle = (a) => {
+      const role = (a.role || '').toLowerCase();
+      const name = (a.name || '').toLowerCase();
+      const combined = `${role} ${name}`;
+      if (combined.includes('buyer') || combined.includes('procurement') || combined.includes('purchasing')) {
+        return 'Buyer (Procurement Director)';
+      }
+      if (combined.includes('seller') || combined.includes('vendor') || combined.includes('supplier') || combined.includes('sales')) {
+        return 'Seller (Sales Account Executive)';
+      }
+      if (combined.includes('recruiter') || combined.includes('hiring') || combined.includes('talent')) {
+        return 'Recruiter (Hiring Director)';
+      }
+      if (combined.includes('candidate') || combined.includes('applicant') || combined.includes('interviewee')) {
+        return 'Candidate (Job Candidate)';
+      }
+      if (combined.includes('engineering') || combined.includes('infrastructure') || combined.includes('department a')) {
+        return 'Engineering Lead (VP of Engineering)';
+      }
+      if (combined.includes('product')) {
+        return 'Product AI Lead (Head of Product AI)';
+      }
+      if (combined.includes('marketing') || combined.includes('department b')) {
+        return 'Marketing Lead (Chief Marketing Officer)';
+      }
+      return a.role && a.name && a.role !== a.name ? `${a.role} (${a.name})` : (a.role || a.name || 'Participant');
+    };
+    const participantRoles = effectiveAgents.map(formatAgentTitle).join(' vs ');
+    const openingAgentLabel = formatAgentTitle(effectiveAgents[0] || {});
     await db.addMessage({
       simulation_id: simId,
       round_number: 1,
       sender_type: 'ORCHESTRATOR',
       sender_name: this.name,
       sender_role: this.role,
-      message: `Simulation initialized for "${preset.title}". Round 1 commenced between ${participantRoles}. Awaiting opening move from ${effectiveAgents[0]?.role || 'Agent 1'}.`,
+      message: `Simulation initialized for "${preset.title}". Round 1 commenced between ${participantRoles}. Awaiting opening move from ${openingAgentLabel}.`,
       action: 'STATUS',
     });
 
@@ -256,9 +284,30 @@ class OrchestratorAgent {
    * Handles 2-agent bilateral and 3+ agent multilateral round-robin turn-taking
    */
   determineNextTurn(sim) {
-    const agents = sim.agents || [];
+    let agents = sim.agents || [];
     if (agents.length === 0) {
       throw new Error('Simulation has no registered participating agents.');
+    }
+
+    // Always sort agents strictly by the canonical scenario preset order
+    const preset = this.getScenarioPreset(sim.scenario_id);
+    if (preset && Array.isArray(preset.agents)) {
+      const orderMap = new Map();
+      preset.agents.forEach((pa, i) => {
+        orderMap.set(pa.id.toLowerCase(), i);
+        orderMap.set(pa.role.toLowerCase(), i);
+      });
+      agents = [...agents].sort((a, b) => {
+        const getIdx = (ag) => {
+          const aId = (ag.id || '').toLowerCase();
+          const aRole = (ag.role || '').toLowerCase();
+          for (const [k, v] of orderMap.entries()) {
+            if (aId.includes(k) || aRole.includes(k)) return v;
+          }
+          return 99;
+        };
+        return getIdx(a) - getIdx(b);
+      });
     }
 
     // Filter messages for the current round sent by AGENTS
@@ -381,6 +430,15 @@ class OrchestratorAgent {
       };
     }
 
+    // Guard: only the very first turn in a simulation can be an 'OFFER'. All subsequent turns are 'COUNTER_OFFER'
+    let stepAction = move.action || 'COUNTER_OFFER';
+    const hasExistingOffers = (sim.messages || []).some(
+      (m) => (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') && m.offer_value
+    );
+    if (hasExistingOffers && stepAction === 'OFFER') {
+      stepAction = 'COUNTER_OFFER';
+    }
+
     // 4. Record Agent Dialogue in Database
     await db.addMessage({
       simulation_id: simulationId,
@@ -391,7 +449,7 @@ class OrchestratorAgent {
       personality: activeAgent.personality,
       message: move.message,
       offer_value: move.offer_value,
-      action: move.action || 'COUNTER_OFFER',
+      action: stepAction,
     });
 
     // 5. Record discrete numerical offer & update agent current standing
@@ -421,9 +479,9 @@ class OrchestratorAgent {
     let currentGap = sim.current_gap;
     if (agent0Offer > 0 && agent1Offer > 0) {
       if (sim.scenario_id === 'job-offer') {
-        // Agent 0 is Candidate (demands salary), Agent 1 is Recruiter (offers budget)
+        // Agent 0 is Recruiter (budget offer), Agent 1 is Candidate (salary ask)
         // If recruiter offers more than or equal to candidate ask, gap is 0 (surplus/agreement)
-        currentGap = agent1Offer >= agent0Offer ? 0 : (agent0Offer - agent1Offer);
+        currentGap = agent0Offer >= agent1Offer ? 0 : (agent1Offer - agent0Offer);
       } else if (sim.scenario_id === 'vendor-pricing') {
         // Agent 0 is Buyer (offers price), Agent 1 is Seller (demands price)
         // If buyer offers more than or equal to seller ask, gap is 0 (agreement)
@@ -432,6 +490,15 @@ class OrchestratorAgent {
         currentGap = Math.abs(agent0Offer - agent1Offer);
       }
     }
+
+    // Require both primary participants to have actively tabled offers before evaluating gap convergence
+    const agent0HasOffered = (updatedSim.messages || []).some(
+      (m) => (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') && m.sender_role === agents[0]?.role && m.offer_value
+    );
+    const agent1HasOffered = (updatedSim.messages || []).some(
+      (m) => (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') && m.sender_role === agents[1]?.role && m.offer_value
+    );
+    const bothHaveOffered = agent0HasOffered && agent1HasOffered;
 
     // Compute dynamic agreement likelihood %
     const threshold = preset.agreement_threshold || 50;
@@ -449,8 +516,9 @@ class OrchestratorAgent {
       currentRound: sim.current_round,
       maxRounds: sim.max_rounds,
       isRoundEnd,
-      settlementPrice: agent1Offer || agent0Offer || move.offer_value,
+      settlementPrice: move.offer_value || (currentGap <= threshold ? Math.round((agent0Offer + agent1Offer) / 2) : (agent1Offer || agent0Offer)),
       activeAgent,
+      bothHaveOffered,
     });
 
     let newStatus = sim.status;
@@ -535,10 +603,11 @@ class OrchestratorAgent {
     isRoundEnd,
     settlementPrice,
     activeAgent,
+    bothHaveOffered = true,
   }) {
     // Condition A: Explicit or Numerical Agreement
     const isExplicitAccept = action === 'ACCEPT' || agreementReached === true;
-    const isGapConverged = currentGap <= threshold && currentGap >= 0;
+    const isGapConverged = bothHaveOffered && currentGap <= threshold && currentGap >= 0;
 
     if (isExplicitAccept || isGapConverged) {
       return {

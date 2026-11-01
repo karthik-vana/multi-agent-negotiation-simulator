@@ -57,6 +57,12 @@ const Header = ({ isMobileNavOpen, onToggleMobileNav }) => {
           title: 'Negotiation Analytics',
           subtitle: 'Audit telemetry, behavioral tactics, and scenario outcome distributions'
         };
+      case '/strategy-library':
+      case '/strategy_library':
+        return {
+          title: 'Strategy Library',
+          subtitle: 'Tactical negotiation frameworks, principled blueprints, and Gemini AI assistant'
+        };
       case '/profile':
       case '/settings':
         return {

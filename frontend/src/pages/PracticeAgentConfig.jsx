@@ -87,23 +87,6 @@ const PRACTICE_ROLES_DATA = {
     participantText: '1 Human Negotiator vs 1 AI Agent',
     roles: [
       {
-        id: 'job-candidate',
-        name: 'Job Candidate',
-        title: 'Senior AI Engineer Candidate',
-        stakeholder: 'Candidate Side',
-        avatarText: 'JC',
-        roleDescription:
-          'An accomplished engineering candidate negotiating a full compensation package including base salary, performance sign-on bonus, equity stock grants, and remote work arrangements.',
-        primaryGoal:
-          'Maximize total compensation package (target base ₹1,75,000, 10% bonus, 0.75% equity) and secure at least 3 remote days per week.',
-        constraints: [
-          'Must secure base salary meeting minimum career threshold (min ₹1,50,000).',
-          'Must secure equity stock allocation of at least 0.5%.',
-          'Must obtain at least 2 remote days per week.',
-        ],
-        defaultPersonality: PERSONALITIES.COLLABORATIVE,
-      },
-      {
         id: 'hiring-director',
         name: 'Hiring Recruiter',
         title: 'Director of Talent Acquisition',
@@ -119,6 +102,23 @@ const PRACTICE_ROLES_DATA = {
           'Must not exceed maximum sign-on bonus percentage cap (max 10%).',
         ],
         defaultPersonality: PERSONALITIES.RISK_AVERSE,
+      },
+      {
+        id: 'job-candidate',
+        name: 'Job Candidate',
+        title: 'Senior AI Engineer Candidate',
+        stakeholder: 'Candidate Side',
+        avatarText: 'JC',
+        roleDescription:
+          'An accomplished engineering candidate negotiating a full compensation package including base salary, performance sign-on bonus, equity stock grants, and remote work arrangements.',
+        primaryGoal:
+          'Maximize total compensation package (target base ₹1,75,000, 10% bonus, 0.75% equity) and secure at least 3 remote days per week.',
+        constraints: [
+          'Must secure base salary meeting minimum career threshold (min ₹1,50,000).',
+          'Must secure equity stock allocation of at least 0.5%.',
+          'Must obtain at least 2 remote days per week.',
+        ],
+        defaultPersonality: PERSONALITIES.COLLABORATIVE,
       },
     ],
   },

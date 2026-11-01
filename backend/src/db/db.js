@@ -7,6 +7,8 @@ try {
 const fs = require('fs');
 const path = require('path');
 
+const { SEED_STRATEGIES } = require('../data/seedStrategies');
+
 let pool = null;
 let isNeonConnected = false;
 
@@ -17,6 +19,10 @@ const inMemoryStore = {
   messages: new Map(), // key: simulationId, value: Array of messages
   offers: new Map(), // key: simulationId, value: Array of offers
   agreements: new Map(), // key: simulationId, value: agreement
+  strategies: new Map(SEED_STRATEGIES.map(s => [s.id, { ...s, created_at: new Date(), updated_at: new Date() }])),
+  bookmarks: new Map(), // key: userId, value: Set of strategyIds
+  conversations: new Map(), // key: convId, value: object
+  chatMessages: new Map(), // key: convId, value: Array of messages
 };
 
 /**
@@ -31,32 +37,40 @@ const initDbConnection = async () => {
     return false;
   }
 
-  try {
-    // Clean sslmode from URL to use explicit ssl configuration without Node v24 warning
-    const cleanConnectionString = connectionString.replace(/([?&])sslmode=[^&]+(&|$)/, '$1').replace(/[?&]$/, '');
-    pool = new Pool({
-      connectionString: cleanConnectionString,
-      ssl: {
-        rejectUnauthorized: false, // Required for Neon serverless postgres
-      },
-      connectionTimeoutMillis: 5000,
-    });
+  const cleanConnectionString = connectionString.replace(/([?&])sslmode=[^&]+(&|$)/, '$1').replace(/[?&]$/, '');
+  pool = new Pool({
+    connectionString: cleanConnectionString,
+    ssl: {
+      rejectUnauthorized: false, // Required for Neon serverless postgres
+    },
+    connectionTimeoutMillis: 15000,
+  });
 
-    // Test connection
-    const client = await pool.connect();
-    const res = await client.query('SELECT NOW()');
-    client.release();
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[Neon DB] Connecting to Neon PostgreSQL (attempt ${attempt}/${maxRetries})...`);
+      const client = await pool.connect();
+      const res = await client.query('SELECT NOW()');
+      client.release();
 
-    console.log('✅ [Neon DB] Connected successfully to Neon PostgreSQL at:', res.rows[0].now);
-    isNeonConnected = true;
+      console.log('✅ [Neon DB] Connected successfully to Neon PostgreSQL at:', res.rows[0].now);
+      isNeonConnected = true;
 
-    // Run migrations
-    await runMigrations();
-    return true;
-  } catch (error) {
-    console.warn('⚠️ [Neon DB] Connection failed, falling back to In-Memory Store:', error.message);
-    isNeonConnected = false;
-    return false;
+      // Run migrations
+      await runMigrations();
+      return true;
+    } catch (error) {
+      console.warn(`⚠️ [Neon DB] Connection attempt ${attempt} failed: ${error.message}`);
+      if (attempt < maxRetries) {
+        console.log(`[Neon DB] Waiting 2s before retry ${attempt + 1}...`);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      } else {
+        console.warn('⚠️ [Neon DB] All connection attempts failed, falling back to In-Memory Store.');
+        isNeonConnected = false;
+        return false;
+      }
+    }
   }
 };
 
@@ -77,6 +91,42 @@ const runMigrations = async () => {
       CREATE INDEX IF NOT EXISTS idx_simulations_user_email ON simulations(user_email);
       UPDATE simulations SET user_email = 'shubhayyadav84@gmail.com' WHERE user_email IS NULL;
     `);
+
+    // Seed negotiation strategies if empty or updated
+    for (const strat of SEED_STRATEGIES) {
+      await pool.query(
+        `INSERT INTO negotiation_strategies (
+          id, slug, title, description, category, difficulty, best_use_case,
+          advantages, risks, example_dialogue, recommended_scenarios, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+        ON CONFLICT (id) DO UPDATE SET
+          slug = EXCLUDED.slug,
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          category = EXCLUDED.category,
+          difficulty = EXCLUDED.difficulty,
+          best_use_case = EXCLUDED.best_use_case,
+          advantages = EXCLUDED.advantages,
+          risks = EXCLUDED.risks,
+          example_dialogue = EXCLUDED.example_dialogue,
+          recommended_scenarios = EXCLUDED.recommended_scenarios,
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          strat.id,
+          strat.slug,
+          strat.title,
+          strat.description,
+          strat.category,
+          strat.difficulty,
+          strat.best_use_case,
+          JSON.stringify(strat.advantages),
+          JSON.stringify(strat.risks),
+          JSON.stringify(strat.example_dialogue),
+          JSON.stringify(strat.recommended_scenarios || [])
+        ]
+      );
+    }
+    console.log(`✅ [Neon DB] Seeded ${SEED_STRATEGIES.length} negotiation strategies successfully.`);
 
     console.log('✅ [Neon DB] Schema tables verified & migrated successfully.');
   } catch (err) {
@@ -194,7 +244,7 @@ const db = {
         if (simRes.rows.length === 0) return null;
 
         const sim = simRes.rows[0];
-        const agentsRes = await pool.query('SELECT * FROM agents WHERE simulation_id = $1 ORDER BY role ASC', [id]);
+        const agentsRes = await pool.query('SELECT * FROM agents WHERE simulation_id = $1 ORDER BY created_at ASC', [id]);
         const msgRes = await pool.query('SELECT * FROM messages WHERE simulation_id = $1 ORDER BY created_at ASC', [id]);
         const offersRes = await pool.query('SELECT * FROM offers WHERE simulation_id = $1 ORDER BY created_at ASC', [id]);
         const agreementRes = await pool.query('SELECT * FROM agreements WHERE simulation_id = $1', [id]);
@@ -530,6 +580,321 @@ const db = {
       }
     }
     inMemoryStore.agreements.delete(simulationId);
+  },
+
+  // ============================================================================
+  // Strategy Library & AI Doubt Assistant DB Methods
+  // ============================================================================
+
+  /**
+   * List all strategies with optional filters
+   */
+  async listStrategies({ category, difficulty, search, scenarioId } = {}) {
+    if (isNeonConnected && pool) {
+      try {
+        let query = 'SELECT * FROM negotiation_strategies WHERE 1=1';
+        const params = [];
+        let pIndex = 1;
+
+        if (category && category !== 'All' && category !== 'All Categories') {
+          query += ` AND category = $${pIndex++}`;
+          params.push(category);
+        }
+        if (difficulty && difficulty !== 'All' && difficulty !== 'All Levels') {
+          query += ` AND LOWER(difficulty) = LOWER($${pIndex++})`;
+          params.push(difficulty);
+        }
+        if (search && search.trim()) {
+          query += ` AND (title ILIKE $${pIndex} OR description ILIKE $${pIndex} OR best_use_case ILIKE $${pIndex} OR category ILIKE $${pIndex})`;
+          params.push(`%${search.trim()}%`);
+          pIndex++;
+        }
+
+        query += ' ORDER BY created_at ASC';
+        const res = await pool.query(query, params);
+        if (res.rows && res.rows.length > 0) {
+          return res.rows;
+        }
+      } catch (err) {
+        console.warn('[Neon DB] listStrategies error:', err.message);
+      }
+    }
+
+    // In-memory fallback
+    let list = Array.from(inMemoryStore.strategies.values());
+    if (category && category !== 'All' && category !== 'All Categories') {
+      list = list.filter(s => s.category.toLowerCase() === category.toLowerCase());
+    }
+    if (difficulty && difficulty !== 'All' && difficulty !== 'All Levels') {
+      list = list.filter(s => s.difficulty.toLowerCase() === difficulty.toLowerCase());
+    }
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(s =>
+        s.title.toLowerCase().includes(q) ||
+        s.description.toLowerCase().includes(q) ||
+        (s.best_use_case && s.best_use_case.toLowerCase().includes(q)) ||
+        s.category.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  },
+
+  /**
+   * Get single strategy by ID or slug
+   */
+  async getStrategy(idOrSlug) {
+    if (!idOrSlug) return null;
+    if (isNeonConnected && pool) {
+      try {
+        const res = await pool.query(
+          'SELECT * FROM negotiation_strategies WHERE id = $1 OR slug = $1 LIMIT 1',
+          [idOrSlug]
+        );
+        if (res.rows.length > 0) return res.rows[0];
+      } catch (err) {
+        console.warn('[Neon DB] getStrategy error:', err.message);
+      }
+    }
+
+    // In-memory fallback
+    const byId = inMemoryStore.strategies.get(idOrSlug);
+    if (byId) return byId;
+    return Array.from(inMemoryStore.strategies.values()).find(s => s.slug === idOrSlug) || null;
+  },
+
+  /**
+   * Get bookmarks for user
+   */
+  async getUserBookmarks(userId) {
+    if (!userId) return [];
+    if (isNeonConnected && pool) {
+      try {
+        const res = await pool.query(
+          'SELECT strategy_id FROM user_strategy_bookmarks WHERE user_id = $1 ORDER BY created_at DESC',
+          [userId]
+        );
+        return res.rows.map(r => r.strategy_id);
+      } catch (err) {
+        console.warn('[Neon DB] getUserBookmarks error:', err.message);
+      }
+    }
+
+    const set = inMemoryStore.bookmarks.get(userId);
+    return set ? Array.from(set) : [];
+  },
+
+  /**
+   * Add bookmark for user
+   */
+  async addBookmark(userId, userEmail, strategyId) {
+    if (!userId || !strategyId) return false;
+    const bookmarkId = `bm_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+    if (isNeonConnected && pool) {
+      try {
+        await pool.query(
+          `INSERT INTO user_strategy_bookmarks (id, user_id, user_email, strategy_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (user_id, strategy_id) DO NOTHING`,
+          [bookmarkId, userId, userEmail || null, strategyId]
+        );
+        return true;
+      } catch (err) {
+        console.warn('[Neon DB] addBookmark error:', err.message);
+      }
+    }
+
+    if (!inMemoryStore.bookmarks.has(userId)) {
+      inMemoryStore.bookmarks.set(userId, new Set());
+    }
+    inMemoryStore.bookmarks.get(userId).add(strategyId);
+    return true;
+  },
+
+  /**
+   * Remove bookmark for user
+   */
+  async removeBookmark(userId, strategyId) {
+    if (!userId || !strategyId) return false;
+    if (isNeonConnected && pool) {
+      try {
+        await pool.query(
+          'DELETE FROM user_strategy_bookmarks WHERE user_id = $1 AND strategy_id = $2',
+          [userId, strategyId]
+        );
+        return true;
+      } catch (err) {
+        console.warn('[Neon DB] removeBookmark error:', err.message);
+      }
+    }
+
+    if (inMemoryStore.bookmarks.has(userId)) {
+      inMemoryStore.bookmarks.get(userId).delete(strategyId);
+    }
+    return true;
+  },
+
+  /**
+   * Create or get strategy chat conversation
+   */
+  async createStrategyConversation(userId, userEmail, title = 'Strategy Inquiry', strategyId = null) {
+    const id = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const convRecord = {
+      id,
+      user_id: userId || 'guest',
+      user_email: userEmail || null,
+      title,
+      strategy_id: strategyId || null,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+
+    if (isNeonConnected && pool) {
+      try {
+        await pool.query(
+          `INSERT INTO strategy_chat_conversations (id, user_id, user_email, title, strategy_id)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [id, convRecord.user_id, convRecord.user_email, title, convRecord.strategy_id]
+        );
+      } catch (err) {
+        console.warn('[Neon DB] createStrategyConversation error:', err.message);
+      }
+    }
+
+    inMemoryStore.conversations.set(id, convRecord);
+    return convRecord;
+  },
+
+  /**
+   * List strategy chat conversations for user
+   */
+  async listStrategyConversations(userId) {
+    if (!userId) return [];
+    if (isNeonConnected && pool) {
+      try {
+        const res = await pool.query(
+          `SELECT c.*, s.title as strategy_title, s.slug as strategy_slug
+           FROM strategy_chat_conversations c
+           LEFT JOIN negotiation_strategies s ON c.strategy_id = s.id
+           WHERE c.user_id = $1
+           ORDER BY c.updated_at DESC`,
+          [userId]
+        );
+        return res.rows;
+      } catch (err) {
+        console.warn('[Neon DB] listStrategyConversations error:', err.message);
+      }
+    }
+
+    return Array.from(inMemoryStore.conversations.values())
+      .filter(c => c.user_id === userId)
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  },
+
+  /**
+   * Get single conversation
+   */
+  async getStrategyConversation(id, userId = null) {
+    if (!id) return null;
+    if (isNeonConnected && pool) {
+      try {
+        const query = userId
+          ? 'SELECT * FROM strategy_chat_conversations WHERE id = $1 AND user_id = $2'
+          : 'SELECT * FROM strategy_chat_conversations WHERE id = $1';
+        const params = userId ? [id, userId] : [id];
+        const res = await pool.query(query, params);
+        if (res.rows.length > 0) return res.rows[0];
+      } catch (err) {
+        console.warn('[Neon DB] getStrategyConversation error:', err.message);
+      }
+    }
+
+    return inMemoryStore.conversations.get(id) || null;
+  },
+
+  /**
+   * Delete conversation
+   */
+  async deleteStrategyConversation(id, userId = null) {
+    if (!id) return false;
+    if (isNeonConnected && pool) {
+      try {
+        const query = userId
+          ? 'DELETE FROM strategy_chat_conversations WHERE id = $1 AND user_id = $2'
+          : 'DELETE FROM strategy_chat_conversations WHERE id = $1';
+        const params = userId ? [id, userId] : [id];
+        await pool.query(query, params);
+        return true;
+      } catch (err) {
+        console.warn('[Neon DB] deleteStrategyConversation error:', err.message);
+      }
+    }
+
+    inMemoryStore.conversations.delete(id);
+    inMemoryStore.chatMessages.delete(id);
+    return true;
+  },
+
+  /**
+   * Add message to conversation
+   */
+  async addStrategyChatMessage(conversationId, role, content, strategyId = null) {
+    const id = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const msg = {
+      id,
+      conversation_id: conversationId,
+      role,
+      content,
+      strategy_id: strategyId || null,
+      created_at: new Date()
+    };
+
+    if (isNeonConnected && pool) {
+      try {
+        await pool.query(
+          `INSERT INTO strategy_chat_messages (id, conversation_id, role, content, strategy_id)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [id, conversationId, role, content, strategyId]
+        );
+        await pool.query(
+          'UPDATE strategy_chat_conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+          [conversationId]
+        );
+      } catch (err) {
+        console.warn('[Neon DB] addStrategyChatMessage error:', err.message);
+      }
+    }
+
+    if (!inMemoryStore.chatMessages.has(conversationId)) {
+      inMemoryStore.chatMessages.set(conversationId, []);
+    }
+    inMemoryStore.chatMessages.get(conversationId).push(msg);
+
+    const conv = inMemoryStore.conversations.get(conversationId);
+    if (conv) conv.updated_at = new Date();
+
+    return msg;
+  },
+
+  /**
+   * Get messages for conversation
+   */
+  async getStrategyChatMessages(conversationId) {
+    if (!conversationId) return [];
+    if (isNeonConnected && pool) {
+      try {
+        const res = await pool.query(
+          'SELECT * FROM strategy_chat_messages WHERE conversation_id = $1 ORDER BY created_at ASC',
+          [conversationId]
+        );
+        return res.rows;
+      } catch (err) {
+        console.warn('[Neon DB] getStrategyChatMessages error:', err.message);
+      }
+    }
+
+    return inMemoryStore.chatMessages.get(conversationId) || [];
   },
 };
 

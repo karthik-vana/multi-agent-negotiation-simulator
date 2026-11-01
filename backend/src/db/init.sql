@@ -78,3 +78,55 @@ CREATE INDEX IF NOT EXISTS idx_messages_simulation_round ON messages(simulation_
 CREATE INDEX IF NOT EXISTS idx_offers_simulation ON offers(simulation_id);
 CREATE INDEX IF NOT EXISTS idx_agents_simulation ON agents(simulation_id);
 
+-- 6. Negotiation Strategies Table
+CREATE TABLE IF NOT EXISTS negotiation_strategies (
+    id VARCHAR(64) PRIMARY KEY,
+    slug VARCHAR(64) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(128) NOT NULL,
+    difficulty VARCHAR(32) NOT NULL DEFAULT 'Beginner', -- 'Beginner', 'Intermediate', 'Advanced'
+    best_use_case TEXT NOT NULL,
+    advantages JSONB DEFAULT '[]'::jsonb,
+    risks JSONB DEFAULT '[]'::jsonb,
+    example_dialogue JSONB DEFAULT '[]'::jsonb,
+    recommended_scenarios JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. User Strategy Bookmarks Table
+CREATE TABLE IF NOT EXISTS user_strategy_bookmarks (
+    id VARCHAR(64) PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL,
+    user_email VARCHAR(255),
+    strategy_id VARCHAR(64) NOT NULL REFERENCES negotiation_strategies(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_strategy_bookmark UNIQUE (user_id, strategy_id)
+);
+
+-- 8. Strategy Chat Conversations Table
+CREATE TABLE IF NOT EXISTS strategy_chat_conversations (
+    id VARCHAR(64) PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL,
+    user_email VARCHAR(255),
+    title VARCHAR(255) NOT NULL DEFAULT 'Strategy Inquiry',
+    strategy_id VARCHAR(64) REFERENCES negotiation_strategies(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. Strategy Chat Messages Table
+CREATE TABLE IF NOT EXISTS strategy_chat_messages (
+    id VARCHAR(64) PRIMARY KEY,
+    conversation_id VARCHAR(64) NOT NULL REFERENCES strategy_chat_conversations(id) ON DELETE CASCADE,
+    role VARCHAR(32) NOT NULL, -- 'user', 'assistant', 'system'
+    content TEXT NOT NULL,
+    strategy_id VARCHAR(64),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_strategy_bookmarks_user ON user_strategy_bookmarks(user_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_chat_conv_user ON strategy_chat_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_chat_msg_conv ON strategy_chat_messages(conversation_id);
+

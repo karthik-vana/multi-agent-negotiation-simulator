@@ -200,6 +200,11 @@ async def call_gemini_model(req: NegotiationTurnRequest) -> Optional[Negotiation
     action = parsed["action"]
     proposed_offer = parsed.get("proposed_offer") or {}
 
+    # Guardrail: If there are prior turns in history, downgrade OFFER to COUNTER_OFFER
+    has_prior = bool(req.conversation_history and len(req.conversation_history) > 0) or (req.round_number > 1)
+    if action == "OFFER" and has_prior:
+        action = "COUNTER_OFFER"
+
     # Guardrail: Prevent premature agreement if agent is Aggressive and round is early (rounds 1-5)
     agent_personality = (req.agent.personality or "Collaborative").lower()
     if action == "ACCEPT" and req.round_number <= 5 and "aggressive" in agent_personality:
@@ -257,6 +262,11 @@ async def call_gemini_model(req: NegotiationTurnRequest) -> Optional[Negotiation
 def _package_reasoning_turn_response(req: NegotiationTurnRequest, parsed: dict) -> NegotiationTurnResponse:
     action = parsed.get("action", "OFFER")
     proposed_offer = parsed.get("proposed_offer") or {}
+
+    # Guardrail: If there are prior turns in history, downgrade OFFER to COUNTER_OFFER
+    has_prior = bool(req.conversation_history and len(req.conversation_history) > 0) or (req.round_number > 1)
+    if action == "OFFER" and has_prior:
+        action = "COUNTER_OFFER"
 
     # Guardrail: Prevent premature agreement if agent is Aggressive and round is early (rounds 1-5)
     agent_personality = (req.agent.personality or "Collaborative").lower()
@@ -448,7 +458,8 @@ def generate_domain_fallback_response(req: NegotiationTurnRequest) -> Negotiatio
     concession_rate = compute_concession_rate(p_name, round_num, max_rounds, cp_name)
     counterpart_offer = float(req.counterpart_agent.current_offer) if req.counterpart_agent.current_offer else None
 
-    action = "COUNTER_OFFER" if round_num > 1 else "OFFER"
+    has_prior_moves = bool(req.conversation_history and len(req.conversation_history) > 0)
+    action = "COUNTER_OFFER" if (has_prior_moves or round_num > 1) else "OFFER"
     agreement = False
 
     # -------------------------------------------------------------
@@ -636,6 +647,12 @@ def generate_domain_fallback_response(req: NegotiationTurnRequest) -> Negotiatio
                     f"We have finalized approvals for {currency}{base_salary:,.0f} base salary and look forward to having you on board.",
                 ])
                 stance = "Agreement reached"
+            elif not counterpart_offer or round_num == 1:
+                msg = random.choice([
+                    f"We are excited about your candidacy and pleased to extend an initial opening offer of {currency}{base_salary:,.0f} base salary with full benefits and hybrid flexibility.",
+                    f"We value your technical background and are pleased to table an opening compensation offer of {currency}{base_salary:,.0f} base salary.",
+                ])
+                stance = "Opening Proposal"
             elif "aggressive" in p_name.lower():
                 msg = random.choice([
                     f"Our internal salary band for this grade is firmly calibrated. We can stretch to {currency}{base_salary:,.0f} base.",

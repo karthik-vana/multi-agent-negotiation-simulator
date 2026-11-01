@@ -114,8 +114,9 @@ function generateDeterministicAgentMove({
 
   let proposedOffer = 0;
   let message = '';
-  let stance = 'Seeking agreement';
-  let action = roundNumber > 1 ? 'COUNTER_OFFER' : 'OFFER';
+  let stance = 'Holding firm';
+  const hasPriorOffers = Array.isArray(history) && history.some((m) => m.offer_value || m.sender_type === 'AGENT' || m.sender_type === 'HUMAN');
+  let action = hasPriorOffers || roundNumber > 1 ? 'COUNTER_OFFER' : 'OFFER';
   let agreementReached = false;
   let terms = {};
 
@@ -213,6 +214,12 @@ function generateDeterministicAgentMove({
           `We confirm an agreed base compensation of ${currency}${proposedOffer.toLocaleString()}. Thrilled to have you join us!`
         ]);
         stance = 'Agreement reached';
+      } else if (!counterpartOffer || roundNumber === 1) {
+        message = pickRandom([
+          `We are excited about your candidacy and pleased to extend an initial opening offer of ${currency}${proposedOffer.toLocaleString()} base salary with full benefits.`,
+          `We value your technical background and are pleased to table an opening compensation offer of ${currency}${proposedOffer.toLocaleString()} base salary.`
+        ]);
+        stance = 'Opening Proposal';
       } else if (personality.includes('aggressive')) {
         message = pickRandom([
           `Our salary band for this grade has strict budget caps. We can adjust to ${currency}${proposedOffer.toLocaleString()} base.`,

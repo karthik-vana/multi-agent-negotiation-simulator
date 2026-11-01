@@ -6,6 +6,7 @@ import {
   GraduationCap,
   FileText,
   BarChart3,
+  BookOpen,
   Settings,
   Search,
   LogOut,
@@ -67,6 +68,13 @@ const Sidebar = ({ isOpen, onClose }) => {
       section: t ? t('mainMenu') : 'Main Menu',
       icon: BarChart3,
       keywords: ['analytics', 'telemetry', 'charts', 'graphs', 'statistics', 'performance', 'metrics', 'trends', 'rates']
+    },
+    {
+      name: 'Strategy Library',
+      path: '/strategy-library',
+      section: t ? t('mainMenu') : 'Main Menu',
+      icon: BookOpen,
+      keywords: ['strategy', 'library', 'gemini', 'doubt', 'tutor', 'batna', 'zopa', 'anchoring', 'tactics', 'principles', 'assistant']
     },
     {
       name: t ? t('profileAndSettings') : 'Profile & Settings',
@@ -297,6 +305,20 @@ const Sidebar = ({ isOpen, onClose }) => {
         >
           <BarChart3 size={22} className="nav-icon" />
           <span>Negotiation Analytics</span>
+        </NavLink>
+
+        <NavLink
+          to="/strategy-library"
+          onClick={() => {
+            sessionStorage.removeItem('active_arena_sim_id');
+            sessionStorage.removeItem('viewing_report_sim_id');
+            if (onClose) onClose();
+          }}
+          className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          title="Browse negotiation frameworks & ask Gemini AI doubts"
+        >
+          <BookOpen size={22} className="nav-icon" />
+          <span>Strategy Library</span>
         </NavLink>
 
         <NavLink
