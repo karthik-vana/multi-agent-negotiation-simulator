@@ -375,19 +375,37 @@ class OrchestratorAgent {
     let move;
     if (isHumanTurn && customMove) {
       let offerVal = customMove.offer_value;
-      if (offerVal === undefined || offerVal === null) {
+      if (offerVal === undefined) {
         const numMatch = (customMove.message || '').replace(/,/g, '').match(/(?:₹|\$)?\s*(\d{4,9})/);
         if (numMatch) {
           offerVal = Number(numMatch[1]);
         } else {
-          offerVal = activeAgent.current_offer || activeAgent.target_value;
+          const thousandMatch = (customMove.message || '').match(/(\d+(?:\.\d+)?)\s*(?:thousand|thousands|k)\b/i);
+          if (thousandMatch) {
+            offerVal = Math.round(parseFloat(thousandMatch[1]) * 1000);
+          } else {
+            offerVal = null;
+          }
+        }
+      }
+
+      let humanAction = customMove.action;
+      if (!humanAction || humanAction === 'COUNTER_OFFER' || humanAction === 'STATUS' || humanAction === 'OFFER') {
+        const lowerMsg = (customMove.message || '').toLowerCase();
+        const hasConditional = /\b(if\b|unless|but\b|however|provided that)\b/i.test(lowerMsg);
+        if (!hasConditional) {
+          if (/\b(accept\b|agreed?\b|we have a deal|that works for me|finalize this|happy with this (?:deal|agreement|offer))\b/i.test(lowerMsg)) {
+            humanAction = 'ACCEPT';
+          } else if (/\b(reject\b|cannot accept|can't accept|not acceptable|end this negotiation|decline\b|no deal|walk away)\b/i.test(lowerMsg)) {
+            humanAction = 'REJECT';
+          }
         }
       }
 
       move = {
         message: customMove.message,
         offer_value: offerVal,
-        action: customMove.action || 'COUNTER_OFFER',
+        action: humanAction || (offerVal !== null ? 'COUNTER_OFFER' : 'STATUS'),
         stance: customMove.stance || 'Human proposal',
         progress_percent: Math.min((activeAgent.progress_percent || 40) + 10, 95),
         terms: customMove.terms || {},
@@ -614,7 +632,7 @@ class OrchestratorAgent {
         shouldStop: true,
         finalStatus: 'COMPLETED',
         agreedValue: settlementPrice,
-        orchestratorMessage: `Agreement successfully confirmed in Round ${currentRound}! Both parties settled at ₹${Number(settlementPrice).toLocaleString()}. Negotiation concluded successfully.`,
+        orchestratorMessage: `Congratulations! Both parties have successfully reached an agreement. The negotiation has been concluded.`,
       };
     }
 
@@ -624,7 +642,7 @@ class OrchestratorAgent {
         shouldStop: true,
         finalStatus: 'DEADLOCK',
         agreedValue: null,
-        orchestratorMessage: `${activeAgent.role} rejected the counterpart's terms citing strict reservation constraints. Negotiation broke down without agreement.`,
+        orchestratorMessage: `The negotiation has been terminated. No agreement was reached between the parties.`,
       };
     }
 
