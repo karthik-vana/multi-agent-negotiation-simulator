@@ -31,6 +31,7 @@ import {
   Tag,
   UserCheck,
   RotateCw,
+  BookOpen,
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -46,6 +47,11 @@ import {
   restartSimulation,
   endSimulation,
 } from '../services/simulationApi';
+import {
+  extractMonetaryOffer,
+  detectNegotiationIntent,
+  getMessageOffer,
+} from '../utils/negotiationInteraction';
 import './NegotiationArena.css';
 
 /**
@@ -300,95 +306,61 @@ const NegotiationArena = () => {
     !isHumanTurn
   );
 
-  // Auto-sync default offer value when human turn activates
-  useEffect(() => {
-    if (activeTurnAgent && (!practiceOfferValue || practiceOfferValue === '')) {
-      const defaultOffer =
-        activeTurnAgent.current_offer ||
-        activeTurnAgent.target_value ||
-        (currentScenarioId === 'vendor-pricing' ? 10000 : 165000);
-      setPracticeOfferValue(String(defaultOffer));
-    }
-  }, [activeTurnAgent?.id, activeTurnAgent?.current_offer, currentScenarioId]);
-
-  /**
-   * Dispatches human negotiation actions: COUNTER_OFFER, ACCEPT, or REJECT
-   */
   // Opening move detection: true when no agent or human has put forward an offer yet
   const activeOffersCount = (simulation?.messages || []).filter(
     (m) => (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') && m.offer_value
   ).length;
   const isOpeningMove = activeOffersCount === 0;
 
-  const handleHumanAction = async (actionType = 'COUNTER_OFFER') => {
-    if (turnRunning || !simulation?.id || simulation.status !== 'RUNNING') {
+  // Real-time detection of monetary amount in single chat input as user types
+  const detectedOfferInInput = extractMonetaryOffer(practiceMessage);
+
+  /**
+   * Dispatches human negotiation messages via the single chat input
+   * Automatically handles:
+   * 1. Monetary offer extraction (₹150,000, 1.5 lakh, ₹2 LPA, $80,000, 150000)
+   * 2. Deal Acceptance detection ("I accept the deal", "That works for me")
+   * 3. Deal Rejection detection ("I cannot accept this offer. Let's end the negotiation")
+   * 4. Irrelevant message forwarding to existing AI service ("What is your favourite movie?")
+   */
+  const handleSendPracticeMessage = async (overrideText = null) => {
+    if (turnRunning || !simulation?.id || simulation.status !== 'RUNNING' || isTerminated) {
       return;
     }
 
-    const text = practiceMessage.trim();
-    let numericOffer = null;
-
-    if (actionType === 'ACCEPT') {
-      // Find counterpart's latest proposed offer in messages or counterpart agent
-      const lastCounterpartOfferMsg = [...(simulation.messages || [])]
-        .reverse()
-        .find((m) => m.sender_type !== 'ORCHESTRATOR' && m.offer_value);
-      numericOffer = lastCounterpartOfferMsg?.offer_value || activeTurnAgent?.current_offer || 165000;
-    } else {
-      const cleanInput = String(practiceOfferValue).replace(/[^0-9.]/g, '');
-      if (cleanInput && !isNaN(Number(cleanInput))) {
-        numericOffer = Number(cleanInput);
-      } else {
-        // Fallback to text parsing
-        const kMatch = text.match(/(?:₹|\$)?\s*(\d+(?:\.\d+)?)\s*(?:k|lac|lakh)/i);
-        if (kMatch) {
-          const val = parseFloat(kMatch[1]);
-          numericOffer =
-            kMatch[0].toLowerCase().includes('lac') || kMatch[0].toLowerCase().includes('lakh')
-              ? Math.round(val * 100000)
-              : Math.round(val * 1000);
-        } else {
-          const numMatch = text.replace(/,/g, '').match(/(?:₹|\$)?\s*(\d{4,9})/);
-          numericOffer = numMatch ? parseInt(numMatch[1], 10) : (activeTurnAgent?.current_offer || 165000);
-        }
-      }
+    const text = (typeof overrideText === 'string' ? overrideText : practiceMessage).trim();
+    if (!text) {
+      return; // Validation: prevents submission of empty or whitespace-only messages
     }
 
-    const effectiveAction = isOpeningMove && actionType === 'COUNTER_OFFER' ? 'OFFER' : actionType;
+    const intent = detectNegotiationIntent(text);
+    const extractedOffer = extractMonetaryOffer(text);
 
-    let finalMessage = text;
-    if (!finalMessage) {
-      if (effectiveAction === 'ACCEPT') {
-        finalMessage = `I agree to your proposal of ₹${Number(numericOffer).toLocaleString()}. We have reached a mutually acceptable agreement.`;
-      } else if (effectiveAction === 'REJECT') {
-        finalMessage = `I cannot accept these terms as they do not meet my minimum reservation boundaries. I must conclude our negotiation.`;
-      } else if (isOpeningMove) {
-        const myRole = (humanAgent?.role || '').toLowerCase();
-        if (myRole.includes('recruiter') || myRole.includes('hiring') || myRole.includes('director')) {
-          finalMessage = `We are pleased to extend an initial opening offer of ₹${Number(numericOffer).toLocaleString()} base salary along with competitive equity and full benefits.`;
-        } else if (myRole.includes('buyer') || myRole.includes('purchasing') || myRole.includes('procurement')) {
-          finalMessage = `We are pleased to propose an opening purchase offer of ₹${Number(numericOffer).toLocaleString()} per unit for our project requirements.`;
-        } else if (myRole.includes('candidate')) {
-          finalMessage = `Thank you for considering my application. I propose an opening base salary of ₹${Number(numericOffer).toLocaleString()} with standard hybrid flexibility.`;
-        } else if (myRole.includes('engineering') || myRole.includes('infrastructure')) {
-          finalMessage = `I would like to propose an opening infrastructure budget allocation of ₹${Number(numericOffer).toLocaleString()}.`;
-        } else {
-          finalMessage = `I would like to table an opening proposal of ₹${Number(numericOffer).toLocaleString()} considering our project requirements.`;
-        }
-      } else {
-        const myRole = (humanAgent?.role || '').toLowerCase();
-        if (myRole.includes('candidate')) {
-          finalMessage = `Based on my specialized engineering experience and market benchmarks, I propose a counter-offer of ₹${Number(numericOffer).toLocaleString()} base compensation.`;
-        } else if (myRole.includes('recruiter') || myRole.includes('hiring') || myRole.includes('talent')) {
-          finalMessage = `We have reviewed our departmental bands and can enhance our compensation package to ₹${Number(numericOffer).toLocaleString()} base.`;
-        } else if (myRole.includes('buyer') || myRole.includes('procurement') || myRole.includes('purchasing')) {
-          finalMessage = `Considering our procurement constraints, I propose a counter-offer of ₹${Number(numericOffer).toLocaleString()} per unit.`;
-        } else if (myRole.includes('seller') || myRole.includes('sales') || myRole.includes('vendor')) {
-          finalMessage = `To protect commercial delivery while meeting you halfway, our revised offer is ₹${Number(numericOffer).toLocaleString()}.`;
-        } else {
-          finalMessage = `I would like to propose a counter-offer of ₹${Number(numericOffer).toLocaleString()} considering our project requirements.`;
-        }
-      }
+    let actionType = 'COUNTER_OFFER';
+    let numericOffer = null;
+
+    if (intent.isAccept) {
+      actionType = 'ACCEPT';
+      // Find counterpart's latest proposed offer in messages or counterpart agent
+      const counterpartMessages = (simulation?.messages || []).filter(
+        (m) => m.sender_type !== 'ORCHESTRATOR' && (m.sender_type === 'AGENT' || m.sender_role !== humanAgent?.role)
+      );
+      const lastCounterpartOfferMsg = [...counterpartMessages].reverse().find(
+        (m) => getMessageOffer(m)
+      );
+      numericOffer = lastCounterpartOfferMsg
+        ? getMessageOffer(lastCounterpartOfferMsg)
+        : (opponentAgent?.current_offer || (currentScenarioId === 'vendor-pricing' ? 10000 : 165000));
+    } else if (intent.isReject) {
+      actionType = 'REJECT';
+      numericOffer = null;
+    } else if (extractedOffer !== null) {
+      actionType = isOpeningMove ? 'OFFER' : 'COUNTER_OFFER';
+      numericOffer = extractedOffer;
+    } else {
+      // General message / conversational response without monetary proposal
+      actionType = isOpeningMove ? 'OFFER' : 'COUNTER_OFFER';
+      numericOffer = null;
     }
 
     setPracticeMessage('');
@@ -396,9 +368,9 @@ const NegotiationArena = () => {
 
     try {
       const updated = await stepSimulation(simulation.id, {
-        message: finalMessage,
+        message: text,
         offer_value: numericOffer,
-        action: effectiveAction,
+        action: actionType,
       });
       if (updated) {
         setSimulation(updated);
@@ -407,13 +379,11 @@ const NegotiationArena = () => {
         }
       }
     } catch (err) {
-      console.error(`Error submitting ${actionType} turn:`, err);
+      console.error('Error submitting practice message:', err);
     } finally {
       setTurnRunning(false);
     }
   };
-
-  const handleSendPracticeMessage = () => handleHumanAction('COUNTER_OFFER');
 
   const transcriptEndRef = useRef(null);
   const timerRef = useRef(null);
@@ -1176,26 +1146,31 @@ const NegotiationArena = () => {
                                 )}
                               </div>
 
-                              {/* Bubble Content Row (Text + Offer badge) */}
-                              <div className="arena-bubble-content-row">
-                                {/* Attached Offer Badge for Right/User messages (Placed on left of text) */}
-                                {!isLeft && msg.offer_value && (
-                                  <div className="arena-attached-offer seller-offer">
-                                    <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
-                                  </div>
-                                )}
+                              {/* Bubble Content Row (Text + Dynamic Offer badge) */}
+                              {(() => {
+                                const attachedOffer = getMessageOffer(msg);
+                                return (
+                                  <div className="arena-bubble-content-row">
+                                    {/* Attached Offer Badge for Right/User messages (Placed on left of text) */}
+                                    {!isLeft && attachedOffer && (
+                                      <div className="arena-attached-offer seller-offer">
+                                        <span>Offer: ₹{Number(attachedOffer).toLocaleString()}</span>
+                                      </div>
+                                    )}
 
-                                <div className={`arena-speech-bubble ${isHumanMsg ? 'human-bubble' : ''} ${isLeft ? 'buyer-bubble' : 'seller-bubble'}`}>
-                                  <p className="arena-bubble-text">{msg.message}</p>
-                                </div>
+                                    <div className={`arena-speech-bubble ${isHumanMsg ? 'human-bubble' : ''} ${isLeft ? 'buyer-bubble' : 'seller-bubble'}`}>
+                                      <p className="arena-bubble-text">{msg.message}</p>
+                                    </div>
 
-                                {/* Attached Offer Badge for Left/AI messages (Placed on right of text) */}
-                                {isLeft && msg.offer_value && (
-                                  <div className="arena-attached-offer buyer-offer">
-                                    <span>Offer: ₹{Number(msg.offer_value).toLocaleString()}</span>
+                                    {/* Attached Offer Badge for Left/AI messages (Placed on right of text) */}
+                                    {isLeft && attachedOffer && (
+                                      <div className="arena-attached-offer buyer-offer">
+                                        <span>Offer: ₹{Number(attachedOffer).toLocaleString()}</span>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </div>
+                                );
+                              })()}
                             </div>
 
                             {/* Right-side Avatar (Shows animated SVG face avatar for all scenarios) */}
@@ -1273,74 +1248,82 @@ const NegotiationArena = () => {
                       </span>
                     </div>
                   )}
-                  <button className="arena-practice-coach-link" type="button" onClick={() => setAiCoachEnabled((p) => !p)}>
-                    <Lightbulb size={13} className="arena-coach-bulb" />
-                    <span>AI Coach Tips</span>
+                  <button
+                    className="arena-practice-coach-link"
+                    type="button"
+                    onClick={() => setAiCoachEnabled((p) => !p)}
+                    title="View accepted number, price, and currency formats"
+                  >
+                    <BookOpen size={13} className="arena-coach-bulb" />
+                    <span>Numbers and Offer Guide</span>
                     <ChevronRight size={13} />
                   </button>
                 </div>
               </div>
 
-              {/* Offer & Rationale Inputs Grid */}
-              <div className="arena-dock-inputs-grid">
-                {/* 1. Numeric Offer Field (₹) */}
-                <div className="arena-dock-field-wrap offer-field-wrap">
-                  <label htmlFor="human-numeric-offer" className="arena-dock-label">
-                    <Coins size={13} />
-                    <span>{isOpeningMove ? 'Your Opening Offer (₹)' : 'Your Counter-Offer (₹)'}</span>
+              {/* Single Chat Input Area (Replaces separate counter-offer numeric input) */}
+              <div className="arena-dock-single-input-wrap">
+                <div className="arena-dock-label-row">
+                  <label htmlFor="human-message-input" className="arena-dock-label">
+                    <MessageSquare size={13} />
+                    <span>Negotiation Chat Input</span>
                   </label>
-                  <div className="arena-currency-input-box">
-                    <span className="currency-symbol">₹</span>
-                    <input
-                      id="human-numeric-offer"
-                      type="text"
-                      className="arena-dock-numeric-input"
-                      placeholder={currentScenarioId === 'vendor-pricing' ? '10,000' : '165,000'}
-                      value={practiceOfferValue}
-                      disabled={!isHumanTurn || turnRunning || isTerminated}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/[^0-9,]/g, '');
-                        setPracticeOfferValue(raw);
-                      }}
-                    />
-                    <span className="currency-suffix">INR</span>
-                  </div>
+                  {detectedOfferInInput && (
+                    <span className="arena-dock-detected-pill">
+                      <Tag size={11} /> Detected Offer: <strong>₹{Number(detectedOfferInInput).toLocaleString()}</strong>
+                    </span>
+                  )}
+                  <span className="arena-dock-char-count">{practiceMessage.length}/1000</span>
                 </div>
-
-                {/* 2. Message Textarea */}
-                <div className="arena-dock-field-wrap message-field-wrap">
-                  <div className="arena-dock-label-row">
-                    <label htmlFor="human-message-input" className="arena-dock-label">
-                      <MessageSquare size={13} />
-                      <span>Negotiation Message & Justification</span>
-                    </label>
-                    <span className="arena-dock-char-count">{practiceMessage.length}/1000</span>
-                  </div>
-                  <textarea
-                    id="human-message-input"
-                    className="arena-dock-textarea"
-                    placeholder={
-                      isTerminated
-                        ? "Negotiation has concluded. Inspect the summary report above or restart to begin a new session."
-                        : isHumanTurn
-                          ? isOpeningMove
-                            ? "State your opening proposal and terms (e.g., 'We are pleased to extend an initial compensation offer of ₹152,000 with standard benefits')..."
-                            : "State your rationale or proposed terms (e.g., 'Given our delivery commitments, I propose ₹165,000 with Net-60 terms')..."
-                          : "AI counterpart is reviewing the dialogue and formulating a response..."
-                    }
-                    value={practiceMessage}
-                    disabled={!isHumanTurn || turnRunning || isTerminated}
-                    onChange={(e) => setPracticeMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleHumanAction('COUNTER_OFFER');
+                <textarea
+                  id="human-message-input"
+                  className="arena-dock-textarea arena-dock-single-textarea"
+                  placeholder={
+                    isTerminated
+                      ? "Negotiation has concluded. Inspect the summary report above or restart to begin a new session."
+                      : isHumanTurn && !turnRunning
+                        ? isOpeningMove
+                          ? "State your opening proposal or offer (e.g. 'I can adjust my salary expectation to ₹173,500' or '₹165,000')..."
+                          : "Type your offer, response, or question (e.g. 'I propose ₹160,000' or 'I accept the deal')..."
+                        : "AI counterpart is reviewing the dialogue and formulating a response..."
+                  }
+                  value={practiceMessage}
+                  disabled={!isHumanTurn || turnRunning || isTerminated}
+                  onChange={(e) => setPracticeMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (practiceMessage.trim() && isHumanTurn && !turnRunning && !isTerminated) {
+                        handleSendPracticeMessage();
                       }
-                    }}
-                    maxLength={1000}
-                    rows={2}
-                  />
-                </div>
+                    }
+                  }}
+                  maxLength={1000}
+                  rows={2}
+                />
+
+                {/* Quick Suggestion Chips */}
+                {!isTerminated && isHumanTurn && !turnRunning && (
+                  <div className="arena-dock-quick-chips">
+                    <span className="quick-chips-label">Quick options:</span>
+                    <button
+                      type="button"
+                      className="arena-quick-chip"
+                      onClick={() => handleHumanSubmit("I accept the deal.")}
+                      title="Directly accept the current offer and conclude negotiation"
+                    >
+                      "I accept the deal."
+                    </button>
+                    <button
+                      type="button"
+                      className="arena-quick-chip chip-reject"
+                      onClick={() => handleHumanSubmit("I cannot accept this offer. Let's end the negotiation.")}
+                      title="Directly reject the offer and terminate negotiation"
+                    >
+                      "I cannot accept this offer."
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Bottom Action Controls Bar */}
@@ -1356,44 +1339,38 @@ const NegotiationArena = () => {
                     <span />
                     <span />
                   </div>
-                  <span className="arena-dock-hint-text">Type terms or speak proposal</span>
+                  <span className="arena-dock-hint-text">Type terms, offers (₹), or responses and hit Send</span>
                 </div>
 
                 <div className="arena-dock-action-buttons">
-                  {/* Action 1: Reject / Concede */}
                   <button
                     type="button"
-                    className="btn-dock-action btn-dock-reject"
-                    disabled={!isHumanTurn || turnRunning || isTerminated}
-                    onClick={() => handleHumanAction('REJECT')}
-                    title="Reject current proposal and terminate negotiation"
+                    className="btn-dock-action btn-dock-send"
+                    disabled={!isHumanTurn || turnRunning || isTerminated || !practiceMessage.trim()}
+                    onClick={() => handleSendPracticeMessage()}
+                    title={
+                      isTerminated
+                        ? "Negotiation has ended"
+                        : !isHumanTurn
+                        ? "Awaiting AI counterpart's response"
+                        : turnRunning
+                        ? "Deliberating turn..."
+                        : !practiceMessage.trim()
+                        ? "Type a message or offer to send"
+                        : "Send negotiation message"
+                    }
                   >
-                    <XCircle size={14} />
-                    <span>Reject / Concede</span>
-                  </button>
-
-                  {/* Action 2: Accept Deal */}
-                  <button
-                    type="button"
-                    className="btn-dock-action btn-dock-accept"
-                    disabled={!isHumanTurn || turnRunning || isTerminated || isOpeningMove}
-                    onClick={() => handleHumanAction('ACCEPT')}
-                    title={isOpeningMove ? "Cannot accept before counterpart extends an offer" : "Accept counterpart's current proposal"}
-                  >
-                    <CheckCircle2 size={14} />
-                    <span>Accept Deal</span>
-                  </button>
-
-                  {/* Action 3: Send Counter-Offer / Opening Offer */}
-                  <button
-                    type="button"
-                    className="btn-dock-action btn-dock-counter"
-                    disabled={!isHumanTurn || turnRunning || isTerminated}
-                    onClick={() => handleHumanAction('COUNTER_OFFER')}
-                    title={isOpeningMove ? "Send initial opening offer with proposed terms" : "Send counter-offer with proposed price and justification"}
-                  >
-                    {isOpeningMove ? <Tag size={14} /> : <ArrowRightLeft size={14} />}
-                    <span>{turnRunning ? 'Deliberating...' : (isOpeningMove ? 'Send Opening Offer' : 'Send Counter-Offer')}</span>
+                    {turnRunning ? (
+                      <>
+                        <Loader2 size={14} className="spin-icon" />
+                        <span>Deliberating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={14} />
+                        <span>Send</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -1404,17 +1381,17 @@ const NegotiationArena = () => {
 
         {/* RIGHT COLUMN: Agent Status & Negotiation Metrics */}
         <div className="arena-sidebar-col">
-          {/* AI Coach Card (Practice Mode Only) */}
+          {/* Numbers and Offer Guide Card (Practice Mode) */}
           {isPracticeMode && (
-          <div className="arena-coach-card">
+          <div className="arena-coach-card arena-number-guide-card">
             <div className="arena-coach-header">
               <div className="arena-coach-left">
-                <div className="arena-coach-icon-wrap">
-                  <Bot size={18} />
+                <div className="arena-coach-icon-wrap guide-icon-wrap">
+                  <Coins size={18} />
                 </div>
                 <div>
-                  <h3 className="arena-coach-title">AI Coach</h3>
-                  <p className="arena-coach-desc">Get real-time suggestions, strategy tips, and feedback based on the negotiation context.</p>
+                  <h3 className="arena-coach-title">Numbers and Offer Guide</h3>
+                  <p className="arena-coach-desc">How to enter prices, offers, acceptances, and rejections in Practice Mode</p>
                 </div>
               </div>
               <div className="arena-coach-toggle-wrap">
@@ -1422,14 +1399,110 @@ const NegotiationArena = () => {
                   type="button"
                   className={`arena-coach-toggle ${aiCoachEnabled ? 'on' : 'off'}`}
                   onClick={() => setAiCoachEnabled((p) => !p)}
-                  title={aiCoachEnabled ? 'Disable AI Coach' : 'Enable AI Coach'}
-                  aria-label="Toggle AI Coach"
+                  title={aiCoachEnabled ? 'Hide Guide' : 'Show Guide'}
+                  aria-label="Toggle Guide"
                 >
                   <span className="arena-toggle-knob" />
                 </button>
-                <Sparkles size={15} className="arena-coach-sparkle" />
               </div>
             </div>
+
+            {aiCoachEnabled && (
+              <div className="arena-guide-body">
+                <div className="arena-format-table-wrapper">
+                  <table className="arena-format-table">
+                    <thead>
+                      <tr>
+                        <th>Format Entered</th>
+                        <th>Example Message</th>
+                        <th>Extracted Offer</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Rupees Symbol (₹)</strong></td>
+                        <td><code>&quot;I propose ₹173,500&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹173,500</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Rupees Text (Rs.)</strong></td>
+                        <td><code>&quot;Rs. 1,50,000 is our best price&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹150,000</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Rupees Suffix (rupees / rs)</strong></td>
+                        <td><code>&quot;80 rupees&quot; or &quot;80 rs&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹80</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Rupees Word Prefix</strong></td>
+                        <td><code>&quot;rupees 80&quot; or &quot;rupee 80&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹80</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Indian Lakh (lakh / lac)</strong></td>
+                        <td><code>&quot;We can do 1.5 lakh&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹150,000</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Thousand in Words</strong></td>
+                        <td><code>&quot;my offer 50 thousand&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹50,000</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>LPA (Lakhs Per Annum)</strong></td>
+                        <td><code>&quot;My expectation is ₹2 LPA&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹200,000</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Dollars ($)</strong></td>
+                        <td><code>&quot;Final offer is $80,000&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹80,000</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>K Notation (k)</strong></td>
+                        <td><code>&quot;We can offer 120k&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹120,000</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Raw Numbers</strong></td>
+                        <td><code>&quot;110000&quot;</code></td>
+                        <td><span className="format-badge-sample">Offer: ₹110,000</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="arena-format-guide-note">
+                  <AlertCircle size={15} className="guide-note-icon" />
+                  <p>
+                    <strong>Don&apos;t use dollars ($):</strong> All scenario conversions, budget limits, and evaluation thresholds are calibrated for <strong>Rupees (₹) only</strong>. If you write a price with a dollar sign (e.g. <code>$80,000</code>), it will automatically convert directly into Rupees (<strong>₹80,000</strong>).
+                  </p>
+                </div>
+
+                <div className="arena-guide-action-box">
+                  <div className="arena-guide-action-item accept-item">
+                    <CheckCircle2 size={16} className="guide-action-icon text-emerald-500" />
+                    <div>
+                      <strong>Accepting an Offer:</strong>
+                      <p>
+                        Type messages such as <code>&quot;I want to accept this offer&quot;</code>, <code>&quot;I accept the deal&quot;</code>, or <code>&quot;I agree to your offer&quot;</code>, or directly click the <strong>&quot;I accept the deal.&quot;</strong> quick option button. The negotiation will immediately conclude with a successful agreement (<strong>Agreed</strong>) and no further turns will run.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="arena-guide-action-item reject-item">
+                    <XCircle size={16} className="guide-action-icon text-rose-500" />
+                    <div>
+                      <strong>Rejecting an Offer:</strong>
+                      <p>
+                        Type messages such as <code>&quot;I want to reject this offer&quot;</code>, <code>&quot;I cannot accept this offer&quot;</code>, or <code>&quot;I decline this deal&quot;</code>, or directly click the <strong>&quot;I cannot accept this offer.&quot;</strong> quick option button. The negotiation will immediately conclude in a breakdown (<strong>Rejected / Deadlock</strong>).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           )}
 

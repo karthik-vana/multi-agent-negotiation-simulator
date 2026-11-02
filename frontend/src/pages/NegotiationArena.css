@@ -1846,6 +1846,183 @@
   color: #818cf8;
 }
 
+/* Number & Currency Guide Table & Note */
+.arena-number-guide-card {
+  padding: 14px 16px;
+}
+
+.guide-icon-wrap {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+  border-color: #a7f3d0 !important;
+}
+
+[data-theme="dark"] .guide-icon-wrap {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+.arena-guide-body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.arena-format-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+}
+
+.arena-format-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.77rem;
+  text-align: left;
+}
+
+.arena-format-table th {
+  background: #f8fafc;
+  color: var(--text-muted, #64748b);
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .arena-format-table th {
+  background: #0f172a;
+}
+
+.arena-format-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  color: var(--text-main, #0f172a);
+}
+
+[data-theme="dark"] .arena-format-table td {
+  border-bottom-color: #1e293b;
+}
+
+.arena-format-table tr:last-child td {
+  border-bottom: none;
+}
+
+.arena-format-table code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.74rem;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+[data-theme="dark"] .arena-format-table code {
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+.format-badge-sample {
+  display: inline-block;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .format-badge-sample {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.arena-format-guide-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 0.76rem;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+[data-theme="dark"] .arena-format-guide-note {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+.guide-note-icon {
+  color: #d97706;
+  min-width: 15px;
+  margin-top: 2px;
+}
+
+.arena-format-guide-note p {
+  margin: 0;
+}
+
+.arena-guide-action-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.arena-guide-action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.arena-guide-action-item.accept-item {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+[data-theme="dark"] .arena-guide-action-item.accept-item {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.arena-guide-action-item.reject-item {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+[data-theme="dark"] .arena-guide-action-item.reject-item {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.arena-guide-action-item p {
+  margin: 2px 0 0;
+}
+
+.guide-action-icon {
+  min-width: 15px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
 /* 2. Practice Mode Message Input Panel (Bottom of Transcript) */
 .arena-practice-input-panel {
   border-top: 1px solid var(--border-color, #e2e8f0);
@@ -2627,6 +2804,121 @@
   cursor: pointer;
   transition: all 0.18s ease;
   border: 1px solid transparent;
+}
+
+/* 4. Single Chat Input Container (Replaces separate numeric counter-offer input) */
+.arena-dock-single-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.arena-dock-single-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 70px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.arena-dock-detected-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  font-size: 0.76rem;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-weight: 600;
+  animation: fadeInPill 0.2s ease-in-out;
+}
+
+[data-theme="dark"] .arena-dock-detected-pill {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+@keyframes fadeInPill {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.arena-dock-quick-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+.quick-chips-label {
+  font-size: 0.74rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+}
+
+.arena-quick-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .arena-quick-chip {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.arena-quick-chip:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.arena-quick-chip.chip-reject {
+  color: #b91c1c;
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
+.arena-quick-chip.chip-reject:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.btn-dock-send {
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+  padding: 8px 22px;
+  font-size: 0.88rem;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+
+.btn-dock-send:hover:not(:disabled) {
+  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
+}
+
+.btn-dock-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #94a3b8;
+  border-color: #cbd5e1;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-dock-reject {

@@ -324,6 +324,19 @@ function generateDeterministicAgentMove({
     terms = { unitPrice: proposedOffer, currency, round: roundNumber };
   }
 
+  // Handle conversational chit-chat / greetings if human sent casual message
+  if (Array.isArray(history) && history.length > 0) {
+    const lastMsg = history[history.length - 1];
+    if (lastMsg?.sender_type === 'HUMAN') {
+      const text = (lastMsg.message || '').toLowerCase().trim();
+      if (/(movie|film|weather|song|joke|sport|food|favourite|favorite|hobby)/i.test(text)) {
+        message = "That's interesting! However, let's focus on our negotiation. Would you be comfortable with our current proposed offer?";
+      } else if (/^(hello|hi\b|hey\b|how are you|good morning|good evening)/i.test(text)) {
+        message = "I'm doing well, thank you! Let's continue our discussion.";
+      }
+    }
+  }
+
   // Calculate progress percent towards deal
   const progressPercent = agreementReached ? 100 : Math.min(95, Math.max(30, Math.round(35 + (roundNumber / maxRounds) * 55)));
 
