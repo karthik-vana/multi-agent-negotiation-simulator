@@ -3325,3 +3325,143 @@
   font-size: 0.76rem;
   font-weight: 700;
 }
+
+
+/* VOICE DICTATION FEATURE */
+.arena-dock-mic-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.arena-dock-mic-btn.mic_recording {
+  background: #dc2626;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55);
+  animation: arenaMicPulse 1.25s ease-out infinite;
+}
+
+.arena-dock-mic-btn.mic_recording:hover {
+  background: #b91c1c;
+}
+
+@keyframes arenaMicPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+.arena-dock-language-select {
+  height: 32px;
+  max-width: 132px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-main, #0f172a);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.arena-dock-language-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .arena-dock-language-select {
+  background: #141e33;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.arena-audio-waves.active span {
+  background: #ef4444;
+  transform-origin: center;
+  animation: arenaVoiceWave 0.8s ease-in-out infinite;
+}
+
+.arena-audio-waves.active span:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.arena-audio-waves.active span:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.arena-audio-waves.active span:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.arena-audio-waves.active span:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+@keyframes arenaVoiceWave {
+  0%, 100% {
+    transform: scaleY(0.45);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scaleY(1.3);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .arena-dock-voice-hint {
+    flex-wrap: wrap;
+  }
+
+  .arena-dock-hint-text {
+    flex-basis: 100%;
+  }
+}
+/* TEXT TO SPEECH */
+.arena-message-tts-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #4f46e5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.arena-message-tts-btn:hover {
+  background: #eef2ff;
+  border-color: #818cf8;
+  transform: scale(1.08);
+}
+
+.arena-message-tts-btn.is-speaking {
+  background: #e0e7ff;
+  color: #3730a3;
+  border-color: #6366f1;
+  animation: ttsPulse 1.2s infinite;
+}
+
+@keyframes ttsPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);
+  }
+}
+
+[data-theme="dark"] .arena-message-tts-btn {
+  background: #141e33;
+  color: #a5b4fc;
+  border-color: #334155;
+}
