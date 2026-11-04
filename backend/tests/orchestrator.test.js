@@ -176,6 +176,7 @@ async function runTests() {
       isRoundEnd: false,
       settlementPrice: 9800,
       activeAgent: { role: 'Seller' },
+      bothHaveOffered: true,
     });
     assert.strictEqual(gapEval.shouldStop, true);
     assert.strictEqual(gapEval.finalStatus, 'COMPLETED');
@@ -214,6 +215,75 @@ async function runTests() {
     assert.strictEqual(maxRoundEval.shouldStop, true);
     assert.strictEqual(maxRoundEval.finalStatus, 'DEADLOCK');
   });
+  await test('11. Detects repeated identical offers', async () => {
+  const orchestrator = new OrchestratorAgent();
+
+  const result = orchestrator.detectDeadlock({
+    messages: [
+      { sender_type: 'AGENT', sender_role: 'Buyer', offer_value: 90000 },
+      { sender_type: 'AGENT', sender_role: 'Seller', offer_value: 110000 },
+      { sender_type: 'AGENT', sender_role: 'Buyer', offer_value: 90000 },
+      { sender_type: 'AGENT', sender_role: 'Buyer', offer_value: 90000 },
+    ],
+  });
+
+  assert.strictEqual(result.detected, true);
+  assert.strictEqual(result.type, 'UNCHANGED_OFFERS');
+});
+
+await test('12. Detects repeated rejections', async () => {
+  const orchestrator = new OrchestratorAgent();
+
+  const result = orchestrator.detectDeadlock({
+    messages: [
+      { sender_type: 'AGENT', action: 'REJECT' },
+      { sender_type: 'HUMAN', action: 'REJECT' },
+      { sender_type: 'AGENT', action: 'REJECT' },
+    ],
+  });
+
+  assert.strictEqual(result.detected, true);
+  assert.strictEqual(result.type, 'REPEATED_REJECTIONS');
+});
+await test('13. Compromise proposal is attempted before final deadlock', async () => {
+  const sim = await orchestratorService.initializeSimulation({
+    scenarioId: 'vendor-pricing',
+    maxRounds: 10,
+    customAgents: [
+      {
+        id: 'buyer-procurement',
+        personality: 'Human',
+        is_human: true,
+      },
+      {
+        id: 'vendor-sales',
+        personality: 'Human',
+        is_human: true,
+      },
+    ],
+  });
+
+  // Repeat the same offers from both participants
+  for (let i = 0; i < 6; i++) {
+    const offerValue = i % 2 === 0 ? 95000 : 110000;
+
+    await orchestratorService.advanceStep(sim.id, {
+      message: `My offer is ₹${offerValue}.`,
+      offer_value: offerValue,
+      action: 'COUNTER_OFFER',
+    });
+  }
+
+  const finalSim = await db.getSimulation(sim.id);
+
+  const compromiseMessage = finalSim.messages.find(
+    (message) =>
+      message.message?.includes('[DEADLOCK_COMPROMISE_ATTEMPTED]')
+  );
+
+  assert.ok(compromiseMessage, 'Compromise proposal should be recorded');
+  assert.strictEqual(finalSim.status, 'DEADLOCK');
+});
 
   await test('8. Pause, Resume, and End lifecycle controls work properly', async () => {
     const sim = await orchestratorService.initializeSimulation({

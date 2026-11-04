@@ -260,6 +260,12 @@ const NegotiationArena = () => {
 
   // Simulation State: always enter in full screen mode by default
   const [simulation, setSimulation] = useState(null);
+  const deadlockReason = (simulation?.messages || [])
+  .filter((message) => message.sender_type === 'ORCHESTRATOR')
+  .find((message) =>
+    message.message?.includes('Deadlock') ||
+    message.message?.includes('deadlock')
+  )?.message || 'No specific deadlock reason available.';
   const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [isFullscreen] = useState(true);
@@ -849,7 +855,7 @@ const NegotiationArena = () => {
               </span>
               <span className="outcome-banner-desc">
                 {isDeadlock
-                  ? `Negotiation reached an impasse in Round ${currentRound}. You can inspect the negotiation report below.`
+                   ? `Negotiation reached an impasse in Round ${currentRound}. Reason: ${deadlockReason}`
                   : `Negotiation successfully completed in Round ${currentRound} of ${maxRounds}. You can inspect the negotiation report below.`}
               </span>
             </div>

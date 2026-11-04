@@ -128,15 +128,96 @@ const SCENARIO_PRESETS = {
         progress_percent: 50,
       },
     ],
-  },
+    },
 };
 
 class OrchestratorAgent {
   constructor() {
-    this.name = 'Orchestrator Agent';
-    this.role = 'Orchestrator';
+  this.name = 'Orchestrator Agent';
+  this.role = 'Orchestrator';
+
+  // Deadlock detection configuration
+  this.deadlockConfig = {
+    unchangedOfferLimit: 3,
+    repeatedRejectionLimit: 3,
+    maxCompromiseAttempts: 1,
+  };
+}
+  /**
+   * Detect repeated offers and rejection patterns.
+   */
+  detectDeadlock(simulation) {
+  const messages = (simulation.messages || []).filter(
+    (message) =>
+      message.sender_type === 'AGENT' ||
+      message.sender_type === 'HUMAN'
+  );
+
+  // Group offers by participant role
+  const participantRoles = [
+    ...new Set(messages.map((message) => message.sender_role))
+  ];
+
+  let unchangedOffers = false;
+
+  for (const role of participantRoles) {
+    const roleOffers = messages.filter(
+      (message) =>
+        message.sender_role === role &&
+        message.offer_value !== null &&
+        message.offer_value !== undefined
+    );
+
+    const recentOffers = roleOffers.slice(
+      -this.deadlockConfig.unchangedOfferLimit
+    );
+
+    if (
+      recentOffers.length >= this.deadlockConfig.unchangedOfferLimit &&
+      recentOffers.every(
+        (message) =>
+          Number(message.offer_value) ===
+          Number(recentOffers[0].offer_value)
+      )
+    ) {
+      unchangedOffers = true;
+      break;
+    }
   }
 
+  // Check the latest participant actions for repeated rejections
+  const recentMessages = messages.slice(
+    -this.deadlockConfig.repeatedRejectionLimit
+  );
+
+  const repeatedRejections =
+    recentMessages.length >= this.deadlockConfig.repeatedRejectionLimit &&
+    recentMessages.every(
+      (message) => message.action === 'REJECT'
+    );
+
+  if (unchangedOffers) {
+    return {
+      detected: true,
+      reason: 'A participant repeated the same offer without making any concession.',
+      type: 'UNCHANGED_OFFERS',
+    };
+  }
+
+  if (repeatedRejections) {
+    return {
+      detected: true,
+      reason: 'Participants repeatedly rejected proposals without reaching an agreement.',
+      type: 'REPEATED_REJECTIONS',
+    };
+  }
+
+  return {
+    detected: false,
+    reason: null,
+    type: null,
+  };
+}
   /**
    * Retrieves scenario definition by ID with fallback
    */
@@ -422,22 +503,39 @@ class OrchestratorAgent {
         action: m.action,
       }));
 
-      // 3. Request decision & reasoned move from AI service (with domain fallback)
-      move = await getAgentNegotiationMove({
-        scenario: {
-          id: sim.scenario_id,
-          title: sim.scenario_title,
-          domain: preset.domain,
-        },
-        agent: activeAgent,
-        counterpart: counterpartAgent,
-        roundNumber: sim.current_round,
-        maxRounds: sim.max_rounds,
-        currentOffer: activeAgent.current_offer || activeAgent.target_value,
-        history: historyContext,
-      });
-    }
+      // 3. Request decision & reasoned move from AI service
+const deadlockTestMode = process.env.DEADLOCK_TEST_MODE === 'true';
 
+if (deadlockTestMode) {
+  const role = String(activeAgent.role).toLowerCase();
+
+const fixedOffer =
+  role === 'buyer' || role === 'recruiter'
+    ? 95000
+    : 110000;
+
+  move = {
+    message: `Deadlock test: maintaining my offer of ₹${fixedOffer}.`,
+    offer_value: fixedOffer,
+    action: 'COUNTER_OFFER',
+    terms: 'Standard terms',
+  };
+} else {
+  move = await getAgentNegotiationMove({
+    scenario: {
+      id: sim.scenario_id,
+      title: sim.scenario_title,
+      domain: preset.domain,
+    },
+    agent: activeAgent,
+    counterpart: counterpartAgent,
+    roundNumber: sim.current_round,
+    maxRounds: sim.max_rounds,
+    currentOffer: activeAgent.current_offer || activeAgent.target_value,
+    history: historyContext,
+  });
+}
+}
     // Guard: check if simulation was paused, ended, or aborted while awaiting AI move
     const freshSim = await db.getSimulation(simulationId);
     if (!freshSim || freshSim.status !== 'RUNNING') {
@@ -517,7 +615,47 @@ class OrchestratorAgent {
       (m) => (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN') && m.sender_role === agents[1]?.role && m.offer_value
     );
     const bothHaveOffered = agent0HasOffered && agent1HasOffered;
+// Check whether the negotiation is reaching a deadlock
+const deadlock = this.detectDeadlock(updatedSim);
 
+const compromiseMarker = '[DEADLOCK_COMPROMISE_ATTEMPTED]';
+
+const compromiseAlreadyAttempted = (updatedSim.messages || []).some(
+  (message) =>
+    message.sender_type === 'ORCHESTRATOR' &&
+    message.message?.includes(compromiseMarker)
+);
+
+let deadlockShouldStop =
+  deadlock.detected && compromiseAlreadyAttempted;
+
+if (deadlock.detected && !compromiseAlreadyAttempted) {
+  const firstOffer = Number(agents[0]?.current_offer);
+  const secondOffer = Number(agents[1]?.current_offer);
+
+  const compromiseOffer =
+    Number.isFinite(firstOffer) &&
+    Number.isFinite(secondOffer) &&
+    firstOffer > 0 &&
+    secondOffer > 0
+      ? Math.round((firstOffer + secondOffer) / 2)
+      : null;
+
+  await db.addMessage({
+    simulation_id: simulationId,
+    round_number: sim.current_round,
+    sender_type: 'ORCHESTRATOR',
+    sender_name: this.name,
+    sender_role: this.role,
+    message: `${compromiseMarker} Deadlock detected. Reason: ${deadlock.reason} ${
+      compromiseOffer !== null
+        ? `The orchestrator proposes a compromise value of ₹${compromiseOffer.toLocaleString()}.`
+        : 'The orchestrator requests revised offers from all participants.'
+    }`,
+    offer_value: compromiseOffer,
+    action: 'STATUS',
+  });
+}
     // Compute dynamic agreement likelihood %
     const threshold = preset.agreement_threshold || 50;
     let likelihood = Math.min(
@@ -538,6 +676,18 @@ class OrchestratorAgent {
       activeAgent,
       bothHaveOffered,
     });
+    // Apply detected deadlock after the compromise attempt
+if (
+  deadlockShouldStop &&
+  stoppingEvaluation.finalStatus !== 'COMPLETED'
+) {
+  stoppingEvaluation.shouldStop = true;
+  stoppingEvaluation.finalStatus = 'DEADLOCK';
+  stoppingEvaluation.agreedValue = null;
+  stoppingEvaluation.deadlockReason = deadlock.reason;
+  stoppingEvaluation.orchestratorMessage =
+    `Negotiation ended in deadlock. Reason: ${deadlock.reason} A compromise proposal was already attempted without success.`;
+}
 
     let newStatus = sim.status;
     let nextRound = sim.current_round;
@@ -621,7 +771,7 @@ class OrchestratorAgent {
     isRoundEnd,
     settlementPrice,
     activeAgent,
-    bothHaveOffered = true,
+    bothHaveOffered,
   }) {
     // Condition A: Explicit or Numerical Agreement
     const isExplicitAccept = action === 'ACCEPT' || agreementReached === true;
@@ -635,27 +785,26 @@ class OrchestratorAgent {
         orchestratorMessage: `Congratulations! Both parties have successfully reached an agreement. The negotiation has been concluded.`,
       };
     }
-
     // Condition B: Negotiation Breakdown on Hard Rejection
-    if (action === 'REJECT') {
-      return {
-        shouldStop: true,
-        finalStatus: 'DEADLOCK',
-        agreedValue: null,
-        orchestratorMessage: `The negotiation has been terminated. No agreement was reached between the parties.`,
-      };
-    }
-
+if (action === 'REJECT') {
+  return {
+    shouldStop: true,
+    finalStatus: 'DEADLOCK',
+    agreedValue: null,
+    deadlockReason: 'An agent explicitly rejected the negotiation.',
+    orchestratorMessage: `The negotiation has been terminated. No agreement was reached between the parties. Reason: An agent explicitly rejected the negotiation.`,
+  };
+}
     // Condition C: Max Rounds Reached at End of Round
-    if (isRoundEnd && currentRound >= maxRounds) {
-      return {
-        shouldStop: true,
-        finalStatus: 'DEADLOCK',
-        agreedValue: null,
-        orchestratorMessage: `Maximum round limit (${maxRounds}) reached without agreement. Final gap remained ₹${currentGap.toLocaleString()}. Negotiation terminated in Deadlock.`,
-      };
-    }
-
+if (isRoundEnd && currentRound >= maxRounds) {
+  return {
+    shouldStop: true,
+    finalStatus: 'DEADLOCK',
+    agreedValue: null,
+    deadlockReason: 'The maximum number of negotiation rounds was reached without an agreement.',
+    orchestratorMessage: `Maximum round limit (${maxRounds}) reached without agreement. Final gap remained ₹${currentGap.toLocaleString()}. Negotiation terminated in Deadlock.`,
+  };
+}
     // No stopping condition met -> continue negotiation
     return {
       shouldStop: false,
