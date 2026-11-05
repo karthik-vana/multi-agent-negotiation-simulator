@@ -20,7 +20,7 @@ async function getAgentNegotiationMove({
   // 1. Attempt to call Python/FastAPI Gemini AI Service
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout for thorough LLM generation
+    const timeout = setTimeout(() => controller.abort(), 3500); // 3.5s timeout for fast real-time response with instant fallback
 
     const res = await fetch(`${AI_SERVICE_URL}/api/agent/respond`, {
       method: 'POST',
@@ -215,6 +215,7 @@ function generateDeterministicAgentMove({
         ]);
         stance = 'Agreement reached';
       } else if (!counterpartOffer || roundNumber === 1) {
+        if (!hasPriorOffers) proposedOffer = salTarget;
         message = pickRandom([
           `We are excited about your candidacy and pleased to extend an initial opening offer of ${currency}${proposedOffer.toLocaleString()} base salary with full benefits.`,
           `We value your technical background and are pleased to table an opening compensation offer of ${currency}${proposedOffer.toLocaleString()} base salary.`
@@ -305,6 +306,13 @@ function generateDeterministicAgentMove({
           `Consensus reached at ${currency}${proposedOffer.toLocaleString()}. We look forward to serving your organization.`
         ]);
         stance = 'Agreement reached';
+      } else if (!counterpartOffer || roundNumber === 1) {
+        if (!hasPriorOffers) proposedOffer = priceTarget;
+        message = pickRandom([
+          `Our initial quotation is ${currency}${proposedOffer.toLocaleString()} under standard Net-30 payment terms and 99.9% uptime SLA.`,
+          `We are pleased to present our initial enterprise rate of ${currency}${proposedOffer.toLocaleString()} with standard commercial delivery terms.`
+        ]);
+        stance = 'Opening Proposal';
       } else if (personality.includes('aggressive')) {
         message = pickRandom([
           `Our dedicated infrastructure and enterprise SLAs justify our rate. Our revised rate is ${currency}${proposedOffer.toLocaleString()}.`,

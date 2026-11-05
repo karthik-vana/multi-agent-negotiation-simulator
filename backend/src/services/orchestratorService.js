@@ -21,7 +21,7 @@ const SCENARIO_PRESETS = {
     domain: 'Procurement & Sales',
     currency: '₹',
     max_rounds: 10,
-    agreement_threshold: 500, // Gap <= 500 considered agreement
+    agreement_threshold: 0, // Gap <= 0 (or exact match/crossover) considered agreement
     agents: [
       {
         id: 'buyer-procurement',
@@ -55,7 +55,7 @@ const SCENARIO_PRESETS = {
     domain: 'Talent & Human Resources',
     currency: '₹',
     max_rounds: 8,
-    agreement_threshold: 500,
+    agreement_threshold: 0,
     agents: [
       {
         id: 'hiring-director',
@@ -89,7 +89,7 @@ const SCENARIO_PRESETS = {
     domain: 'Corporate Strategy & Finance',
     currency: '₹',
     max_rounds: 12,
-    agreement_threshold: 1000,
+    agreement_threshold: 0,
     agents: [
       {
         id: 'vp-engineering',
@@ -233,23 +233,75 @@ class OrchestratorAgent {
     const simId = `sim_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     const effectiveMaxRounds = maxRounds || preset.max_rounds || 10;
-    const effectiveAgents = Array.isArray(customAgents) && customAgents.length > 0
-      ? preset.agents.map((presetAgent, idx) => {
-          const match = customAgents.find(
-            (ca) =>
-              ca.id === presetAgent.id ||
-              ca.role?.toLowerCase() === presetAgent.role?.toLowerCase() ||
-              ca.name?.toLowerCase() === presetAgent.name?.toLowerCase()
-          ) || customAgents[idx];
-          const isHuman = match?.is_human === true || match?.personality === 'Human' || presetAgent.personality === 'Human';
+    const isPractice = Array.isArray(customAgents) && customAgents.some((a) => a.personality === 'Human' || a.is_human === true);
+
+    const matchPresetAgent = (ca, presetAgents) => {
+      const key = `${ca.id || ''} ${ca.role || ''} ${ca.name || ''} ${ca.title || ''}`.toLowerCase();
+      const direct = presetAgents.find((pa) => pa.id === ca.id);
+      if (direct) return direct;
+      if (key.includes('buyer') || key.includes('procurement') || key.includes('purchasing')) {
+        const found = presetAgents.find((pa) => (pa.role || pa.id || '').toLowerCase().includes('buyer') || (pa.name || '').toLowerCase().includes('purchasing'));
+        if (found) return found;
+      }
+      if (key.includes('seller') || key.includes('sales') || key.includes('vendor') || key.includes('supplier')) {
+        const found = presetAgents.find((pa) => (pa.role || pa.id || '').toLowerCase().includes('seller') || (pa.name || '').toLowerCase().includes('sales'));
+        if (found) return found;
+      }
+      if (key.includes('recruiter') || key.includes('hiring') || key.includes('talent')) {
+        const found = presetAgents.find((pa) => (pa.role || pa.id || '').toLowerCase().includes('recruiter') || (pa.name || '').toLowerCase().includes('hiring'));
+        if (found) return found;
+      }
+      if (key.includes('candidate') || key.includes('applicant')) {
+        const found = presetAgents.find((pa) => (pa.role || pa.id || '').toLowerCase().includes('candidate'));
+        if (found) return found;
+      }
+      if (key.includes('engineering') || key.includes('infrastructure') || key.includes('department-a') || key.includes('lead software')) {
+        const found = presetAgents.find((pa) => (pa.role || pa.id || '').toLowerCase().includes('engineering') || (pa.id || '').includes('engineering') || (pa.id || '').includes('department-a'));
+        if (found) return found;
+      }
+      if (key.includes('marketing') || key.includes('growth') || key.includes('department-b')) {
+        const found = presetAgents.find((pa) => (pa.role || pa.id || '').toLowerCase().includes('marketing') || (pa.id || '').includes('marketing') || (pa.id || '').includes('department-b'));
+        if (found) return found;
+      }
+      if (key.includes('product')) {
+        const found = presetAgents.find((pa) => (pa.role || pa.id || '').toLowerCase().includes('product') || (pa.id || '').includes('product'));
+        if (found) return found;
+      }
+      return null;
+    };
+
+    let effectiveAgents = Array.isArray(customAgents) && customAgents.length > 0
+      ? customAgents.map((ca, idx) => {
+          const presetMatch = matchPresetAgent(ca, preset.agents) || preset.agents[idx] || {};
+          const isHuman = ca.is_human === true || ca.personality === 'Human' || presetMatch.personality === 'Human';
           return {
-            ...presetAgent,
-            ...(match || {}),
-            personality: match?.personality || presetAgent.personality,
+            ...presetMatch,
+            ...ca,
+            personality: ca.personality || presetMatch.personality || 'Collaborative',
             is_human: isHuman,
           };
         })
       : preset.agents;
+
+    // Apply Practice Mode specific opening order:
+    // 1. Vendor Pricing: Opening offer from Seller
+    // 2. Job Offer: Opening offer from Recruiter
+    // 3. Project Budget: Human selected role NEVER starts; AI counterpart starts opening offer
+    if (isPractice) {
+      if (preset.id === 'vendor-pricing') {
+        const seller = effectiveAgents.find((a) => (a.role || '').toLowerCase().includes('seller') || (a.role || '').toLowerCase().includes('sales') || (a.id || '').includes('seller') || (a.id || '').includes('vendor'));
+        const buyer = effectiveAgents.find((a) => (a.role || '').toLowerCase().includes('buyer') || (a.role || '').toLowerCase().includes('procurement') || (a.id || '').includes('buyer'));
+        if (seller && buyer) effectiveAgents = [seller, buyer];
+      } else if (preset.id === 'job-offer') {
+        const recruiter = effectiveAgents.find((a) => (a.role || '').toLowerCase().includes('recruiter') || (a.role || '').toLowerCase().includes('hiring') || (a.id || '').includes('recruiter') || (a.id || '').includes('hiring'));
+        const candidate = effectiveAgents.find((a) => (a.role || '').toLowerCase().includes('candidate') || (a.id || '').includes('candidate'));
+        if (recruiter && candidate) effectiveAgents = [recruiter, candidate];
+      } else if (preset.id === 'project-budget') {
+        const aiAgents = effectiveAgents.filter((a) => a.personality !== 'Human' && a.is_human !== true);
+        const humanAgents = effectiveAgents.filter((a) => a.personality === 'Human' || a.is_human === true);
+        if (aiAgents.length > 0 && humanAgents.length > 0) effectiveAgents = [...aiAgents, ...humanAgents];
+      }
+    }
 
     const initialBuyerOffer = effectiveAgents[0]?.current_offer || effectiveAgents[0]?.target_value || 8000;
     const initialSellerOffer = effectiveAgents[1]?.current_offer || effectiveAgents[1]?.target_value || 11000;
@@ -323,7 +375,7 @@ class OrchestratorAgent {
         counterpart: counterpartAgent,
         roundNumber: 1,
         maxRounds: effectiveMaxRounds,
-        currentOffer: initialBuyerOffer,
+        currentOffer: openingAgent.current_offer || openingAgent.target_value || initialBuyerOffer,
         history: [],
       });
 
@@ -370,25 +422,50 @@ class OrchestratorAgent {
       throw new Error('Simulation has no registered participating agents.');
     }
 
-    // Always sort agents strictly by the canonical scenario preset order
-    const preset = this.getScenarioPreset(sim.scenario_id);
-    if (preset && Array.isArray(preset.agents)) {
-      const orderMap = new Map();
-      preset.agents.forEach((pa, i) => {
-        orderMap.set(pa.id.toLowerCase(), i);
-        orderMap.set(pa.role.toLowerCase(), i);
-      });
-      agents = [...agents].sort((a, b) => {
-        const getIdx = (ag) => {
-          const aId = (ag.id || '').toLowerCase();
-          const aRole = (ag.role || '').toLowerCase();
-          for (const [k, v] of orderMap.entries()) {
-            if (aId.includes(k) || aRole.includes(k)) return v;
-          }
-          return 99;
-        };
-        return getIdx(a) - getIdx(b);
-      });
+    // In Practice Mode: Apply scenario-specific opening order
+    // 1. Vendor Pricing: Seller first, Buyer second
+    // 2. Job Offer: Recruiter first, Candidate second
+    // 3. Project Budget: Human selected role NEVER starts; AI counterpart starts opening offer
+    const isPractice =
+      sim.mode === 'practice' ||
+      sim.is_practice === true ||
+      (Array.isArray(sim.agents) && sim.agents.some((a) => a.personality === 'Human' || a.is_human === true));
+
+    if (isPractice) {
+      if (sim.scenario_id === 'vendor-pricing') {
+        const seller = agents.find((a) => (a.role || '').toLowerCase().includes('seller') || (a.role || '').toLowerCase().includes('sales') || (a.id || '').includes('seller') || (a.id || '').includes('vendor'));
+        const buyer = agents.find((a) => (a.role || '').toLowerCase().includes('buyer') || (a.role || '').toLowerCase().includes('procurement') || (a.id || '').includes('buyer'));
+        if (seller && buyer) agents = [seller, buyer];
+      } else if (sim.scenario_id === 'job-offer') {
+        const recruiter = agents.find((a) => (a.role || '').toLowerCase().includes('recruiter') || (a.role || '').toLowerCase().includes('hiring') || (a.id || '').includes('recruiter') || (a.id || '').includes('hiring'));
+        const candidate = agents.find((a) => (a.role || '').toLowerCase().includes('candidate') || (a.id || '').includes('candidate'));
+        if (recruiter && candidate) agents = [recruiter, candidate];
+      } else if (sim.scenario_id === 'project-budget') {
+        const aiAgents = agents.filter((a) => a.personality !== 'Human' && a.is_human !== true);
+        const humanAgents = agents.filter((a) => a.personality === 'Human' || a.is_human === true);
+        if (aiAgents.length > 0 && humanAgents.length > 0) agents = [...aiAgents, ...humanAgents];
+      }
+    } else {
+      // In autonomous simulation mode: sort agents strictly by the canonical scenario preset order
+      const preset = this.getScenarioPreset(sim.scenario_id);
+      if (preset && Array.isArray(preset.agents)) {
+        const orderMap = new Map();
+        preset.agents.forEach((pa, i) => {
+          orderMap.set(pa.id.toLowerCase(), i);
+          orderMap.set(pa.role.toLowerCase(), i);
+        });
+        agents = [...agents].sort((a, b) => {
+          const getIdx = (ag) => {
+            const aId = (ag.id || '').toLowerCase();
+            const aRole = (ag.role || '').toLowerCase();
+            for (const [k, v] of orderMap.entries()) {
+              if (aId.includes(k) || aRole.includes(k)) return v;
+            }
+            return 99;
+          };
+          return getIdx(a) - getIdx(b);
+        });
+      }
     }
 
     // Filter messages for the current round sent by AGENTS
@@ -471,15 +548,19 @@ class OrchestratorAgent {
       }
 
       let humanAction = customMove.action;
+      const lowerMsg = (customMove.message || '').toLowerCase();
+      const hasProposal = /\b(propose|counter|offer|how about|what about|settle at|instead|rather|my offer|my price)\b/i.test(lowerMsg) || (offerVal !== null && offerVal !== undefined);
+      const hasConditional = /\b(if\b|unless|but\b|however|provided that)\b/i.test(lowerMsg);
+
       if (!humanAction || humanAction === 'COUNTER_OFFER' || humanAction === 'STATUS' || humanAction === 'OFFER') {
-        const lowerMsg = (customMove.message || '').toLowerCase();
-        const hasConditional = /\b(if\b|unless|but\b|however|provided that)\b/i.test(lowerMsg);
-        if (!hasConditional) {
+        if (!hasConditional && !hasProposal) {
           if (/\b(accept\b|agreed?\b|we have a deal|that works for me|finalize this|happy with this (?:deal|agreement|offer))\b/i.test(lowerMsg)) {
             humanAction = 'ACCEPT';
           } else if (/\b(reject\b|cannot accept|can't accept|not acceptable|end this negotiation|decline\b|no deal|walk away)\b/i.test(lowerMsg)) {
             humanAction = 'REJECT';
           }
+        } else if (hasProposal && offerVal !== null) {
+          humanAction = 'COUNTER_OFFER';
         }
       }
 
@@ -657,10 +738,10 @@ if (deadlock.detected && !compromiseAlreadyAttempted) {
   });
 }
     // Compute dynamic agreement likelihood %
-    const threshold = preset.agreement_threshold || 50;
+    const threshold = typeof preset.agreement_threshold === 'number' ? preset.agreement_threshold : 0;
     let likelihood = Math.min(
       99,
-      Math.max(10, Math.round(100 - (currentGap / (threshold * 3 || 150)) + (sim.current_round * 5)))
+      Math.max(10, Math.round(100 - (currentGap / 200) + (sim.current_round * 5)))
     );
 
     // 7. Evaluate Stopping Conditions
