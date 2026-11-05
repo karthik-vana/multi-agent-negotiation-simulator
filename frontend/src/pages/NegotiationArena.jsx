@@ -19,6 +19,7 @@ import {
   AlertCircle,
   LayoutGrid,
   Mic,
+  MicOff,
   Send,
   Lightbulb,
   Sparkles,
@@ -32,6 +33,8 @@ import {
   UserCheck,
   RotateCw,
   BookOpen,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -285,6 +288,14 @@ const NegotiationArena = () => {
   const [practiceOfferValue, setPracticeOfferValue] = useState('');
   const [showPracticeReportModal, setShowPracticeReportModal] = useState(false);
 
+  // VOICE DICTATION FEATURE: browser-native speech-to-text state.
+  const [isListening, setIsListening] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState(null);
+  const [speechLanguage, setSpeechLanguage] = useState('en-IN');
+  const [speechStatus, setSpeechStatus] = useState('');
+  const recognitionRef = useRef(null);
+  const speechBaseTextRef = useRef('');
+
   // Turn state helpers for Practice Mode
   const getActiveTurnAgent = (sim) => {
     if (!sim || !sim.agents || sim.agents.length === 0) return null;
@@ -369,6 +380,9 @@ const NegotiationArena = () => {
       numericOffer = null;
     }
 
+    if (recognitionRef.current) {
+      stopVoiceDictation();
+    }
     setPracticeMessage('');
     setTurnRunning(true);
 
@@ -390,6 +404,117 @@ const NegotiationArena = () => {
       setTurnRunning(false);
     }
   };
+
+  // VOICE DICTATION FEATURE: Web Speech API integration.
+  // recognition.start() uses the browser's standard microphone permission prompt.
+  const startVoiceDictation = () => {
+    if (!isHumanTurn || turnRunning || isTerminated || isPaused) return;
+
+    const SpeechRecognitionAPI =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) {
+      setSpeechStatus(
+        'Voice dictation is not supported in this browser. Please use the latest Google Chrome or Microsoft Edge.'
+      );
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognitionAPI();
+      recognition.lang = speechLanguage; // en-IN or en-US
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      // Preserve any text the participant has already typed.
+      speechBaseTextRef.current = practiceMessage.trim();
+      let recognitionError = false;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setSpeechStatus(
+          `Listening in ${speechLanguage === 'en-IN' ? 'English (India)' : 'English (US)'}. Speak now.`
+        );
+      };
+
+      recognition.onresult = (event) => {
+        // Rebuild the current transcript from final AND interim speech results.
+        // Interim words appear live and are replaced by final results as speech settles.
+        const transcriptParts = [];
+        for (let i = 0; i < event.results.length; i += 1) {
+          const spokenText = event.results[i][0]?.transcript?.trim();
+          if (spokenText) transcriptParts.push(spokenText);
+        }
+
+        const dictatedText = transcriptParts.join(' ').replace(/\s+/g, ' ').trim();
+        const combinedText = [speechBaseTextRef.current, dictatedText]
+          .filter(Boolean)
+          .join(' ')
+          .slice(0, 1000);
+
+        // This updates the same controlled textarea used by typed messages.
+        // It does NOT submit the message; the participant can review/edit first.
+        setPracticeMessage(combinedText);
+      };
+
+      recognition.onerror = (event) => {
+        recognitionError = true;
+        const errorMessages = {
+          'not-allowed': 'Microphone permission was denied. Allow microphone access for this site in your browser settings.',
+          'service-not-allowed': 'The browser speech-recognition service is unavailable or blocked.',
+          'audio-capture': 'No microphone was found. Connect or enable a microphone and try again.',
+          'no-speech': 'No speech was detected. Click the microphone and try speaking again.',
+          network: 'Speech recognition could not reach the browser speech service. Check your internet connection.',
+          aborted: 'Voice dictation was stopped.',
+        };
+        setSpeechStatus(
+          errorMessages[event.error] ||
+            `Voice dictation error (${event.error}). Please try again.`
+        );
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        if (recognitionRef.current === recognition) {
+          recognitionRef.current = null;
+        }
+        if (!recognitionError) {
+          setSpeechStatus(
+            'Dictation stopped. Review, edit, or add to the text before clicking Send.'
+          );
+        }
+      };
+
+      recognitionRef.current = recognition;
+      setSpeechStatus('Requesting microphone permission...');
+      // The browser displays its normal microphone permission prompt when needed.
+      recognition.start();
+    } catch (error) {
+      console.error('Unable to start voice dictation:', error);
+      setIsListening(false);
+      setSpeechStatus(
+        'Could not start voice dictation. Check microphone permission and try again.'
+      );
+    }
+  };
+
+  const stopVoiceDictation = () => {
+    const recognition = recognitionRef.current;
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (error) {
+        console.warn('Could not stop speech recognition cleanly:', error);
+      }
+    }
+    setIsListening(false);
+    setSpeechStatus(
+      'Dictation stopped. Review, edit, or add to the text before clicking Send.'
+    );
+  };
+  
 
   const transcriptEndRef = useRef(null);
   const timerRef = useRef(null);
@@ -560,6 +685,41 @@ const NegotiationArena = () => {
   const isCompleted = simulation?.status === 'COMPLETED' || simulation?.status === 'AGREEMENT_REACHED';
   const isTerminated = isDeadlock || isCompleted;
   const isReallyPaused = isPaused && !isTerminated;
+
+  // Stop listening immediately when the human loses the turn, the simulation is
+  // paused, a request is processing, or the negotiation has ended.
+  useEffect(() => {
+    if (
+      (!isHumanTurn || turnRunning || isTerminated || isPaused) &&
+      recognitionRef.current
+    ) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.warn('Could not stop speech recognition after turn change:', error);
+      }
+      setSpeechStatus('Dictation stopped because it is not currently your turn.');
+    }
+  }, [isHumanTurn, turnRunning, isTerminated, isPaused]);
+
+  // Always release the browser speech-recognition session when leaving the page.
+  useEffect(() => {
+    return () => {
+      const recognition = recognitionRef.current;
+      if (recognition) {
+        recognition.onstart = null;
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
+        try {
+          recognition.abort();
+        } catch (error) {
+          console.warn('Speech-recognition cleanup failed:', error);
+        }
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
 
   const [showExitWarning, setShowExitWarning] = useState(false);
   const allowExitRef = useRef(false);
@@ -1167,6 +1327,32 @@ const NegotiationArena = () => {
                                     <div className={`arena-speech-bubble ${isHumanMsg ? 'human-bubble' : ''} ${isLeft ? 'buyer-bubble' : 'seller-bubble'}`}>
                                       <p className="arena-bubble-text">{msg.message}</p>
                                     </div>
+                                    {!isHumanMsg && msg.message?.trim() && (
+                                      <button
+                                      type="button"
+                                      className={`arena-message-tts-btn ${
+                                        speakingMessageId === (msg.id || msg.message)
+                                          ? 'is-speaking'
+                                          : ''
+                                      }`}
+                                      onClick={() =>
+                                        speakMessage(
+                                          msg.id || msg.message,
+                                          msg.message
+                                        )
+                                      }
+                                      title={
+                                        speakingMessageId === (msg.id || msg.message)
+                                          ? 'Stop speaking'
+                                          : 'Listen to AI message'
+                                      }
+                                      aria-label="Listen to AI message"
+                                    >
+                                      {speakingMessageId === (msg.id || msg.message)
+                                        ? <VolumeX size={16} />
+                                        : <Volume2 size={16} />}
+                                    </button>
+                                  )}
 
                                     {/* Attached Offer Badge for Left/AI messages (Placed on right of text) */}
                                     {isLeft && attachedOffer && (
@@ -1335,17 +1521,52 @@ const NegotiationArena = () => {
               {/* Bottom Action Controls Bar */}
               <div className="arena-dock-actions-bar">
                 <div className="arena-dock-voice-hint">
-                  <button className="arena-dock-mic-btn" type="button" title="Record voice message">
-                    <Mic size={15} />
+                  <button
+                    className={`arena-dock-mic-btn ${isListening ? 'mic_recording' : ''}`}
+                    type="button"
+                    disabled={!isHumanTurn || turnRunning || isTerminated || isPaused}
+                    onClick={isListening ? stopVoiceDictation : startVoiceDictation}
+                    title={
+                      isListening
+                        ? 'Stop voice dictation'
+                        : !isHumanTurn || turnRunning || isTerminated || isPaused
+                          ? 'Microphone is available only during your active turn'
+                          : 'Start voice dictation'
+                    }
+                    aria-label={isListening ? 'Stop voice dictation' : 'Start voice dictation'}
+                    aria-pressed={isListening}
+                  >
+                    {isListening ? <MicOff size={15} /> : <Mic size={15} />}
                   </button>
-                  <div className="arena-audio-waves">
+                  <select
+                    className="arena-dock-language-select"
+                    aria-label="Speech recognition language"
+                    value={speechLanguage}
+                    onChange={(event) => setSpeechLanguage(event.target.value)}
+                    disabled={
+                      isListening || !isHumanTurn || turnRunning || isTerminated || isPaused
+                    }
+                    title="Choose the English accent for speech recognition"
+                  >
+                    <option value="en-IN">English (India)</option>
+                    <option value="en-US">English (US)</option>
+                  </select>
+                  <div
+                    className={`arena-audio-waves ${isListening ? 'active' : ''}`}
+                    aria-hidden="true"
+                  >
                     <span />
                     <span />
                     <span />
                     <span />
                     <span />
                   </div>
-                  <span className="arena-dock-hint-text">Type terms, offers (₹), or responses and hit Send</span>
+                  <span className="arena-dock-hint-text" role="status" aria-live="polite">
+                    {speechStatus ||
+                      (isListening
+                        ? 'Listening… speak your offer or counterproposal.'
+                        : 'Click the mic to dictate, then review the text before sending.')}
+                  </span>
                 </div>
 
                 <div className="arena-dock-action-buttons">
