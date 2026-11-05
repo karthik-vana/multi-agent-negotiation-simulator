@@ -35,6 +35,7 @@ import {
   BookOpen,
   Volume2,
   VolumeX,
+  Scale,
 } from 'lucide-react';
 import { useScenario } from '../context/ScenarioContext';
 import { useSettings } from '../context/SettingsContext';
@@ -55,6 +56,7 @@ import {
   detectNegotiationIntent,
   getMessageOffer,
 } from '../utils/negotiationInteraction';
+import { useSpeechToText } from '../hooks/useSpeechToText';
 import './NegotiationArena.css';
 
 /**
@@ -166,6 +168,7 @@ const getFormattedAgentTitle = (agentOrMsg, target = 'transcript') => {
 const formatOrchestratorMessage = (text) => {
   if (!text) return '';
   return text
+    .replace(/\[DEADLOCK_COMPROMISE_ATTEMPTED\]\s*/gi, '')
     .replace(/Purchasing Manager vs Sales Representative/gi, 'Buyer (Procurement Director) vs Seller (Sales Account Executive)')
     .replace(/Awaiting opening move from Purchasing Manager/gi, 'Awaiting opening move from Buyer (Procurement Director)')
     .replace(/Hiring Manager vs Job Candidate/gi, 'Recruiter (Hiring Director) vs Candidate (Job Candidate)')
@@ -250,8 +253,18 @@ const NegotiationArena = () => {
     selectedScenarioId ||
     'vendor-pricing';
 
+  const stateAgentPersonalities = {};
+  if (Array.isArray(location.state?.agents)) {
+    location.state.agents.forEach((ag) => {
+      if (ag && ag.id && ag.personality) {
+        stateAgentPersonalities[ag.id] = ag.personality;
+      }
+    });
+  }
+
   const effectivePersonalities = {
     ...(agentPersonalities || {}),
+    ...stateAgentPersonalities,
     ...(location.state?.agentPersonalities || {}),
   };
 
@@ -288,22 +301,70 @@ const NegotiationArena = () => {
   const [practiceOfferValue, setPracticeOfferValue] = useState('');
   const [showPracticeReportModal, setShowPracticeReportModal] = useState(false);
 
-  // VOICE DICTATION FEATURE: browser-native speech-to-text state.
-  const [isListening, setIsListening] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState(null);
-  const [speechLanguage, setSpeechLanguage] = useState('en-IN');
-  const [speechStatus, setSpeechStatus] = useState('');
-  const recognitionRef = useRef(null);
-  const speechBaseTextRef = useRef('');
 
-  // Turn state helpers for Practice Mode
+  // VOICE DICTATION FEATURE: powered by useSpeechToText hook
+  const {
+    isListening,
+    isSupported: isSpeechSupported,
+    error: speechError,
+    toggleListening,
+    stopListening: stopVoiceDictation,
+  } = useSpeechToText({
+    lang: 'en-US',
+    continuous: true,
+    interimResults: true,
+    onTranscriptChange: (newText) => {
+      setPracticeMessage(newText.slice(0, 1000));
+    },
+  });
+
+  // Turn state helpers for Practice Mode & Simulation Mode
   const getActiveTurnAgent = (sim) => {
     if (!sim || !sim.agents || sim.agents.length === 0) return null;
+    let agents = [...sim.agents];
+
+    if (isPracticeMode) {
+      if (currentScenarioId === 'vendor-pricing') {
+        const seller = agents.find((a) => (a.role || '').toLowerCase().includes('seller') || (a.role || '').toLowerCase().includes('sales') || (a.id || '').includes('seller') || (a.id || '').includes('vendor'));
+        const buyer = agents.find((a) => (a.role || '').toLowerCase().includes('buyer') || (a.role || '').toLowerCase().includes('procurement') || (a.id || '').includes('buyer'));
+        if (seller && buyer) agents = [seller, buyer];
+      } else if (currentScenarioId === 'job-offer') {
+        const recruiter = agents.find((a) => (a.role || '').toLowerCase().includes('recruiter') || (a.role || '').toLowerCase().includes('hiring') || (a.id || '').includes('recruiter') || (a.id || '').includes('hiring'));
+        const candidate = agents.find((a) => (a.role || '').toLowerCase().includes('candidate') || (a.id || '').includes('candidate'));
+        if (recruiter && candidate) agents = [recruiter, candidate];
+      } else if (currentScenarioId === 'project-budget') {
+        const aiAgents = agents.filter((a) => a.personality !== 'Human' && a.is_human !== true && a.id !== location.state?.userRoleAgentId);
+        const humanAgents = agents.filter((a) => a.personality === 'Human' || a.is_human === true || a.id === location.state?.userRoleAgentId);
+        if (aiAgents.length > 0 && humanAgents.length > 0) agents = [...aiAgents, ...humanAgents];
+      }
+    } else {
+      const presetAgents = scenarioMeta?.agents || [];
+      if (presetAgents.length > 0) {
+        const orderMap = new Map();
+        presetAgents.forEach((pa, i) => {
+          if (pa.id) orderMap.set(pa.id.toLowerCase(), i);
+          if (pa.role) orderMap.set(pa.role.toLowerCase(), i);
+        });
+        agents.sort((a, b) => {
+          const getIdx = (ag) => {
+            const aId = (ag.id || '').toLowerCase();
+            const aRole = (ag.role || '').toLowerCase();
+            for (const [k, v] of orderMap.entries()) {
+              if (aId.includes(k) || aRole.includes(k)) return v;
+            }
+            return 99;
+          };
+          return getIdx(a) - getIdx(b);
+        });
+      }
+    }
+
     const currentRoundMessages = (sim.messages || []).filter(
       (m) => m.round_number === sim.current_round && (m.sender_type === 'AGENT' || m.sender_type === 'HUMAN')
     );
-    const activeIndex = currentRoundMessages.length % sim.agents.length;
-    return sim.agents[activeIndex];
+    const activeIndex = currentRoundMessages.length % agents.length;
+    return agents[activeIndex];
   };
 
   const activeTurnAgent = getActiveTurnAgent(simulation);
@@ -312,7 +373,8 @@ const NegotiationArena = () => {
     simulation?.status === 'RUNNING' &&
     (activeTurnAgent?.personality === 'Human' ||
       activeTurnAgent?.is_human === true ||
-      activeTurnAgent?.id === location.state?.userRoleAgentId)
+      activeTurnAgent?.id === location.state?.userRoleAgentId ||
+      (activeTurnAgent?.role && location.state?.userSide === (activeTurnAgent.role.toLowerCase().includes('buyer') ? 'buyer' : 'seller')))
   );
 
   const isAiOpponentTurn = Boolean(
@@ -380,9 +442,7 @@ const NegotiationArena = () => {
       numericOffer = null;
     }
 
-    if (recognitionRef.current) {
-      stopVoiceDictation();
-    }
+    stopVoiceDictation();
     setPracticeMessage('');
     setTurnRunning(true);
 
@@ -405,115 +465,7 @@ const NegotiationArena = () => {
     }
   };
 
-  // VOICE DICTATION FEATURE: Web Speech API integration.
-  // recognition.start() uses the browser's standard microphone permission prompt.
-  const startVoiceDictation = () => {
-    if (!isHumanTurn || turnRunning || isTerminated || isPaused) return;
 
-    const SpeechRecognitionAPI =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognitionAPI) {
-      setSpeechStatus(
-        'Voice dictation is not supported in this browser. Please use the latest Google Chrome or Microsoft Edge.'
-      );
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognitionAPI();
-      recognition.lang = speechLanguage; // en-IN or en-US
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-
-      // Preserve any text the participant has already typed.
-      speechBaseTextRef.current = practiceMessage.trim();
-      let recognitionError = false;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setSpeechStatus(
-          `Listening in ${speechLanguage === 'en-IN' ? 'English (India)' : 'English (US)'}. Speak now.`
-        );
-      };
-
-      recognition.onresult = (event) => {
-        // Rebuild the current transcript from final AND interim speech results.
-        // Interim words appear live and are replaced by final results as speech settles.
-        const transcriptParts = [];
-        for (let i = 0; i < event.results.length; i += 1) {
-          const spokenText = event.results[i][0]?.transcript?.trim();
-          if (spokenText) transcriptParts.push(spokenText);
-        }
-
-        const dictatedText = transcriptParts.join(' ').replace(/\s+/g, ' ').trim();
-        const combinedText = [speechBaseTextRef.current, dictatedText]
-          .filter(Boolean)
-          .join(' ')
-          .slice(0, 1000);
-
-        // This updates the same controlled textarea used by typed messages.
-        // It does NOT submit the message; the participant can review/edit first.
-        setPracticeMessage(combinedText);
-      };
-
-      recognition.onerror = (event) => {
-        recognitionError = true;
-        const errorMessages = {
-          'not-allowed': 'Microphone permission was denied. Allow microphone access for this site in your browser settings.',
-          'service-not-allowed': 'The browser speech-recognition service is unavailable or blocked.',
-          'audio-capture': 'No microphone was found. Connect or enable a microphone and try again.',
-          'no-speech': 'No speech was detected. Click the microphone and try speaking again.',
-          network: 'Speech recognition could not reach the browser speech service. Check your internet connection.',
-          aborted: 'Voice dictation was stopped.',
-        };
-        setSpeechStatus(
-          errorMessages[event.error] ||
-            `Voice dictation error (${event.error}). Please try again.`
-        );
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-        if (recognitionRef.current === recognition) {
-          recognitionRef.current = null;
-        }
-        if (!recognitionError) {
-          setSpeechStatus(
-            'Dictation stopped. Review, edit, or add to the text before clicking Send.'
-          );
-        }
-      };
-
-      recognitionRef.current = recognition;
-      setSpeechStatus('Requesting microphone permission...');
-      // The browser displays its normal microphone permission prompt when needed.
-      recognition.start();
-    } catch (error) {
-      console.error('Unable to start voice dictation:', error);
-      setIsListening(false);
-      setSpeechStatus(
-        'Could not start voice dictation. Check microphone permission and try again.'
-      );
-    }
-  };
-
-  const stopVoiceDictation = () => {
-    const recognition = recognitionRef.current;
-    if (recognition) {
-      try {
-        recognition.stop();
-      } catch (error) {
-        console.warn('Could not stop speech recognition cleanly:', error);
-      }
-    }
-    setIsListening(false);
-    setSpeechStatus(
-      'Dictation stopped. Review, edit, or add to the text before clicking Send.'
-    );
-  };
   
 
   const transcriptEndRef = useRef(null);
@@ -554,16 +506,28 @@ const NegotiationArena = () => {
         sessionStorage.removeItem('active_arena_sim_id');
         sessionStorage.removeItem('viewing_report_sim_id');
 
-        const agentsList = scenarioMeta?.agents || scenarioMeta?.roles || [];
-        const customAgents = agentsList.map((a) => {
+        const agentsList =
+          location.state?.agents ||
+          scenarioMeta?.agents ||
+          scenarioMeta?.roles ||
+          [];
+        let customAgents = agentsList.map((a, idx) => {
+          const fallbackId =
+            a.id ||
+            (currentScenarioId === 'job-offer'
+              ? (idx === 0 ? 'hiring-director' : 'job-candidate')
+              : currentScenarioId === 'project-budget'
+              ? (idx === 0 ? 'department-a' : 'department-b')
+              : (idx === 0 ? 'buyer-procurement' : 'vendor-sales'));
           const personality =
             effectivePersonalities?.[a.id] ||
+            effectivePersonalities?.[fallbackId] ||
             (isPracticeMode && a.id === location.state?.userRoleAgentId ? 'Human' : null) ||
             a.personality ||
             a.defaultPersonality ||
             'Collaborative';
           return {
-            id: a.id,
+            id: fallbackId,
             role: a.role || a.name,
             name: a.name,
             goal: a.primaryGoal || a.goal,
@@ -571,6 +535,27 @@ const NegotiationArena = () => {
             is_human: personality === 'Human' || a.id === location.state?.userRoleAgentId,
           };
         });
+
+        // Apply Practice Mode opening order:
+        // 1. Vendor Pricing: Seller opens first
+        // 2. Job Offer: Recruiter opens first
+        // 3. Project Budget: Human selected role NEVER starts opening offer; AI counterpart starts
+        if (isPracticeMode) {
+          if (currentScenarioId === 'vendor-pricing') {
+            const seller = customAgents.find((a) => (a.role || '').toLowerCase().includes('seller') || (a.role || '').toLowerCase().includes('sales') || (a.id || '').includes('seller') || (a.id || '').includes('vendor'));
+            const buyer = customAgents.find((a) => (a.role || '').toLowerCase().includes('buyer') || (a.role || '').toLowerCase().includes('procurement') || (a.id || '').includes('buyer'));
+            if (seller && buyer) customAgents = [seller, buyer];
+          } else if (currentScenarioId === 'job-offer') {
+            const recruiter = customAgents.find((a) => (a.role || '').toLowerCase().includes('recruiter') || (a.role || '').toLowerCase().includes('hiring') || (a.id || '').includes('recruiter') || (a.id || '').includes('hiring'));
+            const candidate = customAgents.find((a) => (a.role || '').toLowerCase().includes('candidate') || (a.id || '').includes('candidate'));
+            if (recruiter && candidate) customAgents = [recruiter, candidate];
+          } else if (currentScenarioId === 'project-budget') {
+            const aiAgents = customAgents.filter((a) => a.personality !== 'Human' && a.is_human !== true && a.id !== location.state?.userRoleAgentId);
+            const humanAgents = customAgents.filter((a) => a.personality === 'Human' || a.is_human === true || a.id === location.state?.userRoleAgentId);
+            if (aiAgents.length > 0 && humanAgents.length > 0) customAgents = [...aiAgents, ...humanAgents];
+          }
+        }
+
         const simData = await startSimulation(
           currentScenarioId,
           customAgents,
@@ -640,7 +625,7 @@ const NegotiationArena = () => {
       } finally {
         setTurnRunning(false);
       }
-    }, 3500);
+    }, 1200);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -686,40 +671,18 @@ const NegotiationArena = () => {
   const isTerminated = isDeadlock || isCompleted;
   const isReallyPaused = isPaused && !isTerminated;
 
+  const handleToggleVoiceDictation = () => {
+    if (!isHumanTurn || turnRunning || isTerminated || isPaused) return;
+    toggleListening(practiceMessage);
+  };
+
   // Stop listening immediately when the human loses the turn, the simulation is
   // paused, a request is processing, or the negotiation has ended.
   useEffect(() => {
-    if (
-      (!isHumanTurn || turnRunning || isTerminated || isPaused) &&
-      recognitionRef.current
-    ) {
-      try {
-        recognitionRef.current.stop();
-      } catch (error) {
-        console.warn('Could not stop speech recognition after turn change:', error);
-      }
-      setSpeechStatus('Dictation stopped because it is not currently your turn.');
+    if ((!isHumanTurn || turnRunning || isTerminated || isPaused) && isListening) {
+      stopVoiceDictation();
     }
-  }, [isHumanTurn, turnRunning, isTerminated, isPaused]);
-
-  // Always release the browser speech-recognition session when leaving the page.
-  useEffect(() => {
-    return () => {
-      const recognition = recognitionRef.current;
-      if (recognition) {
-        recognition.onstart = null;
-        recognition.onresult = null;
-        recognition.onerror = null;
-        recognition.onend = null;
-        try {
-          recognition.abort();
-        } catch (error) {
-          console.warn('Speech-recognition cleanup failed:', error);
-        }
-        recognitionRef.current = null;
-      }
-    };
-  }, []);
+  }, [isHumanTurn, turnRunning, isTerminated, isPaused, isListening, stopVoiceDictation]);
 
   const [showExitWarning, setShowExitWarning] = useState(false);
   const allowExitRef = useRef(false);
@@ -791,16 +754,28 @@ const NegotiationArena = () => {
     setLoading(true);
     setIsPaused(false);
     try {
-      const agentsList = scenarioMeta?.agents || scenarioMeta?.roles || [];
-      const customAgents = agentsList.map((a) => {
+      const agentsList =
+        location.state?.agents ||
+        scenarioMeta?.agents ||
+        scenarioMeta?.roles ||
+        [];
+      let customAgents = agentsList.map((a, idx) => {
+        const fallbackId =
+          a.id ||
+          (currentScenarioId === 'job-offer'
+            ? (idx === 0 ? 'hiring-director' : 'job-candidate')
+            : currentScenarioId === 'project-budget'
+            ? (idx === 0 ? 'department-a' : 'department-b')
+            : (idx === 0 ? 'buyer-procurement' : 'vendor-sales'));
         const personality =
           effectivePersonalities?.[a.id] ||
+          effectivePersonalities?.[fallbackId] ||
           (isPracticeMode && a.id === location.state?.userRoleAgentId ? 'Human' : null) ||
           a.personality ||
           a.defaultPersonality ||
           'Collaborative';
         return {
-          id: a.id,
+          id: fallbackId,
           role: a.role || a.name,
           name: a.name,
           goal: a.primaryGoal || a.goal,
@@ -808,6 +783,23 @@ const NegotiationArena = () => {
           is_human: personality === 'Human' || a.id === location.state?.userRoleAgentId,
         };
       });
+
+      if (isPracticeMode) {
+        if (currentScenarioId === 'vendor-pricing') {
+          const seller = customAgents.find((a) => (a.role || '').toLowerCase().includes('seller') || (a.role || '').toLowerCase().includes('sales') || (a.id || '').includes('seller') || (a.id || '').includes('vendor'));
+          const buyer = customAgents.find((a) => (a.role || '').toLowerCase().includes('buyer') || (a.role || '').toLowerCase().includes('procurement') || (a.id || '').includes('buyer'));
+          if (seller && buyer) customAgents = [seller, buyer];
+        } else if (currentScenarioId === 'job-offer') {
+          const recruiter = customAgents.find((a) => (a.role || '').toLowerCase().includes('recruiter') || (a.role || '').toLowerCase().includes('hiring') || (a.id || '').includes('recruiter') || (a.id || '').includes('hiring'));
+          const candidate = customAgents.find((a) => (a.role || '').toLowerCase().includes('candidate') || (a.id || '').includes('candidate'));
+          if (recruiter && candidate) customAgents = [recruiter, candidate];
+        } else if (currentScenarioId === 'project-budget') {
+          const aiAgents = customAgents.filter((a) => a.personality !== 'Human' && a.is_human !== true && a.id !== location.state?.userRoleAgentId);
+          const humanAgents = customAgents.filter((a) => a.personality === 'Human' || a.is_human === true || a.id === location.state?.userRoleAgentId);
+          if (aiAgents.length > 0 && humanAgents.length > 0) customAgents = [...aiAgents, ...humanAgents];
+        }
+      }
+
       const restarted = await startSimulation(
         currentScenarioId,
         customAgents,
@@ -853,10 +845,33 @@ const NegotiationArena = () => {
     SCENARIO_OPTIONS.find((s) => s.id === currentScenarioId) || SCENARIO_OPTIONS[0];
 
   const simulationAgents = simulation?.agents || [];
-  const activeAgentsList = (scenarioMeta?.agents || simulationAgents).map((metaAgent, idx) => {
+  let sourceAgentsList =
+    location.state?.agents ||
+    scenarioMeta?.agents ||
+    scenarioMeta?.roles ||
+    simulationAgents;
+
+  if (isPracticeMode && Array.isArray(sourceAgentsList)) {
+    let reordered = [...sourceAgentsList];
+    if (currentScenarioId === 'vendor-pricing') {
+      const seller = reordered.find((a) => (a.role || '').toLowerCase().includes('seller') || (a.role || '').toLowerCase().includes('sales') || (a.id || '').includes('seller') || (a.id || '').includes('vendor'));
+      const buyer = reordered.find((a) => (a.role || '').toLowerCase().includes('buyer') || (a.role || '').toLowerCase().includes('procurement') || (a.id || '').includes('buyer'));
+      if (seller && buyer) sourceAgentsList = [seller, buyer];
+    } else if (currentScenarioId === 'job-offer') {
+      const recruiter = reordered.find((a) => (a.role || '').toLowerCase().includes('recruiter') || (a.role || '').toLowerCase().includes('hiring') || (a.id || '').includes('recruiter') || (a.id || '').includes('hiring'));
+      const candidate = reordered.find((a) => (a.role || '').toLowerCase().includes('candidate') || (a.id || '').includes('candidate'));
+      if (recruiter && candidate) sourceAgentsList = [recruiter, candidate];
+    } else if (currentScenarioId === 'project-budget') {
+      const aiAgents = reordered.filter((a) => a.personality !== 'Human' && a.is_human !== true && a.id !== location.state?.userRoleAgentId);
+      const humanAgents = reordered.filter((a) => a.personality === 'Human' || a.is_human === true || a.id === location.state?.userRoleAgentId);
+      if (aiAgents.length > 0 && humanAgents.length > 0) sourceAgentsList = [...aiAgents, ...humanAgents];
+    }
+  }
+
+  const activeAgentsList = sourceAgentsList.map((metaAgent, idx) => {
     const simAgent =
       simulationAgents.find(
-        (a) => a.id === metaAgent.id || a.role?.toLowerCase() === metaAgent.role?.toLowerCase()
+        (a) => a.id === metaAgent.id || a.role?.toLowerCase() === metaAgent.role?.toLowerCase() || a.name?.toLowerCase() === metaAgent.name?.toLowerCase()
       ) ||
       simulationAgents[idx] ||
       {};
@@ -873,8 +888,8 @@ const NegotiationArena = () => {
     const configuredPersonality =
       effectivePersonalities?.[agentId] ||
       effectivePersonalities?.[metaAgent.id] ||
-      simAgent.personality ||
       metaAgent.personality ||
+      simAgent.personality ||
       metaAgent.defaultPersonality ||
       'Collaborative';
 
@@ -1196,22 +1211,33 @@ const NegotiationArena = () => {
                         const isOrchestrator = msg.sender_type === 'ORCHESTRATOR';
 
                         if (isOrchestrator) {
+                          const isCompromise = typeof msg.message === 'string' && msg.message.includes('[DEADLOCK_COMPROMISE_ATTEMPTED]');
                           return (
-                            <div key={msg.id} className="arena-orchestrator-row">
-                              <div className="arena-orchestrator-box">
+                            <div key={msg.id} className={`arena-orchestrator-row ${isCompromise ? 'compromise-row' : ''}`}>
+                              <div className={`arena-orchestrator-box ${isCompromise ? 'compromise-box' : ''}`}>
                                 <div className="arena-orchestrator-avatar">
-                                  <Bot size={18} />
+                                  {isCompromise ? <Scale size={18} style={{ color: '#d97706' }} /> : <Bot size={18} />}
                                 </div>
                                 <div className="arena-orchestrator-content">
                                   <div className="arena-orchestrator-header">
                                     <span className="arena-orchestrator-name">
-                                      {msg.sender_name || 'Orchestrator Agent'}
+                                      {isCompromise ? 'Orchestrator Deadlock Resolution' : (msg.sender_name || 'Orchestrator Agent')}
                                     </span>
+                                    {isCompromise && (
+                                      <span className="arena-compromise-pill">
+                                        ⚖️ Compromise Proposal
+                                      </span>
+                                    )}
                                     <span className="arena-timestamp">
                                       {msg.timestamp_label || '10:24 AM'}
                                     </span>
                                   </div>
                                   <p className="arena-orchestrator-text">{formatOrchestratorMessage(msg.message)}</p>
+                                  {isCompromise && msg.offer_value && (
+                                    <div className="arena-compromise-suggestion-pill">
+                                      <span>Suggested Settlement: <strong>₹{Number(msg.offer_value).toLocaleString()}</strong></span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1257,7 +1283,11 @@ const NegotiationArena = () => {
 
                         turnIdx++;
 
-                        const displayPersonality = senderAgent?.personality || msg.personality || 'Collaborative';
+                        const displayPersonality =
+                          effectivePersonalities?.[senderAgent?.id] ||
+                          senderAgent?.personality ||
+                          msg.personality ||
+                          'Collaborative';
                         const personalityClass = (displayPersonality || '').toLowerCase().includes('aggressive')
                           ? 'aggressive'
                           : (displayPersonality || '').toLowerCase().includes('risk')
@@ -1327,7 +1357,7 @@ const NegotiationArena = () => {
                                     <div className={`arena-speech-bubble ${isHumanMsg ? 'human-bubble' : ''} ${isLeft ? 'buyer-bubble' : 'seller-bubble'}`}>
                                       <p className="arena-bubble-text">{msg.message}</p>
                                     </div>
-                                    {!isHumanMsg && msg.message?.trim() && (
+                                    {isPracticeMode && !isHumanMsg && msg.message?.trim() && (
                                       <button
                                       type="button"
                                       className={`arena-message-tts-btn ${
@@ -1525,7 +1555,7 @@ const NegotiationArena = () => {
                     className={`arena-dock-mic-btn ${isListening ? 'mic_recording' : ''}`}
                     type="button"
                     disabled={!isHumanTurn || turnRunning || isTerminated || isPaused}
-                    onClick={isListening ? stopVoiceDictation : startVoiceDictation}
+                    onClick={handleToggleVoiceDictation}
                     title={
                       isListening
                         ? 'Stop voice dictation'
@@ -1538,19 +1568,6 @@ const NegotiationArena = () => {
                   >
                     {isListening ? <MicOff size={15} /> : <Mic size={15} />}
                   </button>
-                  <select
-                    className="arena-dock-language-select"
-                    aria-label="Speech recognition language"
-                    value={speechLanguage}
-                    onChange={(event) => setSpeechLanguage(event.target.value)}
-                    disabled={
-                      isListening || !isHumanTurn || turnRunning || isTerminated || isPaused
-                    }
-                    title="Choose the English accent for speech recognition"
-                  >
-                    <option value="en-IN">English (India)</option>
-                    <option value="en-US">English (US)</option>
-                  </select>
                   <div
                     className={`arena-audio-waves ${isListening ? 'active' : ''}`}
                     aria-hidden="true"
@@ -1562,10 +1579,12 @@ const NegotiationArena = () => {
                     <span />
                   </div>
                   <span className="arena-dock-hint-text" role="status" aria-live="polite">
-                    {speechStatus ||
+                    {speechError ||
                       (isListening
                         ? 'Listening… speak your offer or counterproposal.'
-                        : 'Click the mic to dictate, then review the text before sending.')}
+                        : isSpeechSupported
+                          ? 'Click mic to dictate, then review text before sending.'
+                          : 'Voice dictation is not supported in this browser')}
                   </span>
                 </div>
 
@@ -1905,25 +1924,67 @@ const NegotiationArena = () => {
         </div>
       </div>
 
-      {/* Practice Mode Report Under Development Notice Modal */}
+      {/* Practice Mode Executive Negotiation Report Modal */}
       {showPracticeReportModal && (
         <div className="arena-modal-backdrop" onClick={() => setShowPracticeReportModal(false)}>
-          <div className="arena-modal-card practice-report-dev-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="arena-modal-card practice-report-dev-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
             <div className="practice-dev-header">
-              <div className="practice-dev-icon-wrap">
-                <Sparkles size={28} className="practice-dev-icon" />
+              <div className="practice-dev-icon-wrap" style={{ background: isDeadlock ? '#fee2e2' : '#dcfce7' }}>
+                {isDeadlock ? <XCircle size={28} style={{ color: '#ef4444' }} /> : <CheckCircle2 size={28} style={{ color: '#16a34a' }} />}
               </div>
-              <span className="practice-dev-badge">Practice Mode Notice</span>
-              <h3 className="practice-dev-title">Practice Negotiation Report</h3>
-              <span className="practice-dev-status-pill">Under Development</span>
+              <span className="practice-dev-badge">Practice Mode Telemetry</span>
+              <h3 className="practice-dev-title">
+                {isDeadlock ? 'Negotiation Deadlock Audit' : 'Negotiation Agreement Report'}
+              </h3>
+              <span className={`practice-dev-status-pill ${isDeadlock ? 'status-danger' : 'status-success'}`} style={{
+                background: isDeadlock ? '#fee2e2' : '#dcfce7',
+                color: isDeadlock ? '#b91c1c' : '#15803d',
+                fontWeight: 700
+              }}>
+                {isDeadlock ? 'Deadlock Impasse' : 'Agreement Finalized'}
+              </span>
             </div>
 
-            <p className="practice-dev-text">
-              The post-negotiation report for <strong>Practice Mode</strong> (including tactical scorecard, concession curve telemetry, and AI coaching assessment) is currently <strong>Under Development</strong> for Milestone 3.
+            <div className="practice-report-summary-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '12px',
+              margin: '18px 0',
+              padding: '14px',
+              background: 'var(--bg-card-subtle, #f8fafc)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color, #e2e8f0)'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>Settlement Value</span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: isDeadlock ? '#b91c1c' : '#15803d' }}>
+                  {simulation?.agreement?.final_value
+                    ? `₹${Number(simulation.agreement.final_value).toLocaleString()}`
+                    : isDeadlock ? 'No Deal' : `Gap: ₹${Number(simulation?.current_gap || 0).toLocaleString()}`}
+                </span>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>Rounds Concluded</span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                  {simulation?.current_round || 1} / {simulation?.max_rounds || 10}
+                </span>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>Offers Exchanged</span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#6366f1' }}>
+                  {(simulation?.messages || []).filter(m => m.offer_value).length}
+                </span>
+              </div>
+            </div>
+
+            <p className="practice-dev-text" style={{ fontSize: '0.92rem', lineHeight: '1.5', color: '#334155', margin: '0 0 16px 0' }}>
+              {isDeadlock
+                ? `Negotiation reached an impasse in Round ${simulation?.current_round || 1}. Reason: ${simulation?.deadlock_reason || 'Participants were unable to converge within reservation thresholds.'}`
+                : `Successfully concluded mutual terms between ${humanAgent?.name || 'Human Participant'} and ${opponentAgent?.name || 'AI Counterpart'} at ₹${Number(simulation?.agreement?.final_value || 0).toLocaleString()} under scenario guidelines.`}
             </p>
 
-            <div className="practice-dev-note">
-              <span>💡 Comprehensive reports and archived transcripts are fully available for <strong>Simulation Mode</strong> under History & Reports.</span>
+            <div className="practice-dev-note" style={{ background: '#f1f5f9', padding: '12px 14px', borderRadius: '10px', fontSize: '0.82rem', color: '#475569', marginBottom: '20px' }}>
+              <span>🎯 <strong>Tactical Feedback:</strong> {isDeadlock ? 'AI counterpart held a firm stance. Consider proposing concessions earlier or testing a collaborative opening move.' : 'Great job closing the gap! Your concessions effectively matched the counterpart archetype.'}</span>
             </div>
 
             <div className="practice-dev-actions">

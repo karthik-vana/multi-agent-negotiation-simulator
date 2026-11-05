@@ -110,6 +110,12 @@ test('5. Conditional Rejection does NOT accidentally terminate negotiations (con
   assert.strictEqual(cond2.isReject, false);
   assert.strictEqual(cond2.isAccept, false);
   assert.strictEqual(cond2.isConditionalCounter, true);
+
+  const cond3 = detectNegotiationIntent('I want to propose offer ₹99000 , I cannot accept ₹95,500');
+  assert.strictEqual(cond3.isReject, false, 'Must not reject when counter-proposing');
+  assert.strictEqual(cond3.isAccept, false);
+  assert.strictEqual(cond3.isConditionalCounter, true);
+  assert.strictEqual(extractMonetaryOffer('I want to propose offer ₹99000 , I cannot accept ₹95,500'), 99000);
 });
 
 test('6. getMessageOffer dynamically attaches offer badge for monetary messages only', () => {

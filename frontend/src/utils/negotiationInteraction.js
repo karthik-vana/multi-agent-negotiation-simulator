@@ -134,9 +134,12 @@ export function detectNegotiationIntent(text) {
   const lower = text.toLowerCase().trim();
 
   // Conditional guards: e.g. "I cannot accept ₹150,000, but I can agree to ₹180,000"
-  const hasConditional = /\b(if\b|only if|provided that|unless|as long as|but\b|however|subject to|with the condition)\b/i.test(lower);
+  // Counterproposal and conditional guards:
+  // e.g. "I want to propose offer ₹99000 , I cannot accept ₹95,500" or "I cannot accept ₹150,000, but I can agree to ₹180,000"
+  const hasCounterKeywords = /\b(propose|counter|counteroffer|counter-offer|how about|what about|instead|rather|prefer|settle at|my price|my offer|make it)\b/i.test(lower);
   const hasMonetary = /(?:₹|Rs\.?|INR|\$)?\s*\d+/i.test(lower);
-  const isConditionalCounter = hasConditional && (hasMonetary || /\b(instead|rather|propose|counter|prefer|want|need)\b/i.test(lower));
+  const hasConditional = /\b(if\b|only if|provided that|unless|as long as|but\b|however|subject to|with the condition)\b/i.test(lower);
+  const isConditionalCounter = (hasConditional && (hasMonetary || hasCounterKeywords)) || (hasCounterKeywords && hasMonetary);
 
   const rejectPatterns = [
     /\b(i\s*(?:want\s*to|would\s*like\s*to|wish\s*to|plan\s*to|am\s*going\s*to)?\s*reject\s*(?:this|the|your)?\s*(?:deal|offer|proposal|terms)?)\b/i,

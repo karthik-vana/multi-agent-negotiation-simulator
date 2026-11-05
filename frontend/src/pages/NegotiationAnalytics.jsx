@@ -32,8 +32,8 @@ import './NegotiationAnalytics.css';
 function isLeftInBetween(sim) {
   if (!sim) return false;
 
-  // 1. Explicitly left in between or paused
-  if (sim.status === 'LEFT_IN_BETWEEN' || sim.status === 'PAUSED') return true;
+  // 1. Explicitly left in between, paused, or running (left in between without ending)
+  if (sim.status === 'LEFT_IN_BETWEEN' || sim.status === 'PAUSED' || sim.status === 'RUNNING') return true;
 
   // 2. Transcript contains explicit leave in between message
   if (Array.isArray(sim.messages)) {
@@ -47,17 +47,12 @@ function isLeftInBetween(sim) {
     if (hasLeftMsg) return true;
   }
 
-  // 3. Deadlocks are NOT left in between
-  if (sim.status === 'DEADLOCK') return false;
+  // 3. Deadlocks or completed/agreed negotiations are NOT left in between
+  if (sim.status === 'DEADLOCK' || sim.status === 'COMPLETED' || sim.status === 'AGREEMENT_REACHED') {
+    return false;
+  }
 
-  // 4. Completed agreement
-  const hasAgreedData = Boolean(
-    sim.agreement &&
-      ((sim.agreement.final_value !== undefined && sim.agreement.final_value !== null) ||
-        (sim.agreement.agreed_value !== undefined && sim.agreement.agreed_value !== null))
-  );
-  const isAgreement = (sim.status === 'AGREEMENT_REACHED' || sim.status === 'COMPLETED') && hasAgreedData;
-  if (isAgreement) return false;
+  // Any other unfinished/interrupted status is Left in Between
   return true;
 }
 
@@ -248,8 +243,7 @@ export default function NegotiationAnalytics() {
           return false;
         });
 
-        // Filter strictly to the 3 official scenarios: vendor-pricing, job-offer, project-budget
-        // Exclude practice sessions from Simulation Mode analytics
+        // 1. Simulation Mode: Filter strictly to official scenarios (excluding practice)
         const officialSims = userSims.filter((s) => {
           const isPractice =
             s.mode === 'practice' ||
@@ -271,7 +265,35 @@ export default function NegotiationAnalytics() {
           );
         });
 
+        // 2. Practice Mode: Filter real practice sessions from DB
+        const officialPracticeSims = userSims.filter((s) => {
+          const isPractice =
+            s.mode === 'practice' ||
+            s.is_practice === true ||
+            (s.id && s.id.includes('practice')) ||
+            (Array.isArray(s.agents) && s.agents.some((a) => a.personality === 'Human' || a.is_human === true));
+          if (!isPractice) return false;
+
+          const sid = (s.scenario_id || '').toLowerCase();
+          const title = (s.scenario_title || '').toLowerCase();
+          if (title.includes('saas') || title.includes('lease') || title.includes('office space')) return false;
+          return (
+            sid === 'vendor-pricing' ||
+            sid === 'job-offer' ||
+            sid === 'project-budget' ||
+            title.includes('vendor') ||
+            title.includes('job') ||
+            title.includes('project')
+          );
+        }).map((s) => ({
+          ...s,
+          score: s.status === 'COMPLETED' || s.status === 'AGREEMENT_REACHED' ? 92 : s.status === 'DEADLOCK' ? 45 : 65,
+        }));
+
         setSimulations(officialSims);
+        if (officialPracticeSims.length > 0) {
+          setPracticeSessions(officialPracticeSims);
+        }
       } else {
         setSimulations([]);
       }
@@ -312,7 +334,8 @@ export default function NegotiationAnalytics() {
         s.status === 'AGREEMENT_REACHED' ||
         s.status === 'PAUSED' ||
         s.status === 'LEFT_IN_BETWEEN' ||
-        s.status === 'DEADLOCK'
+        s.status === 'DEADLOCK' ||
+        s.status === 'RUNNING'
     );
 
     const total = validSims.length;
@@ -690,13 +713,13 @@ export default function NegotiationAnalytics() {
   // Secondary Strip Indicators
   const secondaryIndicators = analyticsMode === 'SIMULATION'
     ? [
-        { label: 'Active Agent Personas', value: '6 Personas', icon: Users, color: '#2563eb' },
+        { label: 'Active Agent Personas', value: '7 Personas', icon: Users, color: '#2563eb' },
         { label: 'Agreements Reached', value: `${stats.agreements}`, icon: CheckCircle2, color: '#10b981' },
         { label: 'Left in Between / Paused', value: `${stats.leftInBetween}`, icon: Clock, color: '#f59e0b' },
         { label: 'Total Simulation Time', value: `${stats.totalSimMinutes} mins`, icon: Activity, color: '#8b5cf6' },
       ]
     : [
-        { label: 'Target AI Opponents', value: '6 AI Archetypes', icon: Users, color: '#2563eb' },
+        { label: 'Target AI Opponents', value: '7 AI Archetypes', icon: Users, color: '#2563eb' },
         { label: 'Agreements Reached', value: `${practiceStats.agreements} Deals`, icon: CheckCircle2, color: '#10b981' },
         { label: 'Conceded / Walked Away', value: `${practiceStats.deadlocks + practiceStats.leftInBetween} Sessions`, icon: Clock, color: '#f59e0b' },
         { label: 'Total Practice Time', value: `${practiceStats.totalPracticeMinutes} mins`, icon: Activity, color: '#7c3aed' },

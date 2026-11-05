@@ -327,6 +327,7 @@ const PracticeAgentConfig = () => {
         constraints: userRole.constraints,
       },
       userRoleAgentId: userRole.id,
+      userSide: userRole.id === 'buyer-procurement' ? 'buyer' : userRole.id === 'vendor-sales' ? 'seller' : null,
       aiCounterparts: aiCounterparts.map((ai) => ({
         id: ai.id,
         name: ai.name,

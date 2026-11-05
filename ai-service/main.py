@@ -552,6 +552,12 @@ def generate_domain_fallback_response(req: NegotiationTurnRequest) -> Negotiatio
                     f"Contract finalized at {currency}{proposed_price:,.0f}. Both parties have reached consensus on all key terms."
                 ])
                 stance = "Agreement reached"
+            elif not counterpart_offer or round_num == 1:
+                msg = random.choice([
+                    f"We are pleased to present our initial enterprise pricing of {currency}{proposed_price:,.0f} with {payment_days}-day terms and 99.9% uptime SLA.",
+                    f"Our opening commercial proposal is {currency}{proposed_price:,.0f} with dedicated enterprise infrastructure and {delivery_weeks}-week rollout."
+                ])
+                stance = "Opening proposal"
             elif "aggressive" in p_name.lower():
                 msg = random.choice([
                     f"Our tier-1 enterprise SLA and dedicated engineering justify our premium rate. Our revised rate is {currency}{proposed_price:,.0f} with {payment_days}-day terms.",
